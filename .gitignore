@@ -6,8 +6,3 @@ staticfiles/
 .env
 
 
-# Archivos de compilación de Tailwind CSS
-theme/static/css/dist/
-
-# Archivos CSS generados
-*.css.map
