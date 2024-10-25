@@ -1,1 +1,1 @@
-web: gunicorn proyecto_taller153.wsgi
+web: python manage.py collectstatic --noinput && gunicorn django_project.wsgi
