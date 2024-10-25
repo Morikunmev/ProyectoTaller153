@@ -1,5 +1,15 @@
-venv
-__pycache__
+# Entorno virtual de Python
+venv/
+__pycache__/
 db.sqlite3
-staticfiles
+staticfiles/
 .env
+
+# Dependencias de Node.js
+node_modules/
+
+# Archivos de compilación de Tailwind CSS
+theme/static/css/dist/
+
+# Archivos CSS generados
+*.css.map

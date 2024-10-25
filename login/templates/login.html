@@ -1,19 +1,27 @@
+{% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="keywords" content="html">
     <meta name="author" content="Richard Rocuant">
-    <title></title>
-    {% load static %}
+    <title>Login</title>
+    {% tailwind_css %}
 </head>
-<body>
+<body class="flex items-center justify-center min-h-screen bg-gray-100">
 
-    <h1>Login</h1>
-    <img src="{% static '/images/logo.png' %}" alt="" style="width: 100px;">
-    <a href="{% url 'dashboard' %}">Logearse</a>
-    <img src="{% static '/images/madera.jpg' %}" alt="" style="width: 100px;">
+    <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
+        <h1 class="text-2xl font-bold text-center mb-4">Login</h1>
+        <img src="{% static 'images/logo.png' %}" alt="Logo" class="w-24 mx-auto mb-4">
+
+        <form method="POST" class="space-y-4">
+            {% csrf_token %}
+            <input type="text" name="username" placeholder="Username" class="block w-full px-3 py-2 border rounded-md">
+            <input type="password" name="password" placeholder="Password" class="block w-full px-3 py-2 border rounded-md">
+            <a href="{% url 'dashboard' %}">Login</a>
+        </form>
+    </div>
+
 </body>
 </html>

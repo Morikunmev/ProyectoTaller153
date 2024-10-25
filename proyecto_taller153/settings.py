@@ -43,9 +43,20 @@ INSTALLED_APPS = [
     'login',
     'dashboard',
     'whitenoise.runserver_nostatic',
+    'tailwind',
+    'theme',
+    'django_browser_reload'
+]
+TAILWIND_APP_NAME ='theme'
+
+INTERNAL_IPS=[
+    '127.0.0.1',
 ]
 
+NPM_BIN_PATH="C:/Program Files/nodejs/npm.cmd"
+
 MIDDLEWARE = [
+    "django_browser_reload.middleware.BrowserReloadMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
