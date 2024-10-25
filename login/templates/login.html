@@ -15,6 +15,8 @@
         <h1 class="text-2xl font-bold text-center mb-4">Login</h1>
         <img src="{% static 'images/logo.png' %}" alt="Logo" class="w-24 mx-auto mb-4">
 
+        <img src="{% static 'images/madera.jpg' %}" alt="">
+
         <form method="POST" class="space-y-4">
             {% csrf_token %}
             <input type="text" name="username" placeholder="Username" class="block w-full px-3 py-2 border rounded-md">
