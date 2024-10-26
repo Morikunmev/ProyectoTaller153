@@ -45,13 +45,25 @@ INSTALLED_APPS = [
     'whitenoise.runserver_nostatic',
     'tailwind',
     'theme',
-    'django_browser_reload'
+    'django_browser_reload',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 TAILWIND_APP_NAME ='theme'
 
 INTERNAL_IPS=[
     '127.0.0.1',
 ]
+
+# Configuración de Cloudinary
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET')
+}
+#indica que los archivos multimedia se almacenarán en Cloudinary en lugar del sistema de archivos local.
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 
 NPM_BIN_PATH="C:/Program Files/nodejs/npm.cmd"
 
