@@ -54,27 +54,6 @@
 </head>
 <body>
     <h1>Este es el dashboard</h1>
-
-    <!-- Formulario para crear un nuevo producto -->
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Guardar Producto</button>
-    </form>
-
-    <!-- Lista de productos recuperados -->
-    <h2>Productos Guardados</h2>
-    <ul class="product-list">
-        {% for producto in productos %}
-            <li>
-                <strong>{{ producto.nombre }}</strong>
-                {% if producto.imagen %}
-                    <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" width="100">
-                {% endif %}
-            </li>
-        {% empty %}
-            <li>No hay productos guardados.</li>
-        {% endfor %}
-    </ul>
+    <p>Lorem ipsum dolor, sit amet consectetur adipisicing elit. Sint voluptatum quas, qui eveniet nulla harum et odio amet ipsa consequatur tempore aspernatur laboriosam autem ratione. Commodi id doloremque delectus maiores.</p>
 </body>
 </html>
