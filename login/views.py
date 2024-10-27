@@ -23,7 +23,6 @@ def recuperar_contraseña(request):
             Para recuperar tu contraseña, haz clic en el siguiente enlace:
             {recuperacion_url}
             '''
-            
             send_mail(
                 'Recuperación de Contraseña',
                 mensaje_correo,
