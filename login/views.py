@@ -5,7 +5,7 @@ from django.core.mail import send_mail
 from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth import authenticate, login as auth_login  # Renombramos login para evitar conflicto
-
+from django.conf import settings
 
 def login(request):
     return render(request, 'login.html')
@@ -54,7 +54,9 @@ def recuperar_contraseña(request):
     else:
         form = FormularioRecuperar()
 
-    return render(request, 'correo_recuperacion.html', {'form': form})
+    return render(request, 'correo_recuperacion.html', {'form': form,'RECAPTCHA_SITE_KEY': settings.RECAPTCHA_SITE_KEY})
 
 def mostrar_template_recuperacion(request):
     return render(request, 'contraseña_recuperacion.html')
+
+
