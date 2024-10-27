@@ -12,19 +12,23 @@
         <h1>Restablecer Contraseña</h1>
         
         {% if message %}
-            <p class="message">{{ message }}</p>
+            <p class="message {% if message_type %}message-{{ message_type }}{% endif %}">
+                {{ message }}
+            </p>
         {% endif %}
-
+    
         <form method="post">
             {% csrf_token %}
             <label for="email">Introduzca su email:</label>
             <input type="email" id="email" name="email" required>
-
+    
             <!-- Agregamos el contenedor para el reCAPTCHA -->
+            {% if show_captcha %}
             <div class="captcha-container">
                 <div class="g-recaptcha" data-sitekey="{{ RECAPTCHA_SITE_KEY }}"></div>
             </div>
-
+            {% endif %}
+    
             <button type="submit">Enviar</button>
         </form>
     </div>
