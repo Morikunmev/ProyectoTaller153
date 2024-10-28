@@ -8,5 +8,4 @@ urlpatterns = [
     
     path('correo_recuperacion/', views.recuperar_contraseña, name='correo_recuperacion'),
     path('cambiar_contraseña/<uidb64>/<token>/', views.cambiar_contraseña, name='cambiar_contraseña'),
-    path('contraseña_recuperacion/', views.mostrar_template_recuperacion, name='contraseña_recuperacion')
 ]

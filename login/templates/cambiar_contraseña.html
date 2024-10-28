@@ -10,11 +10,18 @@
     <title>Cambiar Contraseña</title>
     {% tailwind_css %}
     <script>
-        // JavaScript para redirigir al login después de 3 segundos
+        // JavaScript para redirigir al login después de 3 segundos con una cuenta regresiva actualizada
         function redirigirAlLogin() {
-            setTimeout(function() {
-                window.location.href = "{% url 'login' %}";
-            }, 3000); // 3000 ms = 3 segundos
+            let segundos = 3;
+            const cuentaRegresiva = setInterval(function() {
+                if (segundos > 0) {
+                    document.getElementById('contador').textContent = segundos;
+                    segundos--;
+                } else {
+                    clearInterval(cuentaRegresiva);
+                    window.location.href = "{% url 'login' %}";
+                }
+            }, 1000); // Actualiza cada segundo
         }
     </script>
 </head>
@@ -35,11 +42,11 @@
             <p class="{% if message_type == 'success' %}success{% else %}error{% endif %}">{{ message }}</p>
             
             {% if redirect_to_login %}
-                <!-- Llama a la función que redirige al login -->
+                <!-- Llama a la función que redirige al login con la cuenta regresiva -->
                 <script>
                     redirigirAlLogin();
                 </script>
-                <p>Serás redirigido al inicio de sesión en 3 segundos...</p>
+                <p>Serás redirigido al inicio de sesión en <span id="contador">3</span> segundos...</p>
             {% endif %}
         {% endif %}
     </form>

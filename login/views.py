@@ -92,8 +92,6 @@ def recuperar_contraseña(request):
         'message_type': message_type,
         'show_captcha': show_captcha
     })
-def mostrar_template_recuperacion(request):
-    return render(request, 'contraseña_recuperacion.html')
 
 def cambiar_contraseña(request, uidb64, token):
     User = get_user_model()
