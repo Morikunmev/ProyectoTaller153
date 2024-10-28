@@ -1,0 +1,48 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="keywords" content="html">
+    <meta name="author" content="Richard Rocuant">
+    <title>Cambiar Contraseña</title>
+    {% tailwind_css %}
+    <script>
+        // JavaScript para redirigir al login después de 3 segundos
+        function redirigirAlLogin() {
+            setTimeout(function() {
+                window.location.href = "{% url 'login' %}";
+            }, 3000); // 3000 ms = 3 segundos
+        }
+    </script>
+</head>
+<body>
+    <form method="POST">
+        {% csrf_token %}
+        <div>
+            <label for="nueva_contraseña">Nueva Contraseña:</label>
+            <input type="password" name="nueva_contraseña" required>
+        </div>
+        <div>
+            <label for="confirmar_contraseña">Confirmar Contraseña:</label>
+            <input type="password" name="confirmar_contraseña" required>
+        </div>
+        <button type="submit">Cambiar Contraseña</button>
+        
+        {% if message %}
+            <p class="{% if message_type == 'success' %}success{% else %}error{% endif %}">{{ message }}</p>
+            
+            {% if redirect_to_login %}
+                <!-- Llama a la función que redirige al login -->
+                <script>
+                    redirigirAlLogin();
+                </script>
+                <p>Serás redirigido al inicio de sesión en 3 segundos...</p>
+            {% endif %}
+        {% endif %}
+    </form>
+    
+</body>
+</html>
