@@ -42,7 +42,10 @@ module.exports = {
         // '../../**/*.py'
     ],
     theme: {
-        extend: {},
+        extend: {
+            backgroundImage: {
+                'fondo-login': "url('/static/images/fondo.webp')",
+        },
     },
     plugins: [
         /**
@@ -54,4 +57,4 @@ module.exports = {
         require('@tailwindcss/typography'),
         require('@tailwindcss/aspect-ratio'),
     ],
-}
+}}

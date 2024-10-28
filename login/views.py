@@ -22,11 +22,21 @@ def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
+        remember_me = request.POST.get("remember_me")  # Obtener el valor del checkbox
         
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
             auth_login(request, user)  # Usamos auth_login en lugar de login
+            
+            # Configurar la duración de la sesión según si "recordarme" está marcado
+            if remember_me:
+                # Si remember_me está marcado, la sesión durará dos semanas
+                request.session.set_expiry(1209600)  # 2 semanas en segundos
+            else:
+                # Si no está marcado, la sesión termina al cerrar el navegador
+                request.session.set_expiry(0)
+                
             return redirect("dashboard")
         else:
             messages.error(request, "Nombre de usuario o contraseña incorrectos")
@@ -100,21 +110,18 @@ def cambiar_contraseña(request, uidb64, token):
     redirect_to_login = False
 
     try:
-        # Decodificar el UID
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = User.objects.get(pk=uid)
         
-        # Verificar el token
         if default_token_generator.check_token(user, token):
             if request.method == 'POST':
                 nueva_contraseña = request.POST['nueva_contraseña']
                 confirmar_contraseña = request.POST['confirmar_contraseña']
                 
-                # Validar que ambas contraseñas coinciden
                 if nueva_contraseña == confirmar_contraseña:
                     user.set_password(nueva_contraseña)
                     user.save()
-                    message = 'Tu contraseña ha sido cambiada con éxito. Serás redirigido al inicio de sesión en 3 segundos.'
+                    message = 'Tu contraseña ha sido cambiada con éxito.'  # Mensaje modificado
                     message_type = 'success'
                     redirect_to_login = True
                 else:
