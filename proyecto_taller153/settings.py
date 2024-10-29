@@ -172,3 +172,8 @@ RECAPTCHA_SITE_KEY = os.environ.get('RECAPTCHA_SITE_KEY')
 # Para el tema de recordarme
 SESSION_COOKIE_AGE = 1209600  # Duración máxima de la cookie en segundos (2 semanas)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Permitir que las sesiones persistan
+
+# settings.py (agregar estas configuraciones)
+LOGIN_URL = 'login'  # URL donde se redirige si el usuario no está autenticado
+LOGIN_REDIRECT_URL = 'dashboard'  # URL donde se redirige después de un login exitoso
+LOGOUT_REDIRECT_URL = 'login'  # URL donde se redirige después de cerrar sesión

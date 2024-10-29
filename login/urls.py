@@ -3,7 +3,7 @@ from login import views
 
 urlpatterns = [
     #este seria el index
-    path('', views.login, name="login"),
+    path('', views.login, name="index"),
     path('login/', views.login_view, name='login'),
     
     path('correo_recuperacion/', views.recuperar_contraseña, name='correo_recuperacion'),
