@@ -17,41 +17,46 @@ from .models import Usuario  # Asegúrate de importar el modelo Usuario
 
 
 def login(request):
+    # Verificar si el usuario está autenticado
+    if request.user.is_authenticated:
+        # Si el usuario ya está autenticado, redirigir al dashboard
+        return redirect('dashboard')
+    # Si no está autenticado, mostrar la página de login
     return render(request, 'login.html')
 
 
 def login_view(request):
+    # Verificar si ya hay una sesión activa
+    if request.user.is_authenticated:
+        # Si el usuario ya está autenticado, redirigir al dashboard
+        return redirect('dashboard')
+    
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
         remember_me = request.POST.get("remember_me")
-
         # Intentar autenticar el usuario
         user = authenticate(request, username=username, password=password)
         if user is not None:
             # Verificar si el user.id es 1
             if user.id == 1:
                 auth_login(request, user)
-
                 # Configurar la duración de la sesión según el checkbox "recordarme"
                 if remember_me:
                     request.session.set_expiry(1209600)  # 2 semanas
                 else:
                     request.session.set_expiry(0)  # Expirar al cerrar el navegador
-
                 return redirect("dashboard")
             else:
                 try:
                     usuario = Usuario.objects.get(user=user)
                     if usuario.TipoUsuario == "Administrador":
                         auth_login(request, user)
-
                         # Configurar la duración de la sesión según el checkbox "recordarme"
                         if remember_me:
                             request.session.set_expiry(1209600)  # 2 semanas
                         else:
                             request.session.set_expiry(0)  # Expirar al cerrar el navegador
-
                         return redirect("dashboard")
                     else:
                         messages.error(request, "Solo el administrador puede iniciar sesión.")
@@ -59,9 +64,7 @@ def login_view(request):
                     messages.error(request, "Nombre de usuario o contraseña incorrectos.")
         else:
             messages.error(request, "Nombre de usuario o contraseña incorrectos.")
-
     return render(request, "login.html")
-
 def recuperar_contraseña(request):
     message = None
     message_type = None
