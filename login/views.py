@@ -1,4 +1,6 @@
 # views.py
+from django.utils import timezone
+from django.core.signing import TimestampSigner, SignatureExpired
 from django.shortcuts import render, redirect
 from .forms import FormularioRecuperar
 from django.core.mail import send_mail
@@ -13,7 +15,9 @@ from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from .models import Usuario  # Asegúrate de importar el modelo Usuario
-
+from datetime import timedelta
+import base64
+import json
 
 
 def login(request):
@@ -68,36 +72,44 @@ def login_view(request):
 def recuperar_contraseña(request):
     message = None
     message_type = None
-    show_captcha = True  # Variable para controlar la visibilidad del captcha
+    show_captcha = True
     if request.method == 'POST':
-        #se crea una instancia del formulario
         form = FormularioRecuperar(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email']
-            
-            #Se obtiene el modelo de usuario configurado en la aplicación (esto puede ser el modelo de usuario por defecto de Django o uno personalizado).
-            
-            # Verificar si existe el usuario con ese email
             User = get_user_model()
             try:
                 user = User.objects.get(email=email)
-                
-                # Se genera un token de recuperación de contraseña utilizando el generador de tokens por defecto de Django. Este token es único y se vincula al usuario.
-                
+                # Generamos el token
                 token = default_token_generator.make_token(user)
+                # Creamos un timestamp de expiración (2 minutos desde ahora)
+                expiry_time = timezone.now() + timedelta(minutes=2)
+                # Creamos un payload con el token y el timestamp
+                payload = {
+                    'token': token,
+                    'expiry': expiry_time.timestamp()
+                }
                 
-                #Se codifica el ID del usuario (user.pk) en un formato seguro para URLs, usando urlsafe_base64_encode. Esto es útil para enviar el ID del usuario de manera segura en un enlace, por ejemplo, en un correo electrónico.
+                # Codificamos el payload
+                encoded_payload = base64.urlsafe_b64encode(
+                    json.dumps(payload).encode()
+                ).decode()
                 
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
 
-                # URL de recuperación
+                # URL de recuperación con el payload codificado
                 recuperacion_url = request.build_absolute_uri(
-                    reverse('cambiar_contraseña', kwargs={'uidb64': uid, 'token': token})
+                    reverse('cambiar_contraseña', kwargs={
+                        'uidb64': uid, 
+                        'token_payload': encoded_payload
+                    })
                 )
                 
                 mensaje_correo = f'''
                 Para recuperar tu contraseña, haz clic en el siguiente enlace:
                 {recuperacion_url}
+                
+                Este enlace expirará en 2 minutos.
                 '''
                 send_mail(
                     'Recuperación de Contraseña',
@@ -106,13 +118,13 @@ def recuperar_contraseña(request):
                     [email],
                     fail_silently=False,
                 )
-                message = f'Correo enviado a {email} con instrucciones para recuperar la contraseña.'
+                message = f'Correo enviado a {email} con instrucciones para recuperar la contraseña. El enlace expirará en 2 minutos.'
                 message_type = 'success'
-                show_captcha = False  # Ocultar captcha después de envío exitoso
+                show_captcha = False
             except User.DoesNotExist:
                 message = 'No existe ninguna cuenta asociada a este correo electrónico.'
                 message_type = 'error'
-                show_captcha = False  # Ocultar captcha después de error
+                show_captcha = False
                 
     else:
         form = FormularioRecuperar()
@@ -125,13 +137,26 @@ def recuperar_contraseña(request):
         'show_captcha': show_captcha
     })
 
-def cambiar_contraseña(request, uidb64, token):
+def cambiar_contraseña(request, uidb64, token_payload):
     User = get_user_model()
     message = None
     message_type = None
     redirect_to_login = False
 
     try:
+        # Decodificamos el payload
+        try:
+            payload = json.loads(base64.urlsafe_b64decode(token_payload.encode()).decode())
+            token = payload['token']
+            expiry_timestamp = float(payload['expiry'])
+            
+            # Verificamos si el enlace ha expirado
+            if timezone.now().timestamp() > expiry_timestamp:
+                raise ValueError('Token expired')
+                
+        except (json.JSONDecodeError, KeyError, ValueError):
+            raise ValueError('Invalid token payload')
+
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = User.objects.get(pk=uid)
         
@@ -143,7 +168,7 @@ def cambiar_contraseña(request, uidb64, token):
                 if nueva_contraseña == confirmar_contraseña:
                     user.set_password(nueva_contraseña)
                     user.save()
-                    message = 'Tu contraseña ha sido cambiada con éxito.'  # Mensaje modificado
+                    message = 'Tu contraseña ha sido cambiada con éxito.'
                     message_type = 'success'
                     redirect_to_login = True
                 else:
@@ -155,7 +180,7 @@ def cambiar_contraseña(request, uidb64, token):
     
     except (TypeError, ValueError, OverflowError, User.DoesNotExist):
         user = None
-        message = 'El enlace de recuperación de contraseña es inválido.'
+        message = 'El enlace de recuperación de contraseña es inválido o ha expirado.'
         message_type = 'error'
         
     return render(request, 'cambiar_contraseña.html', {
