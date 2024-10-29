@@ -12,6 +12,8 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
+from .models import Usuario  # Asegúrate de importar el modelo Usuario
+
 
 
 def login(request):
@@ -22,25 +24,42 @@ def login_view(request):
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
-        remember_me = request.POST.get("remember_me")  # Obtener el valor del checkbox
-        
+        remember_me = request.POST.get("remember_me")
+
+        # Intentar autenticar el usuario
         user = authenticate(request, username=username, password=password)
-        
         if user is not None:
-            auth_login(request, user)  # Usamos auth_login en lugar de login
-            
-            # Configurar la duración de la sesión según si "recordarme" está marcado
-            if remember_me:
-                # Si remember_me está marcado, la sesión durará dos semanas
-                request.session.set_expiry(1209600)  # 2 semanas en segundos
+            # Verificar si el user.id es 1
+            if user.id == 1:
+                auth_login(request, user)
+
+                # Configurar la duración de la sesión según el checkbox "recordarme"
+                if remember_me:
+                    request.session.set_expiry(1209600)  # 2 semanas
+                else:
+                    request.session.set_expiry(0)  # Expirar al cerrar el navegador
+
+                return redirect("dashboard")
             else:
-                # Si no está marcado, la sesión termina al cerrar el navegador
-                request.session.set_expiry(0)
-                
-            return redirect("dashboard")
+                try:
+                    usuario = Usuario.objects.get(user=user)
+                    if usuario.TipoUsuario == "Administrador":
+                        auth_login(request, user)
+
+                        # Configurar la duración de la sesión según el checkbox "recordarme"
+                        if remember_me:
+                            request.session.set_expiry(1209600)  # 2 semanas
+                        else:
+                            request.session.set_expiry(0)  # Expirar al cerrar el navegador
+
+                        return redirect("dashboard")
+                    else:
+                        messages.error(request, "Solo el administrador puede iniciar sesión.")
+                except Usuario.DoesNotExist:
+                    messages.error(request, "Nombre de usuario o contraseña incorrectos.")
         else:
-            messages.error(request, "Nombre de usuario o contraseña incorrectos")
-            
+            messages.error(request, "Nombre de usuario o contraseña incorrectos.")
+
     return render(request, "login.html")
 
 def recuperar_contraseña(request):
