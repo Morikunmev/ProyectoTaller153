@@ -1,18 +1,16 @@
+{% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="keywords" content="html">
-    <meta name="author" content="Richard Rocuant">
-    <title>Dashboard</title>
+    <title>Estilo Básico</title>
+    <link rel="stylesheet" href="{% static 'dashboard/styles.css' %}">
+    {% tailwind_css %}
 </head>
 <body>
-    <h1>Bienvenido al Dashboard</h1>
-    <h2>Hola {{ user.username }}</h2>
-    <a href="{% url 'logout' %}" class="border-2 border-red-700 bg-red-700 text-white py-1 rounded-md hover:bg-transparent hover:text-red-700 font-semibold">
-        Cerrar sesión
-    </a>
+    <h1 class="titulo">Hola</h1>
+    <p class="parrafo">Lorem ipsum dolor sit amet consectetur adipisicing elit. Incidunt ut omnis rerum nobis inventore, consequatur tempore vitae reiciendis eaque. Sunt ipsa cum, saepe laborum accusantium debitis nihil repellendus! Molestiae, architecto?</p>
+    <p class="parrafo">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Possimus, labore facilis minima fugit est repellendus assumenda odit, sint porro nemo et consequuntur? Id maiores blanditiis tempora fugit laboriosam, atque aspernatur!</p>
 </body>
 </html>
