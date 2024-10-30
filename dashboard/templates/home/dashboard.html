@@ -4,13 +4,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Estilo Básico</title>
-    <link rel="stylesheet" href="{% static 'dashboard/styles.css' %}">
+    <title>TALLER 153 - DASHBOARD</title>
+    <link rel="stylesheet" href="{% static 'dashboard/style.css' %}">
+
     {% tailwind_css %}
 </head>
 <body>
-    <h1 class="titulo">Hola</h1>
-    <p class="parrafo">Lorem ipsum dolor sit amet consectetur adipisicing elit. Incidunt ut omnis rerum nobis inventore, consequatur tempore vitae reiciendis eaque. Sunt ipsa cum, saepe laborum accusantium debitis nihil repellendus! Molestiae, architecto?</p>
-    <p class="parrafo">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Possimus, labore facilis minima fugit est repellendus assumenda odit, sint porro nemo et consequuntur? Id maiores blanditiis tempora fugit laboriosam, atque aspernatur!</p>
+    <div class="flex">
+        <div class="bg-dark-purple h-screen p-5 pt-8 w-72 r">
+
+
+
+
+
+        </div>
+    </div>
+    <a href="{% url 'logout' %}">Cerrar sesión</a>
+    
 </body>
 </html>
