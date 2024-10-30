@@ -6,7 +6,6 @@ from django.contrib.auth.hashers import make_password
 class Usuario(models.Model):
     # Relación uno a uno con auth_user
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=False, blank=False)
-    
     # Campos obligatorios
     RutUsuario = models.CharField(max_length=12, unique=True, null=False, blank=False)
     TipoUsuario = models.CharField(max_length=20, null=False, blank=False)
