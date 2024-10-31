@@ -4,98 +4,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TALLER 153 - DASHBOARD</title>
-    <link rel="stylesheet" href="{% static 'dashboard/style.css' %}">
-
+    <title>Sidebar con Tailwind CSS</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/lucide-icons"></script>
+    <style>
+        .icon {
+            width: 1.25rem; /* 20px */
+            height: 1.25rem; /* 20px */
+        }
+    </style>
     {% tailwind_css %}
 </head>
-<body class="bg-gray-100">
-    <div class="flex">
-        <!-- Sidebar -->
-        <div class="bg-purple-900 text-white h-screen p-5 pt-8 w-72 flex flex-col justify-between">
-            <!-- Parte superior del sidebar -->
-            <div>
-                <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
-
-                <ul class="space-y-2">
-                    <!-- Link simple -->
-                    <li>
-                        <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Inicio</a>
-                    </li>
-
-                    <!-- Menú desplegable 1 -->
-                    <li>
-                        <button id="menu1-button" class="w-full flex items-center justify-between text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded focus:outline-none">
-                            <span>Gestión de Usuarios</span>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                        <ul id="menu1" class="hidden space-y-2 ml-4 mt-2">
-                            <li>
-                                <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Registrar Usuario</a>
-                            </li>
-                            <li>
-                                <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Listar Usuarios</a>
-                            </li>
-                        </ul>
-                    </li>
-
-                    <!-- Menú desplegable 2 -->
-                    <li>
-                        <button id="menu2-button" class="w-full flex items-center justify-between text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded focus:outline-none">
-                            <span>Reportes</span>
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </button>
-                        <ul id="menu2" class="hidden space-y-2 ml-4 mt-2">
-                            <li>
-                                <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Reportes Mensuales</a>
-                            </li>
-                            <li>
-                                <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Reportes Anuales</a>
-                            </li>
-                        </ul>
-                    </li>
-
-                    <!-- Link simple -->
-                    <li>
-                        <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Configuraciones</a>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- Botón de cerrar sesión abajo -->
-            <div class="mb-4">
-                <a href="{% url 'logout' %}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 hover:shadow-lg hover:scale-105 transition duration-300 w-full text-center block">
-                    Cerrar sesión
-                </a>
-            </div>
+<body class="flex min-h-screen bg-gray-50">
+    <div id="sidebar" class="bg-gray-900 text-white transition-all duration-300 ease-in-out flex flex-col w-64">
+        <!-- Header -->
+        <div class="p-4 flex items-center justify-between border-b border-gray-700">
+            <h1 id="sidebar-title" class="font-bold text-xl whitespace-nowrap overflow-hidden transition-all duration-300 opacity-100 w-auto">
+                Dashboard
+            </h1>
+            <button id="toggle-sidebar" class="p-1 hover:bg-gray-700 rounded-lg transition-colors" aria-label="Contraer menú">
+                <svg id="toggle-icon" class="icon" viewBox="0 0 24 24">
+                    <path fill="none" stroke="currentColor" stroke-width="2" d="M9 18l6-6-6-6"/>
+                </svg>
+            </button>
         </div>
+        <!-- Links de navegación -->
+        <nav class="flex-1 pt-4 overflow-y-auto">
+            <div id="menu-container"></div>
+        </nav>
 
-        <!-- Contenido principal -->
-        <div class="flex-1 p-10">
-            <h2 class="text-3xl font-semibold mb-5">Bienvenido a tu panel</h2>
-            <!-- Agrega contenido del dashboard aquí -->
+        <!-- Footer -->
+        <div class="p-4 border-t border-gray-700 flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0"></div>
+            <div class="transition-all duration-300 overflow-hidden whitespace-nowrap opacity-100 w-auto">
+                <div class="font-medium">Usuario</div>
+                <div class="text-sm text-gray-400">admin@ejemplo.com</div>
+            </div>
         </div>
     </div>
 
-    <!-- JavaScript para los menús desplegables -->
+    <!-- Contenido principal -->
+    <div class="flex-1 p-8">
+        <h2 class="text-2xl font-bold text-gray-800">Contenido Principal</h2>
+        <p class="mt-4 text-gray-600">
+            Selecciona una opción del menú lateral para ver su contenido.
+        </p>
+    </div>
+
     <script>
-        const menu1Button = document.getElementById('menu1-button');
-        const menu1 = document.getElementById('menu1');
+        const menuItems = [
+            { id: 'home', icon: 'Home', text: 'Inicio', href: '#' },
+            {
+                id: 'users', icon: 'Users', text: 'Usuarios', hasSubmenu: true, submenu: [
+                    { icon: 'UserPlus', text: 'Registro', href: '#' },
+                    { icon: 'UserCheck', text: 'Permisos', href: '#' },
+                    { icon: 'Users', text: 'Directorio', href: '#' }
+                ]
+            },
+            {
+                id: 'sales', icon: 'ShoppingCart', text: 'Ventas', hasSubmenu: true, submenu: [
+                    { icon: 'DollarSign', text: 'Transacciones', href: '#' },
+                    { icon: 'Package', text: 'Productos', href: '#' },
+                    { icon: 'ShoppingCart', text: 'Pedidos', href: '#' }
+                ]
+            },
+            {
+                id: 'stats', icon: 'BarChart', text: 'Estadísticas', hasSubmenu: true, submenu: [
+                    { icon: 'TrendingUp', text: 'Tendencias', href: '#' },
+                    { icon: 'PieChart', text: 'Reportes', href: '#' },
+                    { icon: 'BarChart', text: 'Métricas', href: '#' }
+                ]
+            },
+            { id: 'settings', icon: 'Settings', text: 'Configuración', href: '#' },
+            { id: 'help', icon: 'HelpCircle', text: 'Ayuda', href: '#' },
+        ];
 
-        menu1Button.addEventListener('click', () => {
-            menu1.classList.toggle('hidden');
-        });
+        const menuContainer = document.getElementById('menu-container');
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = document.getElementById('toggle-sidebar');
+        const toggleIcon = document.getElementById('toggle-icon');
+        let isExpanded = true;
+        let openSubmenus = [];
 
-        const menu2Button = document.getElementById('menu2-button');
-        const menu2 = document.getElementById('menu2');
+        const renderMenu = () => {
+            menuContainer.innerHTML = '';
+            menuItems.forEach(item => {
+                const menuItem = document.createElement('div');
+                menuItem.className = 'relative';
 
-        menu2Button.addEventListener('click', () => {
-            menu2.classList.toggle('hidden');
-        });
+                const button = document.createElement('button');
+                button.className = 'w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-800 transition-colors';
+                button.onclick = () => {
+                    if (item.hasSubmenu) toggleSubmenu(item.id);
+                };
+
+                const icon = document.createElement('span');
+                icon.innerHTML = `<svg class="icon lucide lucide-${item.icon.toLowerCase()}"><path fill="none" stroke="currentColor" stroke-width="2" d="..."/></svg>`;
+                button.appendChild(icon);
+
+                if (isExpanded) {
+                    const textContainer = document.createElement('div');
+                    textContainer.className = 'flex-1 flex items-center justify-between';
+                    const text = document.createElement('span');
+                    text.textContent = item.text;
+                    textContainer.appendChild(text);
+
+                    if (item.hasSubmenu) {
+                        const chevron = document.createElement('svg');
+                        chevron.className = `icon transition-transform duration-200 ${openSubmenus.includes(item.id) ? 'rotate-180' : ''}`;
+                        chevron.innerHTML = '<path fill="none" stroke="currentColor" stroke-width="2" d="M9 18l6-6-6-6"/>';
+                        textContainer.appendChild(chevron);
+                    }
+
+                    button.appendChild(textContainer);
+                } else {
+                    button.setAttribute('aria-label', item.text);
+                    button.setAttribute('title', item.text);
+                }
+
+                menuItem.appendChild(button);
+                menuContainer.appendChild(menuItem);
+
+                if (item.hasSubmenu && isExpanded) {
+                    const submenuContainer = document.createElement('div');
+                    submenuContainer.className = `overflow-hidden transition-all duration-200 bg-gray-800 ${openSubmenus.includes(item.id) ? 'max-h-48' : 'max-h-0'}`;
+                    item.submenu.forEach(subItem => {
+                        const subLink = document.createElement('a');
+                        subLink.href = subItem.href;
+                        subLink.className = 'flex items-center gap-3 px-4 py-2 pl-12 hover:bg-gray-700 transition-colors text-gray-300 text-sm';
+                        subLink.innerHTML = `<svg class="icon lucide lucide-${subItem.icon.toLowerCase()}"><path fill="none" stroke="currentColor" stroke-width="2" d="..."/></svg><span>${subItem.text}</span>`;
+                        submenuContainer.appendChild(subLink);
+                    });
+                    menuItem.appendChild(submenuContainer);
+                }
+            });
+        };
+        const toggleSubmenu = (id) => {
+            openSubmenus = openSubmenus.includes(id) ? openSubmenus.filter(item => item !== id) : [...openSubmenus, id];
+            renderMenu();
+        };
+
+        toggleButton.onclick = () => {
+            isExpanded = !isExpanded;
+            sidebar.classList.toggle('w-64', isExpanded);
+            sidebar.classList.toggle('w-16', !isExpanded);
+            renderMenu();
+            toggleIcon.innerHTML = isExpanded 
+                ? '<path fill="none" stroke="currentColor" stroke-width="2" d="M9 18l6-6-6-6"/>' 
+                : '<path fill="none" stroke="currentColor" stroke-width="2" d="M9 6l6 6-6 6"/>';
+        };
+
+        renderMenu();
     </script>
 </body>
 </html>
