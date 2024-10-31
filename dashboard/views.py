@@ -10,4 +10,18 @@ def dashboard(request):
 def logout(request):
     auth_logout(request)  # Cerrar la sesión del usuario
     return redirect('login')  # Redirigir al usuario a la página de inicio de sesión
-#--------------------------LOGICA DE LOGIN --------------------------------
+
+
+
+#--------------------------GESTOR PROVEEDORES --------------------------------
+@login_required(login_url='login')
+def mod_proveedor(request):
+    return render(request, 'proveedor/proveedor.html')
+
+@login_required(login_url='login')
+def mod_factura(request):
+    return render(request, 'proveedor/factura.html')
+
+@login_required(login_url='login')
+def mod_envio(request):
+    return render(request, 'proveedor/envio.html')
