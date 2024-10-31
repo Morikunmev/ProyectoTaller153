@@ -1,7 +1,20 @@
 <!--navbar.html-->
+{% load static tailwind_tags %}
+{% tailwind_css %}
+
 <!-- Sidebar con altura fija y overflow -->
 <div class="bg-black h-screen p-5 pt-8 w-20 hover:w-64 transition-all duration-300 flex flex-col group relative"
     onmouseenter="handleMouseEnter()" onmouseleave="hideAllSubmenus()">
+
+    <!-- Logo de la empresa -->
+    <div class="flex justify-center items-center mb-6">
+        <div class="p-2 bg-white rounded-full shadow-lg transform hover:scale-105 transition-all duration-300"
+            style="box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);">
+            <img src="{% static 'images/logo.png' %}" alt="Logo Empresa"
+                class="w-12 h-12 hover:w-14 hover:h-14 transition-all duration-300 rounded-full p-1"
+                style="filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));">
+        </div>
+    </div>
 
     <!-- Título fijo en la parte superior -->
     <h2 class="text-white text-2xl font-bold mb-6 hidden group-hover:block sticky top-0 bg-black z-10">Menú</h2>
@@ -26,19 +39,22 @@
                     </a>
                     <ul id="submenu-proveedor" class="hidden pl-4 space-y-2">
                         <li>
-                            <a href="{% url 'mod_proveedor' %}" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                            <a href="{% url 'mod_proveedor' %}"
+                                class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
                                 <i class="fas fa-user"></i>
                                 <span class="hidden group-hover:inline-block">Proveedor</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'mod_factura' %}" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                            <a href="{% url 'mod_factura' %}"
+                                class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
                                 <i class="fas fa-file-invoice"></i>
                                 <span class="hidden group-hover:inline-block">Factura</span>
                             </a>
                         </li>
                         <li>
-                            <a href="{% url 'mod_envio' %}" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                            <a href="{% url 'mod_envio' %}"
+                                class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
                                 <i class="fas fa-shipping-fast"></i>
                                 <span class="hidden group-hover:inline-block">Envío</span>
                             </a>

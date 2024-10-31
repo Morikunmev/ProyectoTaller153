@@ -135,7 +135,17 @@
 <body>
     <!-- Loader -->
     <div id="loader" class="loader-container">
-        <div class="loader"></div>
+        <div class="flex flex-col items-center justify-center">
+            <!-- Logo -->
+            <img src="{% static 'images/logo.png' %}" 
+                 alt="Logo" 
+                 class="w-32 h-32 mb-4 animate-pulse"
+                 style="animation: pulse 2s infinite;">
+            <!-- Loader -->
+            <div class="loader mb-4"></div>
+            <!-- Texto de carga -->
+            <div class="text-gray-600 font-semibold mt-2">Cargando...</div>
+        </div>
     </div>
 
     <div class="flex">
@@ -157,6 +167,24 @@
             }, 500);
         });
     </script>
+
+    <style>
+        /* Animación de pulso para el logo */
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
 </body>
 
 </html>
