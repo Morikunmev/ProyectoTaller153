@@ -9,17 +9,93 @@
 
     {% tailwind_css %}
 </head>
-<body>
+<body class="bg-gray-100">
     <div class="flex">
-        <div class="bg-dark-purple h-screen p-5 pt-8 w-72 r">
+        <!-- Sidebar -->
+        <div class="bg-purple-900 text-white h-screen p-5 pt-8 w-72 flex flex-col justify-between">
+            <!-- Parte superior del sidebar -->
+            <div>
+                <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
 
+                <ul class="space-y-2">
+                    <!-- Link simple -->
+                    <li>
+                        <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Inicio</a>
+                    </li>
 
+                    <!-- Menú desplegable 1 -->
+                    <li>
+                        <button id="menu1-button" class="w-full flex items-center justify-between text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded focus:outline-none">
+                            <span>Gestión de Usuarios</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <ul id="menu1" class="hidden space-y-2 ml-4 mt-2">
+                            <li>
+                                <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Registrar Usuario</a>
+                            </li>
+                            <li>
+                                <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Listar Usuarios</a>
+                            </li>
+                        </ul>
+                    </li>
 
+                    <!-- Menú desplegable 2 -->
+                    <li>
+                        <button id="menu2-button" class="w-full flex items-center justify-between text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded focus:outline-none">
+                            <span>Reportes</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+                        <ul id="menu2" class="hidden space-y-2 ml-4 mt-2">
+                            <li>
+                                <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Reportes Mensuales</a>
+                            </li>
+                            <li>
+                                <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Reportes Anuales</a>
+                            </li>
+                        </ul>
+                    </li>
 
+                    <!-- Link simple -->
+                    <li>
+                        <a href="#" class="block text-gray-300 hover:bg-purple-700 hover:text-white px-4 py-2 rounded">Configuraciones</a>
+                    </li>
+                </ul>
+            </div>
 
+            <!-- Botón de cerrar sesión abajo -->
+            <div class="mb-4">
+                <a href="{% url 'logout' %}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-700 hover:shadow-lg hover:scale-105 transition duration-300 w-full text-center block">
+                    Cerrar sesión
+                </a>
+            </div>
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="flex-1 p-10">
+            <h2 class="text-3xl font-semibold mb-5">Bienvenido a tu panel</h2>
+            <!-- Agrega contenido del dashboard aquí -->
         </div>
     </div>
-    <a href="{% url 'logout' %}">Cerrar sesión</a>
-    
+
+    <!-- JavaScript para los menús desplegables -->
+    <script>
+        const menu1Button = document.getElementById('menu1-button');
+        const menu1 = document.getElementById('menu1');
+
+        menu1Button.addEventListener('click', () => {
+            menu1.classList.toggle('hidden');
+        });
+
+        const menu2Button = document.getElementById('menu2-button');
+        const menu2 = document.getElementById('menu2');
+
+        menu2Button.addEventListener('click', () => {
+            menu2.classList.toggle('hidden');
+        });
+    </script>
 </body>
 </html>
