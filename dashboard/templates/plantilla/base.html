@@ -1,0 +1,149 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'dashboard/style.css' %}">
+    {% tailwind_css %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <script>
+        // Función para mostrar el submenú
+        function showSubMenu() {
+            const submenu = document.getElementById("submenu-proveedor");
+            submenu.classList.remove("hidden");
+            submenu.classList.add("animate-slide-down");
+        }
+        // Función para ocultar el submenú
+        function hideSubMenu() {
+            const submenu = document.getElementById("submenu-proveedor");
+            submenu.classList.add("hidden");
+        }
+
+        // Evento para mostrar el submenú al hacer clic
+        function toggleSubMenu() {
+            const submenu = document.getElementById("submenu-proveedor");
+            submenu.classList.toggle("hidden");
+            submenu.classList.toggle("animate-slide-down");
+        }
+
+        // Función para bloquear "Cerrar sesión" al expandir la barra
+        function lockLogout() {
+            const logoutLink = document.getElementById("logout-link");
+            logoutLink.classList.add("disabled-link");
+            logoutLink.classList.add("pointer-events-none");  // Deshabilitar clic
+        }
+
+        // Función para desbloquear "Cerrar sesión" cuando termina el despliegue
+        function unlockLogout() {
+            const logoutLink = document.getElementById("logout-link");
+            logoutLink.classList.remove("disabled-link");
+            logoutLink.classList.remove("pointer-events-none");
+        }
+
+        // Escuchar el evento "mouseenter" para bloquear "Cerrar sesión"
+        function handleMouseEnter() {
+            lockLogout();
+            setTimeout(unlockLogout, 300);  // Desbloquear después de la duración del despliegue
+        }
+    </script>
+    <style>
+        /* Animación para el submenú */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide-down {
+            animation: slideDown 0.3s ease-out;
+        }
+
+        /* Estilo para "Cerrar sesión" deshabilitado */
+        .disabled-link {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="flex">
+        <!-- Sidebar -->
+        <div class="bg-black h-screen p-5 pt-8 w-16 hover:w-64 transition-all duration-300 flex flex-col group"
+            onmouseenter="handleMouseEnter()" onmouseleave="hideSubMenu()">
+            <h2 class="text-white text-2xl font-bold mb-10 hidden group-hover:block">Menú</h2>
+            <nav class="flex-1">
+                <!-- Enlaces del navbar -->
+                <ul class="space-y-4">
+                    <li>
+                        <a href="#" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                            <i class="fas fa-home"></i>
+                            <span class="hidden group-hover:inline-block">Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <!-- Enlace Proveedor con submenú -->
+                        <a href="javascript:void(0);" onclick="toggleSubMenu()"
+                            class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                            <i class="fas fa-box"></i>
+                            <span class="hidden group-hover:inline-block">Proveedor</span>
+                        </a>
+                        <!-- Submenú para Proveedor -->
+                        <ul id="submenu-proveedor" class="hidden pl-4 space-y-2">
+                            <li>
+                                <a href="#"
+                                    class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                                    <i class="fas fa-user"></i>
+                                    <span class="hidden group-hover:inline-block">Proveedor</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#"
+                                    class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                                    <i class="fas fa-file-invoice"></i>
+                                    <span class="hidden group-hover:inline-block">Factura</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#"
+                                    class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                                    <i class="fas fa-shipping-fast"></i>
+                                    <span class="hidden group-hover:inline-block">Envío</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+            <!-- Enlace para cerrar sesión en la parte inferior -->
+            <div class="mt-auto">
+                <a href="#" id="logout-link"
+                    class="text-white flex items-center space-x-2 hover:bg-red-500 p-2 rounded-md disabled-link">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="hidden group-hover:inline-block">Cerrar sesión</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Contenido principal -->
+        <div class="flex-1 p-10">
+            <!--Contenido cambiante-->
+            {% block content %}
+
+
+
+            {% endblock %}
+        </div>
+    </div>
+</body>
+
+</html>
