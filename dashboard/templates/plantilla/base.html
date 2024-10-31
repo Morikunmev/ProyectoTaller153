@@ -120,6 +120,7 @@
             0% {
                 transform: rotate(0deg);
             }
+
             100% {
                 transform: rotate(360deg);
             }
@@ -137,16 +138,16 @@
     <div id="loader" class="loader-container">
         <div class="flex flex-col items-center justify-center">
             <!-- Logo -->
-            <img src="{% static 'images/logo.png' %}" 
-                 alt="Logo" 
-                 class="w-32 h-32 mb-4 animate-pulse"
-                 style="animation: pulse 2s infinite;">
+            <img src="{% static 'images/logo.png' %}" alt="Logo" class="w-32 h-32 mb-4 animate-pulse"
+                style="animation: pulse 2s infinite;">
             <!-- Loader -->
             <div class="loader mb-4"></div>
             <!-- Texto de carga -->
             <div class="text-gray-600 font-semibold mt-2">Cargando...</div>
         </div>
     </div>
+
+
 
     <div class="flex">
         {% include 'plantilla/navbar.html' %}
@@ -158,10 +159,10 @@
     </div>
 
     <script>
-        window.addEventListener('load', function() {
+        window.addEventListener('load', function () {
             const loader = document.getElementById('loader');
             loader.classList.add('fade-out');
-            
+
             setTimeout(() => {
                 loader.style.display = 'none';
             }, 500);
@@ -175,10 +176,12 @@
                 opacity: 1;
                 transform: scale(1);
             }
+
             50% {
                 opacity: 0.7;
                 transform: scale(0.95);
             }
+
             100% {
                 opacity: 1;
                 transform: scale(1);
