@@ -1,8 +1,6 @@
 {% extends "plantilla/base.html" %}
 {% load static tailwind_tags %}
 {% block content %}
-<div id="react-envio"></div>
-
-<!-- Cargar React solo en esta página -->
-<script src="{% static 'js/react/dist/envio.bundle.js' %}"></script>
+    <div id="react-envio"></div>
+    <script src="{% static 'js/react/dist/envio.bundle.js' %}"></script>
 {% endblock %}
