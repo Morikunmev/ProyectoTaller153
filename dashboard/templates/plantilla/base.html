@@ -149,12 +149,19 @@
 
 
 
-    <div class="flex">
+
+    <!--el h-screen es clave-->
+    <!-- Layout principal -->
+    <div class="flex h-screen overflow-hidden">
+        <!-- Navbar (se mantiene fijo) -->
         {% include 'plantilla/navbar.html' %}
-        <!-- Contenido principal -->
-        <div class="flex-1 p-10">
-            {% block content %}
-            {% endblock %}
+
+        <!-- Contenedor principal con scroll -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-10">
+                {% block content %}
+                {% endblock %}
+            </div>
         </div>
     </div>
 
