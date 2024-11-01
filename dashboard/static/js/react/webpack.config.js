@@ -28,6 +28,19 @@ module.exports = {
                         plugins: ['@babel/plugin-proposal-class-properties']
                     }
                 }
+            },
+            {
+                test: /\.css$/,                   // Procesar archivos CSS
+                use: [
+                    'style-loader',               // Inyecta los estilos en el DOM
+                    {
+                        loader: 'css-loader',     // Interpreta @import, url() etc.
+                        options: {
+                            importLoaders: 1      // Número de loaders que se aplicarán antes de css-loader
+                        }
+                    },
+                    'postcss-loader'             // Procesa CSS con PostCSS (necesario para Tailwind)
+                ]
             }
         ]
     },
@@ -35,5 +48,8 @@ module.exports = {
     resolve: {
         extensions: ['.js', '.jsx']  // Permite importar archivos sin especificar estas extensiones
     },
-    mode: 'development'  // Modo desarrollo, cambiar a 'production' para producción
+    // Source maps para mejor debugging
+    devtool: 'source-map',
+    // Modo desarrollo, cambiar a 'production' para producción
+    mode: 'development'
 };

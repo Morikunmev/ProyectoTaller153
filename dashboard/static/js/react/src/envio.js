@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import EnvioForm from './components/EnvioForm';
+import './styles/index.css';
+
 
 const container = document.getElementById('react-envio');
 const root = createRoot(container);
