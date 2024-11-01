@@ -1,6 +1,6 @@
 {% extends "plantilla/base.html" %}
 {% load static tailwind_tags %}
 {% block content %}
-    <h1 class="text-3xl font-bold">Seccion de Proveedor</h1>
-    <h2>Contenido de proveedor</h2>
+<div id="react-proveedor"></div>
+    <script src="{% static 'js/react/dist/proveedor.bundle.js' %}"></script>
 {% endblock %}

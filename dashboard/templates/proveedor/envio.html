@@ -1,6 +1,8 @@
 {% extends "plantilla/base.html" %}
 {% load static tailwind_tags %}
 {% block content %}
-    <h1 class="text-3xl font-bold">Seccion de Envio</h1>
-    <h2>Contenido de Envio</h2>
+<div id="react-envio"></div>
+
+<!-- Cargar React solo en esta página -->
+<script src="{% static 'js/react/dist/envio.bundle.js' %}"></script>
 {% endblock %}
