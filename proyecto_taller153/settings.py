@@ -68,9 +68,9 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 NPM_BIN_PATH="C:/Program Files/nodejs/npm.cmd"
 
 MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',  # Primero SecurityMiddleware
+    'whitenoise.middleware.WhiteNoiseMiddleware',    # Luego WhiteNoise
     "django_browser_reload.middleware.BrowserReloadMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",
-    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -142,7 +142,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'  # Cambia 'static/' a '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -153,6 +153,8 @@ STATICFILES_DIRS=[
     os.path.join(BASE_DIR, 'dashboard/static')  # Añade esta línea
 
 ]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 
 # Añade esto en tu proyecto_taller153/settings.py
 CACHE_VERSION = '1.0'
