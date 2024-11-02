@@ -3,5 +3,5 @@
 {% tailwind_css %}
 {% block content %}
     <div id="react-proveedor"></div>
-    <script src="{% static 'js/react/dist/proveedor.bundle.js' %}"></script>
+    <script src="{% static 'js/react/dist/proveedor.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
 {% endblock %}

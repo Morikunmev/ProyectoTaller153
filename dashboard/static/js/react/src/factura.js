@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import FacturaForm from './components/FacturaForm';
+import FacturaForm from './components/FacturaComponents/FacturaForm.jsx';
 import './styles/index.css';
 
 

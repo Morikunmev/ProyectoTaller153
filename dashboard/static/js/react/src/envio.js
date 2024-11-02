@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import EnvioForm from './components/EnvioForm';
+import EnvioForm from './components/EnvioComponents/EnvioForm';
 import './styles/index.css';
 
 

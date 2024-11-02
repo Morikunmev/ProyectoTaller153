@@ -3,5 +3,5 @@
 {% tailwind_css %}
 {% block content %}
     <div id="react-factura"></div>
-    <script src="{% static 'js/react/dist/factura.bundle.js' %}"></script>
+    <script src="{% static 'js/react/dist/factura.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
 {% endblock %}

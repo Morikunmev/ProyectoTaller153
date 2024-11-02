@@ -154,6 +154,9 @@ STATICFILES_DIRS=[
 
 ]
 
+# Añade esto en tu proyecto_taller153/settings.py
+CACHE_VERSION = '1.0'
+
 
 STATIC_ROOT= os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
