@@ -7,6 +7,8 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
+import PaginacionModProveedor from "./PaginacionModProveedor"; // Ajusta la ruta según tu estructura
+
 const ProveedorListar = () => {
   const [proveedores, setProveedores] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,6 +17,8 @@ const ProveedorListar = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [isChangingView, setIsChangingView] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   {
     /*Estado encargado de la animacion para buscar*/
   }
@@ -22,6 +26,7 @@ const ProveedorListar = () => {
   const handleSearch = (value) => {
     setSearchTerm(value);
     setIsSearching(true);
+    setCurrentPage(1); // Resetear a la primera página cuando se busca
     setTimeout(() => {
       setIsSearching(false);
     }, 300);
@@ -69,6 +74,10 @@ const ProveedorListar = () => {
       proveedor.MarcaProveedor,
     ].some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+  const totalPages = Math.ceil(filteredProveedores.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentProveedores = filteredProveedores.slice(startIndex, endIndex);
 
   const renderActionButtons = (proveedor) => (
     <div className="flex space-x-2">
@@ -89,9 +98,21 @@ const ProveedorListar = () => {
     </div>
   );
 
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
   const renderGridView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {filteredProveedores.map((proveedor) => (
+      {currentProveedores.map((proveedor) => (
         <div
           key={proveedor.id}
           className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
@@ -192,7 +213,7 @@ const ProveedorListar = () => {
         </tr>
       </thead>
       <tbody>
-        {filteredProveedores.map((proveedor) => (
+        {currentProveedores.map((proveedor) => (
           <tr
             key={proveedor.id}
             className="border-b last:border-b-0 hover:bg-gray-50"
@@ -316,13 +337,24 @@ const ProveedorListar = () => {
             No se encontraron proveedores
           </div>
         ) : (
-          <div
-            className={`transition-opacity duration-300 ${
-              isChangingView || isSearching ? "opacity-0" : "opacity-100"
-            }`}
-          >
-            {isGridView ? renderGridView() : renderTableView()}
-          </div>
+          <>
+            <div
+              className={`transition-opacity duration-300 ${
+                isChangingView || isSearching ? "opacity-0" : "opacity-100"
+              }`}
+            >
+              {isGridView ? renderGridView() : renderTableView()}
+            </div>
+            <PaginacionModProveedor
+              currentPage={currentPage}
+              totalPages={totalPages}
+              handlePreviousPage={handlePreviousPage}
+              handleNextPage={handleNextPage}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              totalItems={filteredProveedores.length}
+            />
+          </>
         )}
       </div>
     </div>
