@@ -84,20 +84,35 @@ def crear_proveedor(request):
 def listar_proveedores(request):
     if request.method == 'GET':
         try:
-            proveedores = Proveedor.objects.all().values(
-                'id', 'NombreProveedor', 'RutProveedor', 'MarcaProveedor',
-                'CiudadProveedor', 'RegionProveedor', 'PaisProveedor', 
-                'TelefonoProveedor'
-            )
+            proveedores = Proveedor.objects.all()
+            data = []
+            for proveedor in proveedores:
+                data.append({
+                    'id': proveedor.id,
+                    # Campos obligatorios
+                    'NombreProveedor': proveedor.NombreProveedor,
+                    'RutProveedor': proveedor.RutProveedor,
+                    'MarcaProveedor': proveedor.MarcaProveedor,
+                    # Campo de comentario
+                    'ComentarioProveedor': proveedor.ComentarioProveedor or '',
+                    # Campos de ubicación
+                    'CiudadProveedor': proveedor.CiudadProveedor or '',
+                    'RegionProveedor': proveedor.RegionProveedor or '',
+                    'PaisProveedor': proveedor.PaisProveedor or '',
+                    # Campos de contacto y multimedia
+                    'TelefonoProveedor': proveedor.TelefonoProveedor or '',
+                    'FotoProveedor': proveedor.FotoProveedor.url if proveedor.FotoProveedor else None
+                })
             return JsonResponse({
                 'success': True,
-                'proveedores': list(proveedores)
+                'proveedores': data
             })
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'message': str(e)
             }, status=500)
+    return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
 
 
 

@@ -10,6 +10,7 @@ urlpatterns = [
     path('proveedor/', views.mod_proveedor, name='mod_proveedor'),  # Vista principal de proveedores
     #Nuevas URLS para la API
     path('api/proveedor/crear/', views.crear_proveedor, name='crear_proveedor'),
+    
     path('api/proveedor/listar/', views.listar_proveedores, name='listar_proveedores'),
 
     #--------------------RUTA PARA FACTURA--------------------
