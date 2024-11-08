@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const ProveedorForm = () => {
+const ProveedorModal = () => {
   const [formData, setFormData] = useState({
     NombreProveedor: "",
     RutProveedor: "",
@@ -106,7 +106,7 @@ const ProveedorForm = () => {
 
   return (
     <div className="max-w-xl mx-auto p-4">
-      <h2 className="text-lg font-semibold mb-3">Registro de Proveedor</h2>
+      <h2 className="text-lg font-semibold mb-3">Registro de Proveedor MODAL</h2>
       {successMessage && (
         <div className="p-3 mb-4 rounded bg-green-100 text-green-700">
           {successMessage}
@@ -296,4 +296,4 @@ const ProveedorForm = () => {
   );
 };
 
-export default ProveedorForm;
+export default ProveedorModal;
