@@ -2,6 +2,7 @@
 {% load static tailwind_tags %}
 {% tailwind_css %}
 {% block content %}
-    <div id="react-proveedor"></div>
-    <script src="{% static 'js/react/dist/proveedor.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
+{% csrf_token %} <!--nuevo-->
+<div id="react-proveedor"></div>
+<script src="{% static 'js/react/dist/proveedor.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
 {% endblock %}
