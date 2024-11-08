@@ -7,10 +7,11 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-import PaginacionModProveedor from "./PaginacionModProveedor"; // Ajusta la ruta según tu estructura
+import PaginacionModProveedor from "./PaginacionModProveedor";
 import ProveedorModal from "./ProveedorModal";
 
 const ProveedorListar = () => {
+  // Estados principales
   const [proveedores, setProveedores] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
@@ -19,41 +20,72 @@ const ProveedorListar = () => {
   const [isChangingView, setIsChangingView] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  {
-    /*Estado encargado de la animacion para buscar*/
-  }
+  const itemsPerPage = 10;
 
+  // Efecto para cargar datos iniciales
+  useEffect(() => {
+    fetchProveedores();
+    // Limpiar estados al desmontar
+    return () => {
+      setProveedores([]);
+      setLoading(true);
+      setError(null);
+    };
+  }, []);
+
+  // Manejadores del modal
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
+  // Manejador de búsqueda
   const handleSearch = (value) => {
     setSearchTerm(value);
     setIsSearching(true);
-    setCurrentPage(1); // Resetear a la primera página cuando se busca
-    setTimeout(() => {
+    setCurrentPage(1); // Reset a primera página
+
+    // Usar cleanup function en el setTimeout
+    const timer = setTimeout(() => {
       setIsSearching(false);
     }, 300);
+
+    return () => clearTimeout(timer);
   };
 
-  useEffect(() => {
-    fetchProveedores();
-  }, []);
+  const handleViewChange = (isGrid) => {
+    setIsChangingView(true);
 
+    const timer = setTimeout(() => {
+      setIsGridView(isGrid);
+      setIsChangingView(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  };
+
+  // Fetch de datos
   const fetchProveedores = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
       const response = await fetch("/api/proveedor/listar/");
       if (!response.ok) {
         throw new Error(`Error HTTP: ${response.status}`);
       }
-      const data = await response.json();
-      console.log("Datos recibidos:", data);
 
+      const data = await response.json();
       if (data.success) {
         setProveedores(data.proveedores);
       } else {
         throw new Error(data.message || "Error al cargar los proveedores");
       }
-      setError(null);
     } catch (error) {
       console.error("Error al cargar proveedores:", error);
       setError("No se pudieron cargar los proveedores");
@@ -62,14 +94,38 @@ const ProveedorListar = () => {
     }
   };
 
-  const handleViewChange = (isGrid) => {
-    setIsChangingView(true);
-    setTimeout(() => {
-      setIsGridView(isGrid);
-      setIsChangingView(false);
-    }, 300);
+  // Manejador para crear nuevo proveedor
+  const handleProveedorCreated = async (nuevoProveedor) => {
+    try {
+      // Primero actualizar la UI optimisticamente
+      setProveedores((prevProveedores) => [...prevProveedores, nuevoProveedor]);
+
+      // Luego refrescar los datos del servidor
+      await fetchProveedores();
+
+      // Calcular la nueva página usando el length actualizado
+      const newTotalPages = Math.ceil((proveedores.length + 1) / itemsPerPage);
+      setCurrentPage(newTotalPages);
+
+      // Cerrar el modal solo si todo fue exitoso
+      handleCloseModal();
+    } catch (error) {
+      console.error("Error al crear proveedor:", error);
+      // Aquí podrías manejar el error en la UI
+      setError("Error al crear el proveedor");
+    }
   };
 
+  // Manejadores de paginación
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  // Filtrado y paginación
   const filteredProveedores = proveedores.filter((proveedor) =>
     [
       proveedor.NombreProveedor,
@@ -77,11 +133,16 @@ const ProveedorListar = () => {
       proveedor.MarcaProveedor,
     ].some((field) => field?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
   const totalPages = Math.ceil(filteredProveedores.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const endIndex = Math.min(
+    startIndex + itemsPerPage,
+    filteredProveedores.length
+  );
   const currentProveedores = filteredProveedores.slice(startIndex, endIndex);
 
+  // Renderizado de botones de acción
   const renderActionButtons = (proveedor) => (
     <div className="flex space-x-2">
       <button
@@ -101,29 +162,7 @@ const ProveedorListar = () => {
     </div>
   );
 
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
-  const handleProveedorCreated = async (nuevoProveedor) => {
-    // Actualizar la lista de proveedores inmediatamente
-    setProveedores((prevProveedores) => [...prevProveedores, nuevoProveedor]);
-
-    // Opcionalmente, volver a cargar los datos del servidor
-    await fetchProveedores();
-
-    // Asegurarse de que se muestre la última página donde estará el nuevo proveedor
-    const newTotalPages = Math.ceil((proveedores.length + 1) / itemsPerPage);
-    setCurrentPage(newTotalPages);
-  };
-
+  // Renderizado de vistas
   const renderGridView = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {currentProveedores.map((proveedor) => (
@@ -168,7 +207,6 @@ const ProveedorListar = () => {
               <span className="text-sm text-gray-500">RUT:</span>
               <p className="text-gray-700">{proveedor.RutProveedor}</p>
             </div>
-
             <div>
               <span className="text-sm text-gray-500">Ubicación:</span>
               <p className="text-gray-700">
@@ -181,14 +219,12 @@ const ProveedorListar = () => {
                   .join(", ") || "-"}
               </p>
             </div>
-
             <div>
               <span className="text-sm text-gray-500">Teléfono:</span>
               <p className="text-gray-700">
                 {proveedor.TelefonoProveedor || "-"}
               </p>
             </div>
-
             {proveedor.ComentarioProveedor && (
               <div>
                 <span className="text-sm text-gray-500">Comentario:</span>
@@ -294,26 +330,30 @@ const ProveedorListar = () => {
       </tbody>
     </table>
   );
-
   return (
     <div className="max-w-7xl mx-auto p-6">
+      {/* Header: Búsqueda, Vista y Botón Crear */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
+          {/* Barra de búsqueda */}
           <div className="relative w-[300px]">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             <input
               type="text"
               placeholder="Buscar proveedor..."
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
+                       focus:outline-none focus:ring-1 focus:ring-blue-500
+                       transition-colors duration-200"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
 
+          {/* Botones de vista */}
           <div className="flex bg-white border rounded-lg overflow-hidden">
             <button
               onClick={() => handleViewChange(false)}
-              className={`p-2 transition-colors ${
+              className={`p-2 transition-colors duration-200 ${
                 !isGridView
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-500 hover:text-gray-700"
@@ -324,7 +364,7 @@ const ProveedorListar = () => {
             </button>
             <button
               onClick={() => handleViewChange(true)}
-              className={`p-2 transition-colors ${
+              className={`p-2 transition-colors duration-200 ${
                 isGridView
                   ? "bg-gray-100 text-gray-900"
                   : "text-gray-500 hover:text-gray-700"
@@ -336,47 +376,72 @@ const ProveedorListar = () => {
           </div>
         </div>
 
+        {/* Botón Crear Proveedor */}
         <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+          onClick={handleOpenModal}
+          className="group relative bg-black text-white px-4 py-2 rounded-lg 
+                   hover:bg-gray-800 active:bg-gray-900
+                   transition-all duration-200 ease-out 
+                   hover:shadow-lg active:shadow-none
+                   transform active:scale-95"
         >
-          + Crear Proveedor
+          <span className="flex items-center">
+            <span className="inline-block transform transition-transform duration-200 group-hover:translate-x-[-2px]">
+              +
+            </span>
+            <span className="ml-1">Crear Proveedor</span>
+          </span>
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-x-auto">
+      {/* Contenido Principal */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
         {error ? (
-          <div className="text-center p-4 text-red-500">{error}</div>
+          <div className="text-center p-8 text-red-500">
+            <p className="text-lg">{error}</p>
+          </div>
         ) : loading ? (
-          <div className="text-center p-4 text-gray-500">Cargando...</div>
+          <div className="text-center p-8 text-gray-500">
+            <p className="text-lg">Cargando...</p>
+          </div>
         ) : filteredProveedores.length === 0 ? (
-          <div className="text-center p-4 text-gray-500">
-            No se encontraron proveedores
+          <div className="text-center p-8 text-gray-500">
+            <p className="text-lg">No se encontraron proveedores</p>
           </div>
         ) : (
           <>
-            <div
-              className={`transition-opacity duration-300 ${
-                isChangingView || isSearching ? "opacity-0" : "opacity-100"
-              }`}
-            >
-              {isGridView ? renderGridView() : renderTableView()}
+            {/* Vista de Proveedores */}
+            <div className="overflow-x-auto">
+              <div
+                className={`transition-opacity duration-300 ease-in-out
+                  ${
+                    isChangingView || isSearching ? "opacity-0" : "opacity-100"
+                  }`}
+              >
+                {isGridView ? renderGridView() : renderTableView()}
+              </div>
             </div>
-            <PaginacionModProveedor
-              currentPage={currentPage}
-              totalPages={totalPages}
-              handlePreviousPage={handlePreviousPage}
-              handleNextPage={handleNextPage}
-              startIndex={startIndex}
-              endIndex={endIndex}
-              totalItems={filteredProveedores.length}
-            />
+
+            {/* Paginación */}
+            <div className="border-t">
+              <PaginacionModProveedor
+                currentPage={currentPage}
+                totalPages={totalPages}
+                handlePreviousPage={handlePreviousPage}
+                handleNextPage={handleNextPage}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                totalItems={filteredProveedores.length}
+              />
+            </div>
           </>
         )}
       </div>
+
+      {/* Modal de Crear Proveedor */}
       <ProveedorModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         onSubmit={handleProveedorCreated}
       />
     </div>
