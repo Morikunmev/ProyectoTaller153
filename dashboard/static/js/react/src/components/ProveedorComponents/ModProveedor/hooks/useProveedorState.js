@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export const useProveedorState = () => {
   // Estados principales
@@ -11,8 +11,59 @@ export const useProveedorState = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [proveedorToDelete, setProveedorToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const itemsPerPage = 10;
+
+  // Función para manejar la apertura del modal de eliminación
+  const handleDelete = useCallback((proveedor) => {
+    setProveedorToDelete(proveedor);
+    setDeleteModalOpen(true);
+  }, []);
+
+  const handleConfirmDelete = async () => {
+    if (!proveedorToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await fetch(
+        `/api/proveedor/${proveedorToDelete.id}/eliminar/`,
+        {
+          method: "DELETE",
+          headers: {
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+              .value,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Error al eliminar el proveedor");
+      }
+
+      // Si la eliminación fue exitosa
+      if (data.success) {
+        // Actualizar el estado local
+        setProveedores((prevProveedores) =>
+          prevProveedores.filter((p) => p.id !== proveedorToDelete.id)
+        );
+
+        // Cerrar el modal
+        setDeleteModalOpen(false);
+        setProveedorToDelete(null);
+      } else {
+        throw new Error(data.message);
+      }
+    } catch (error) {
+      setError("Error al eliminar el proveedor: " + error.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Fetch de datos
   const fetchProveedores = async () => {
@@ -145,6 +196,9 @@ export const useProveedorState = () => {
     totalPages,
     startIndex,
     endIndex,
+    deleteModalOpen,
+    proveedorToDelete,
+    isDeleting, // Estado de carga durante la eliminación
 
     // Manejadores
     handleOpenModal,
@@ -155,5 +209,11 @@ export const useProveedorState = () => {
     handlePreviousPage,
     handleNextPage,
     fetchProveedores,
+    handleDelete,
+    handleConfirmDelete,
+
+    // Setters
+    setDeleteModalOpen,
+    setProveedorToDelete,
   };
 };

@@ -10,6 +10,8 @@ import {
 import PaginacionModProveedor from "./PaginacionModProveedor";
 import ProveedorModal from "./ProveedorModal";
 import { useProveedorState } from "./hooks/useProveedorState";
+import DeleteConfirmationProveedor from "./DeleteConfirmationProveedor";
+
 const ProveedorListar = () => {
   // Estados principales
   const {
@@ -26,6 +28,15 @@ const ProveedorListar = () => {
     startIndex,
     endIndex,
     filteredProveedores,
+    // Nuevos estados y funciones para el delete
+    deleteModalOpen,
+    proveedorToDelete,
+    isDeleting, // Añadido aquí
+    handleDelete,
+    handleConfirmDelete,
+    setDeleteModalOpen,
+    setProveedorToDelete,
+    // Resto de los estados y funciones
     handleOpenModal,
     handleCloseModal,
     handleSearch,
@@ -39,18 +50,32 @@ const ProveedorListar = () => {
   const renderActionButtons = (proveedor) => (
     <div className="flex space-x-2">
       <button
-        className="p-1.5 text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm"
+        className="p-1.5 text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm
+                   transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
         title="Editar proveedor"
       >
-        <Pencil className="w-4 h-4" />
+        <Pencil className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
         Editar
       </button>
       <button
-        className="p-1.5 text-red-600 hover:text-red-800 flex items-center gap-1 text-sm"
+        onClick={() => handleDelete(proveedor)}
+        className="p-1.5 text-red-600 hover:text-red-800 flex items-center gap-1 text-sm
+                   relative overflow-hidden group transition-all duration-200 ease-in-out 
+                   hover:scale-105 active:scale-95"
         title="Eliminar proveedor"
       >
-        <Trash2 className="w-4 h-4" />
-        Eliminar
+        {/* Efecto de fondo al hover */}
+        <span
+          className="absolute inset-0 bg-red-100 opacity-0 group-hover:opacity-100 
+                       transition-opacity duration-200 rounded-md"
+        ></span>
+
+        {/* Icono y texto con su propia transición */}
+        <Trash2
+          className="w-4 h-4 relative z-10 transition-transform duration-200 
+                          group-hover:scale-110 group-hover:rotate-12"
+        />
+        <span className="relative z-10">Eliminar</span>
       </button>
     </div>
   );
@@ -336,6 +361,16 @@ const ProveedorListar = () => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleProveedorCreated}
+      />
+      <DeleteConfirmationProveedor
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setProveedorToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        proveedorName={proveedorToDelete?.NombreProveedor}
+        isDeleting={isDeleting} // Ya está correctamente pasado
       />
     </div>
   );

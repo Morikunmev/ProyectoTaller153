@@ -8,6 +8,8 @@ from .models import Proveedor
 from django.core.exceptions import ValidationError #Importa ValidationError, que se usa para manejar errores de validacion en los modelos de Django
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db import IntegrityError
+from django.shortcuts import render, redirect, get_object_or_404
+
 
 
 #--------------------------LOGICA DE LOGIN --------------------------------
@@ -165,7 +167,36 @@ def listar_proveedores(request):
             }, status=500)
     return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
 
-
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_proveedor(request, proveedor_id):
+    if request.method == 'DELETE':
+        try:
+            # Intentar obtener el proveedor o devolver 404 si no existe
+            proveedor = get_object_or_404(Proveedor, id=proveedor_id)
+            
+            # Guardar el nombre para incluirlo en la respuesta
+            nombre_proveedor = proveedor.NombreProveedor
+            
+            # Eliminar el proveedor
+            proveedor.delete()
+            
+            # Retornar respuesta exitosa
+            return JsonResponse({
+                'success': True,
+                'message': f'Proveedor {nombre_proveedor} eliminado exitosamente'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al eliminar el proveedor: {str(e)}'
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, status=405)
 
 #--------------------------GESTOR FACTURA --------------------------------
 @login_required(login_url='login')
