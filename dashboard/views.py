@@ -7,6 +7,8 @@ import json #Importa la biblioteca json para trabajar con datos en formato JSON.
 from .models import Proveedor
 from django.core.exceptions import ValidationError #Importa ValidationError, que se usa para manejar errores de validacion en los modelos de Django
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.db import IntegrityError
+
 
 #--------------------------LOGICA DE LOGIN --------------------------------
 @login_required(login_url='login')
@@ -31,10 +33,36 @@ def mod_proveedor(request):
 def crear_proveedor(request):
     if request.method == 'POST':
         try:
-            # Obtenemos los datos del formulario
             data = request.POST
             
-            # Creamos el proveedor sin la foto primero
+            # Verificar si ya existe un proveedor con el mismo nombre
+            if Proveedor.objects.filter(NombreProveedor=data.get('NombreProveedor')).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'NombreProveedor': 'Este nombre de proveedor ya existe'
+                    }
+                }, status=400)
+            
+            # Verificar si ya existe un proveedor con el mismo RUT
+            if Proveedor.objects.filter(RutProveedor=data.get('RutProveedor')).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'RutProveedor': 'Este RUT ya existe'
+                    }
+                }, status=400)
+            
+            # Verificar si ya existe un proveedor con la misma marca
+            if Proveedor.objects.filter(MarcaProveedor=data.get('MarcaProveedor')).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'MarcaProveedor': 'Esta marca ya existe'
+                    }
+                }, status=400)
+            
+            # Si no hay duplicados, crear el proveedor
             nuevo_proveedor = Proveedor(
                 NombreProveedor=data.get('NombreProveedor'),
                 RutProveedor=data.get('RutProveedor'),
@@ -46,37 +74,60 @@ def crear_proveedor(request):
                 TelefonoProveedor=data.get('TelefonoProveedor')
             )
             
-            # Si hay una foto, la subimos a Cloudinary
+            # Manejar la foto si existe
             if 'FotoProveedor' in request.FILES:
                 foto = request.FILES['FotoProveedor']
-                # La foto se subirá automáticamente a Cloudinary gracias al CloudinaryField
                 nuevo_proveedor.FotoProveedor = foto
             
-            # Validamos el modelo
-            nuevo_proveedor.full_clean()
-            # Guardamos el proveedor
+            # Validar el modelo
+            try:
+                nuevo_proveedor.full_clean()
+            except ValidationError as e:
+                # Formatear errores de validación con la misma estructura
+                errores_formateados = {}
+                for campo, errores in e.message_dict.items():
+                    # Convertir lista de errores a un solo string
+                    errores_formateados[campo] = errores[0] if errores else str(errores)
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores_formateados
+                }, status=400)
+            
+            # Guardar el proveedor
             nuevo_proveedor.save()
             
+            # Retornar respuesta exitosa
             return JsonResponse({
                 'success': True,
                 'message': 'Proveedor creado exitosamente',
-                'proveedor_id': nuevo_proveedor.id
+                'proveedor': {
+                    'id': nuevo_proveedor.id,
+                    'NombreProveedor': nuevo_proveedor.NombreProveedor,
+                    'RutProveedor': nuevo_proveedor.RutProveedor,
+                    'MarcaProveedor': nuevo_proveedor.MarcaProveedor,
+                    'ComentarioProveedor': nuevo_proveedor.ComentarioProveedor,
+                    'CiudadProveedor': nuevo_proveedor.CiudadProveedor,
+                    'RegionProveedor': nuevo_proveedor.RegionProveedor,
+                    'PaisProveedor': nuevo_proveedor.PaisProveedor,
+                    'TelefonoProveedor': nuevo_proveedor.TelefonoProveedor,
+                    'FotoProveedor': nuevo_proveedor.FotoProveedor.url if nuevo_proveedor.FotoProveedor else None,
+                }
             })
             
-        except ValidationError as e:
-            return JsonResponse({
-                'success': False,
-                'message': dict(e)
-            }, status=400)
         except Exception as e:
+            # Manejar otros errores inesperados
             return JsonResponse({
                 'success': False,
-                'message': str(e)
+                'errors': {
+                    'general': f'Error al crear el proveedor: {str(e)}'
+                }
             }, status=400)
     
     return JsonResponse({
         'success': False,
-        'message': 'Método no permitido'
+        'errors': {
+            'general': 'Método no permitido'
+        }
     }, status=405)
 
 

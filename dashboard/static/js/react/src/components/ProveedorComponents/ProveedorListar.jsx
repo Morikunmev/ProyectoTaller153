@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import PaginacionModProveedor from "./PaginacionModProveedor"; // Ajusta la ruta según tu estructura
+import ProveedorModal from "./ProveedorModal";
 
 const ProveedorListar = () => {
   const [proveedores, setProveedores] = useState([]);
@@ -19,6 +20,8 @@ const ProveedorListar = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   {
     /*Estado encargado de la animacion para buscar*/
   }
@@ -108,6 +111,17 @@ const ProveedorListar = () => {
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
     }
+  };
+  const handleProveedorCreated = async (nuevoProveedor) => {
+    // Actualizar la lista de proveedores inmediatamente
+    setProveedores((prevProveedores) => [...prevProveedores, nuevoProveedor]);
+
+    // Opcionalmente, volver a cargar los datos del servidor
+    await fetchProveedores();
+
+    // Asegurarse de que se muestre la última página donde estará el nuevo proveedor
+    const newTotalPages = Math.ceil((proveedores.length + 1) / itemsPerPage);
+    setCurrentPage(newTotalPages);
   };
 
   const renderGridView = () => (
@@ -322,7 +336,10 @@ const ProveedorListar = () => {
           </div>
         </div>
 
-        <button className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+        >
           + Crear Proveedor
         </button>
       </div>
@@ -357,6 +374,11 @@ const ProveedorListar = () => {
           </>
         )}
       </div>
+      <ProveedorModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleProveedorCreated}
+      />
     </div>
   );
 };
