@@ -6,11 +6,18 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
     NombreProveedor: "",
     RutProveedor: "",
     MarcaProveedor: "",
+    ComentarioProveedor: "",
+    CiudadProveedor: "",
+    RegionProveedor: "",
+    PaisProveedor: "",
+    TelefonoProveedor: "",
+    FotoProveedor: null,
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -27,6 +34,19 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
     setIsAnimating(false);
     setTimeout(() => {
       onClose();
+      setFormData({
+        NombreProveedor: "",
+        RutProveedor: "",
+        MarcaProveedor: "",
+        ComentarioProveedor: "",
+        CiudadProveedor: "",
+        RegionProveedor: "",
+        PaisProveedor: "",
+        TelefonoProveedor: "",
+        FotoProveedor: null,
+      });
+      setPreviewUrl(null);
+      setErrors({});
     }, 200);
   };
 
@@ -43,8 +63,20 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
     if (!formData.MarcaProveedor || formData.MarcaProveedor.length < 2) {
       newErrors.MarcaProveedor = "La marca debe tener al menos 2 caracteres";
     }
+    if (formData.TelefonoProveedor && formData.TelefonoProveedor.length > 15) {
+      newErrors.TelefonoProveedor =
+        "El teléfono no puede tener más de 15 caracteres";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData((prev) => ({ ...prev, FotoProveedor: file }));
+      setPreviewUrl(URL.createObjectURL(file));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -54,9 +86,11 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
     setIsSubmitting(true);
     try {
       const formDataToSend = new FormData();
-      Object.keys(formData).forEach((key) =>
-        formDataToSend.append(key, formData[key])
-      );
+      Object.keys(formData).forEach((key) => {
+        if (formData[key] !== null && formData[key] !== "") {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
 
       const response = await fetch("/api/proveedor/crear/", {
         method: "POST",
@@ -97,14 +131,15 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
       onClick={handleClose}
     >
       <div
-        className={`bg-white w-full max-w-md rounded-lg shadow-lg
+        className={`bg-white w-full max-w-md rounded-lg shadow-lg my-8 flex flex-col max-h-[calc(100vh-4rem)]
           transition-all duration-200 ease-out
           ${isAnimating ? "scale-100 translate-y-0" : "scale-95 translate-y-4"}
           ${isAnimating ? "opacity-100" : "opacity-0"}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-4">
+        {/* Header fijo */}
+        <div className="p-6 border-b">
+          <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Nuevo Proveedor</h2>
             <button
               onClick={handleClose}
@@ -113,57 +148,190 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
               <X className="h-5 w-5" />
             </button>
           </div>
+        </div>
 
+        {/* Contenido scrolleable */}
+        <div className="p-6 overflow-y-auto flex-1">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {["Nombre", "Rut", "Marca"].map((field) => (
-              <div key={field}>
-                <label className="text-sm font-medium">
-                  {field}*{field === "Rut" && " (XX.XXX.XXX-X)"}
-                </label>
-                <input
-                  type="text"
-                  name={`${field}Proveedor`}
-                  value={formData[`${field}Proveedor`]}
+            {/* Campos obligatorios */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Información Principal</h3>
+              {["Nombre", "Rut", "Marca"].map((field) => (
+                <div key={field}>
+                  <label className="text-sm font-medium">
+                    {field}*{field === "Rut" && " (XX.XXX.XXX-X)"}
+                  </label>
+                  <input
+                    type="text"
+                    name={`${field}Proveedor`}
+                    value={formData[`${field}Proveedor`]}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        [e.target.name]: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  {errors[`${field}Proveedor`] && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors[`${field}Proveedor`]}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Campos opcionales */}
+            <div className="space-y-4">
+              <h3 className="font-medium">Información Adicional</h3>
+
+              {/* Ubicación */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Ciudad</label>
+                  <input
+                    type="text"
+                    name="CiudadProveedor"
+                    value={formData.CiudadProveedor}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        CiudadProveedor: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Región</label>
+                  <input
+                    type="text"
+                    name="RegionProveedor"
+                    value={formData.RegionProveedor}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        RegionProveedor: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">País</label>
+                  <input
+                    type="text"
+                    name="PaisProveedor"
+                    value={formData.PaisProveedor}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        PaisProveedor: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Teléfono</label>
+                  <input
+                    type="tel"
+                    name="TelefonoProveedor"
+                    value={formData.TelefonoProveedor}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        TelefonoProveedor: e.target.value,
+                      }))
+                    }
+                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  {errors.TelefonoProveedor && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {errors.TelefonoProveedor}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Comentario */}
+              <div>
+                <label className="text-sm font-medium">Comentario</label>
+                <textarea
+                  name="ComentarioProveedor"
+                  value={formData.ComentarioProveedor}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      [e.target.name]: e.target.value,
+                      ComentarioProveedor: e.target.value,
                     }))
                   }
+                  rows="3"
                   className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
-                {errors[`${field}Proveedor`] && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {errors[`${field}Proveedor`]}
-                  </p>
-                )}
               </div>
-            ))}
+
+              {/* Foto */}
+              <div>
+                <label className="text-sm font-medium">
+                  Foto del Proveedor
+                </label>
+                <div className="mt-1 flex items-center space-x-4">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="foto-proveedor"
+                  />
+                  <label
+                    htmlFor="foto-proveedor"
+                    className="px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+                  >
+                    Seleccionar imagen
+                  </label>
+                  {previewUrl && (
+                    <img
+                      src={previewUrl}
+                      alt="Vista previa"
+                      className="h-16 w-16 object-cover rounded"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
 
             {errors.general && (
               <div className="p-4 bg-red-50 text-red-600 rounded">
                 {errors.general}
               </div>
             )}
-
-            <div className="flex justify-end gap-2 pt-4">
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="px-4 py-2 border rounded hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition-colors"
-              >
-                {isSubmitting ? "Creando..." : "Crear"}
-              </button>
-            </div>
           </form>
+        </div>
+
+        {/* Footer fijo */}
+        <div className="p-6 border-t">
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={handleClose}
+              disabled={isSubmitting}
+              className="px-4 py-2 border rounded hover:bg-gray-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition-colors"
+            >
+              {isSubmitting ? "Creando..." : "Crear"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
