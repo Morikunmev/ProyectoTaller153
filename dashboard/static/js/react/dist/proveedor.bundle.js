@@ -57,6 +57,20 @@ var ProveedorListar = function ProveedorListar() {
     _useState12 = _slicedToArray(_useState11, 2),
     isChangingView = _useState12[0],
     setIsChangingView = _useState12[1];
+  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(false),
+    _useState14 = _slicedToArray(_useState13, 2),
+    isSearching = _useState14[0],
+    setIsSearching = _useState14[1];
+  {
+    /*Estado encargado de la animacion para buscar*/
+  }
+  var handleSearch = function handleSearch(value) {
+    setSearchTerm(value);
+    setIsSearching(true);
+    setTimeout(function () {
+      setIsSearching(false);
+    }, 300);
+  };
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
     fetchProveedores();
   }, []);
@@ -287,7 +301,7 @@ var ProveedorListar = function ProveedorListar() {
     className: "w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500",
     value: searchTerm,
     onChange: function onChange(e) {
-      return setSearchTerm(e.target.value);
+      return handleSearch(e.target.value);
     }
   })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "flex bg-white border rounded-lg overflow-hidden"
@@ -318,7 +332,7 @@ var ProveedorListar = function ProveedorListar() {
   }, "Cargando...") : filteredProveedores.length === 0 ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "text-center p-4 text-gray-500"
   }, "No se encontraron proveedores") : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "transition-opacity duration-300 ".concat(isChangingView ? "opacity-0" : "opacity-100")
+    className: "transition-opacity duration-300 ".concat(isChangingView || isSearching ? "opacity-0" : "opacity-100")
   }, isGridView ? renderGridView() : renderTableView())));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ProveedorListar);

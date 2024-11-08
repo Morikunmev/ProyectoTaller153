@@ -7,7 +7,6 @@ import {
   Pencil,
   Trash2,
 } from "lucide-react";
-
 const ProveedorListar = () => {
   const [proveedores, setProveedores] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,6 +14,18 @@ const ProveedorListar = () => {
   const [error, setError] = useState(null);
   const [isGridView, setIsGridView] = useState(false);
   const [isChangingView, setIsChangingView] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  {
+    /*Estado encargado de la animacion para buscar*/
+  }
+
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setIsSearching(true);
+    setTimeout(() => {
+      setIsSearching(false);
+    }, 300);
+  };
 
   useEffect(() => {
     fetchProveedores();
@@ -260,7 +271,7 @@ const ProveedorListar = () => {
               placeholder="Buscar proveedor..."
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
 
@@ -307,7 +318,7 @@ const ProveedorListar = () => {
         ) : (
           <div
             className={`transition-opacity duration-300 ${
-              isChangingView ? "opacity-0" : "opacity-100"
+              isChangingView || isSearching ? "opacity-0" : "opacity-100"
             }`}
           >
             {isGridView ? renderGridView() : renderTableView()}
@@ -317,5 +328,4 @@ const ProveedorListar = () => {
     </div>
   );
 };
-
 export default ProveedorListar;
