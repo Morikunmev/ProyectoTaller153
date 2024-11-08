@@ -1,7 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import ProveedorModal from "./components/ProveedorComponents/ProveedorModal";
-import ProveedorListar from "./components/ProveedorComponents/ProveedorListar";
+import ProveedorListar from "./components/ProveedorComponents/ModProveedor/ProveedorListar";
 
 import "./styles/index.css"; // Esta línea debe estar exactamente así
 
