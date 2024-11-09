@@ -11,7 +11,7 @@ import PaginacionModProveedor from "./PaginacionModProveedor";
 import ProveedorCreateModal from "./ProveedorCreateModal";
 import { useProveedorState } from "./hooks/useProveedorState";
 import DeleteConfirmationProveedor from "./DeleteConfirmationProveedor";
-import ProveedorCard from "./ProveedorCard"; // Importamos el nuevo componente
+import ProveedorCard from "./views/ProveedorCard"; // Importamos el nuevo componente
 
 const ProveedorListar = () => {
   // Estados principales

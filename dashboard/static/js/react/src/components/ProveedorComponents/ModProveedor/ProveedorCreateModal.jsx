@@ -1,6 +1,7 @@
 import React from "react";
 import { X } from "lucide-react";
 import { useProveedorCreateModal } from "./hooks/useProveedorCreateModal";
+
 const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const {
     formData,
@@ -14,6 +15,14 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
     handleInputChange,
     handleFileChange,
   } = useProveedorCreateModal({ isOpen, onClose, onSubmit });
+
+  // Función auxiliar para determinar la clase del borde basada en el contenido
+  const getInputBorderClass = (value) => {
+    if (value && value.trim() !== "") {
+      return "border-green-400"; // Verde cuando hay contenido
+    }
+    return "border-gray-300"; // Gris por defecto
+  };
 
   if (!isVisible) return null;
 
@@ -33,10 +42,12 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
         {/* Header */}
         <div className="p-6 border-b">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Nuevo Proveedor</h2>
+            <h2 className="text-xl font-bold w-full text-center">
+              Nuevo Proveedor
+            </h2>
             <button
               onClick={handleClose}
-              className="p-1.5 hover:bg-gray-100 rounded-full transition-colors duration-150"
+              className="p-1.5 hover:bg-gray-100 rounded-full transition-colors duration-150 absolute right-4"
             >
               <X className="h-5 w-5" />
             </button>
@@ -59,7 +70,12 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     name={`${field}Proveedor`}
                     value={formData[`${field}Proveedor`]}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className={`w-full px-3 py-2 border-2 rounded mt-1 
+                              focus:ring-2 focus:ring-blue-500 focus:outline-none
+                              transition-colors duration-200
+                              ${getInputBorderClass(
+                                formData[`${field}Proveedor`]
+                              )}`}
                   />
                   {errors[`${field}Proveedor`] && (
                     <p className="text-sm text-red-500 mt-1">
@@ -83,7 +99,10 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     name="CiudadProveedor"
                     value={formData.CiudadProveedor}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className={`w-full px-3 py-2 border-2 rounded mt-1 
+                              focus:ring-2 focus:ring-blue-500 focus:outline-none
+                              transition-colors duration-200
+                              ${getInputBorderClass(formData.CiudadProveedor)}`}
                   />
                 </div>
                 <div>
@@ -93,7 +112,10 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     name="RegionProveedor"
                     value={formData.RegionProveedor}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className={`w-full px-3 py-2 border-2 rounded mt-1 
+                              focus:ring-2 focus:ring-blue-500 focus:outline-none
+                              transition-colors duration-200
+                              ${getInputBorderClass(formData.RegionProveedor)}`}
                   />
                 </div>
               </div>
@@ -106,7 +128,10 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     name="PaisProveedor"
                     value={formData.PaisProveedor}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className={`w-full px-3 py-2 border-2 rounded mt-1 
+                              focus:ring-2 focus:ring-blue-500 focus:outline-none
+                              transition-colors duration-200
+                              ${getInputBorderClass(formData.PaisProveedor)}`}
                   />
                 </div>
                 <div>
@@ -116,7 +141,12 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     name="TelefonoProveedor"
                     value={formData.TelefonoProveedor}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    className={`w-full px-3 py-2 border-2 rounded mt-1 
+                              focus:ring-2 focus:ring-blue-500 focus:outline-none
+                              transition-colors duration-200
+                              ${getInputBorderClass(
+                                formData.TelefonoProveedor
+                              )}`}
                   />
                   {errors.TelefonoProveedor && (
                     <p className="text-sm text-red-500 mt-1">
@@ -134,13 +164,20 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   value={formData.ComentarioProveedor}
                   onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-3 py-2 border rounded mt-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className={`w-full px-3 py-2 border-2 rounded mt-1 
+                            focus:ring-2 focus:ring-blue-500 focus:outline-none
+                            transition-colors duration-200
+                            ${getInputBorderClass(
+                              formData.ComentarioProveedor
+                            )}`}
                 />
               </div>
 
               {/* Foto */}
               <div>
-                <label className="text-sm font-medium">Foto del Proveedor</label>
+                <label className="text-sm font-medium">
+                  Foto del Proveedor
+                </label>
                 <div className="mt-1 flex items-center space-x-4">
                   <input
                     type="file"
@@ -177,21 +214,24 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
 
         {/* Footer */}
         <div className="p-6 border-t">
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-center space-x-16">
             <button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-4 py-2 border rounded hover:bg-gray-50 
-                       transition-colors duration-150"
+              className="px-8 py-2.5 border-2 border-gray-200 rounded-lg font-medium
+                       hover:bg-gray-50 hover:border-gray-300
+                       transition-all duration-150 w-36
+                       disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-black text-white rounded 
-                       hover:bg-gray-800 transition-colors duration-150
+              className="px-8 py-2.5 bg-black text-white rounded-lg font-medium
+                       hover:bg-gray-800 shadow-sm hover:shadow
+                       transition-all duration-150 w-36
                        disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Creando..." : "Crear"}
