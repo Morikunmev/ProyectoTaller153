@@ -8,10 +8,11 @@ import {
   Trash2,
 } from "lucide-react";
 import PaginacionModProveedor from "./PaginacionModProveedor";
-import ProveedorModal from "./ProveedorModal";
+import ProveedorCreateModal from "./ProveedorCreateModal";
 import { useProveedorState } from "./hooks/useProveedorState";
 import DeleteConfirmationProveedor from "./DeleteConfirmationProveedor";
-import ProveedorCard from "./ProveedorCard";
+import ProveedorCard from "./ProveedorCard"; // Importamos el nuevo componente
+
 const ProveedorListar = () => {
   // Estados principales
   const {
@@ -64,13 +65,10 @@ const ProveedorListar = () => {
                    hover:scale-105 active:scale-95"
         title="Eliminar proveedor"
       >
-        {/* Efecto de fondo al hover */}
         <span
           className="absolute inset-0 bg-red-100 opacity-0 group-hover:opacity-100 
                        transition-opacity duration-200 rounded-md"
         ></span>
-
-        {/* Icono y texto con su propia transición */}
         <Trash2
           className="w-4 h-4 relative z-10 transition-transform duration-200 
                           group-hover:scale-110 group-hover:rotate-12"
@@ -82,9 +80,14 @@ const ProveedorListar = () => {
 
   // Renderizado de vistas
   const renderGridView = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
       {currentProveedores.map((proveedor) => (
-        <ProveedorCard key={proveedor.id} proveedor={proveedor} />
+        <ProveedorCard
+          key={proveedor.id}
+          proveedor={proveedor}
+          onEdit={() => handleUpdateModalOpen(proveedor)}
+          onDelete={() => handleDelete(proveedor)}
+        />
       ))}
     </div>
   );
@@ -282,7 +285,7 @@ const ProveedorListar = () => {
       </div>
 
       {/* Modal de Crear Proveedor */}
-      <ProveedorModal
+      <ProveedorCreateModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleProveedorCreated}
@@ -295,7 +298,7 @@ const ProveedorListar = () => {
         }}
         onConfirm={handleConfirmDelete}
         proveedorName={proveedorToDelete?.NombreProveedor}
-        isDeleting={isDeleting} // Ya está correctamente pasado
+        isDeleting={isDeleting}
       />
     </div>
   );

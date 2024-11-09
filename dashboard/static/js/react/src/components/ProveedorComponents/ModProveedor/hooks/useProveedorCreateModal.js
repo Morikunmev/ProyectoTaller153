@@ -1,7 +1,7 @@
 // useProveedorModal.js
 import { useState, useEffect } from "react";
 
-export const useProveedorModal = ({ isOpen, onClose, onSubmit }) => {
+export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
   // Form Data State
   const [formData, setFormData] = useState({
     NombreProveedor: "",

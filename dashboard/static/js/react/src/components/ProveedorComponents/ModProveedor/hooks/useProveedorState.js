@@ -2,18 +2,30 @@ import { useState, useEffect, useCallback } from "react";
 
 export const useProveedorState = () => {
   // Estados principales
-  const [proveedores, setProveedores] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isGridView, setIsGridView] = useState(false);
-  const [isChangingView, setIsChangingView] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [proveedorToDelete, setProveedorToDelete] = useState(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Estados para el manejo de datos principales
+  const [proveedores, setProveedores] = useState([]); // Almacena la lista principal de proveedores obtenida del servidor
+  const [searchTerm, setSearchTerm] = useState(""); // Almacena el texto que el usuario escribe en la barra de búsqueda
+
+  // Estados para el manejo de carga y errores
+  const [loading, setLoading] = useState(true); // Indica si se están cargando datos del servidor (true durante la carga, false cuando termina)
+  const [error, setError] = useState(null); // Almacena mensajes de error si algo falla (null cuando no hay errores)
+
+  // Estados para el control de la vista y animaciones
+  const [isGridView, setIsGridView] = useState(false); // Controla el tipo de vista: true para cuadrícula (grid), false para tabla
+  const [isChangingView, setIsChangingView] = useState(false); // Indica si se está cambiando entre vistas (para manejar animaciones de transición)
+  const [isSearching, setIsSearching] = useState(false); // Indica si se está realizando una búsqueda (para mostrar estados de carga en la búsqueda)
+
+  // Estados para la paginación
+  const [currentPage, setCurrentPage] = useState(1); // Controla la página actual que se está mostrando en la paginación
+
+  // Estados para el manejo de modales
+  const [isModalOpen, setIsModalOpen] = useState(false); // Controla la visibilidad del modal para crear nuevo proveedor
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false); // Controla la visibilidad del modal de confirmación de eliminación
+
+  // Estados para el proceso de eliminación
+  const [proveedorToDelete, setProveedorToDelete] = useState(null); // Almacena el proveedor que se ha seleccionado para eliminar
+  const [isDeleting, setIsDeleting] = useState(false); // Indica si se está procesando una eliminación (para mostrar estados de carga durante el borrado)
 
   const itemsPerPage = 10;
 

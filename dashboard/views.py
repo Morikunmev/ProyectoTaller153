@@ -79,7 +79,8 @@ def crear_proveedor(request):
                 CiudadProveedor=data.get('CiudadProveedor'),
                 RegionProveedor=data.get('RegionProveedor'),
                 PaisProveedor=data.get('PaisProveedor'),
-                TelefonoProveedor=data.get('TelefonoProveedor')
+                TelefonoProveedor=data.get('TelefonoProveedor'),
+                EstadoProveedor=True  # Por defecto, el proveedor se crea activo
             )
             
             # Manejar la foto si existe
@@ -91,10 +92,8 @@ def crear_proveedor(request):
             try:
                 nuevo_proveedor.full_clean()
             except ValidationError as e:
-                # Formatear errores de validación con la misma estructura
                 errores_formateados = {}
                 for campo, errores in e.message_dict.items():
-                    # Convertir lista de errores a un solo string
                     errores_formateados[campo] = errores[0] if errores else str(errores)
                 return JsonResponse({
                     'success': False,
@@ -104,7 +103,7 @@ def crear_proveedor(request):
             # Guardar el proveedor
             nuevo_proveedor.save()
             
-            # Retornar respuesta exitosa
+            # Retornar respuesta exitosa con los campos adicionales
             return JsonResponse({
                 'success': True,
                 'message': 'Proveedor creado exitosamente',
@@ -119,11 +118,14 @@ def crear_proveedor(request):
                     'PaisProveedor': nuevo_proveedor.PaisProveedor,
                     'TelefonoProveedor': nuevo_proveedor.TelefonoProveedor,
                     'FotoProveedor': nuevo_proveedor.FotoProveedor.url if nuevo_proveedor.FotoProveedor else None,
+                    # Nuevos campos de auditoría
+                    'FechaCreacionProveedor': nuevo_proveedor.FechaCreacionProveedor.isoformat() if nuevo_proveedor.FechaCreacionProveedor else None,
+                    'FechaModificacionProveedor': nuevo_proveedor.FechaModificacionProveedor.isoformat() if nuevo_proveedor.FechaModificacionProveedor else None,
+                    'EstadoProveedor': nuevo_proveedor.EstadoProveedor
                 }
             })
             
         except Exception as e:
-            # Manejar otros errores inesperados
             return JsonResponse({
                 'success': False,
                 'errors': {
@@ -160,7 +162,11 @@ def listar_proveedores(request):
                     'PaisProveedor': proveedor.PaisProveedor or '',
                     # Campos de contacto y multimedia
                     'TelefonoProveedor': proveedor.TelefonoProveedor or '',
-                    'FotoProveedor': proveedor.FotoProveedor.url if proveedor.FotoProveedor else None
+                    'FotoProveedor': proveedor.FotoProveedor.url if proveedor.FotoProveedor else None,
+                    # Campos de auditoría
+                    'FechaCreacionProveedor': proveedor.FechaCreacionProveedor.isoformat() if proveedor.FechaCreacionProveedor else None,
+                    'FechaModificacionProveedor': proveedor.FechaModificacionProveedor.isoformat() if proveedor.FechaModificacionProveedor else None,
+                    'EstadoProveedor': proveedor.EstadoProveedor
                 })
             return JsonResponse({
                 'success': True,
@@ -172,7 +178,6 @@ def listar_proveedores(request):
                 'message': str(e)
             }, status=500)
     return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
-
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def eliminar_proveedor(request, proveedor_id):

@@ -1,7 +1,7 @@
 import React from "react";
 import { X } from "lucide-react";
-import { useProveedorModal } from "./hooks/useProveedorModal";
-const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
+import { useProveedorCreateModal } from "./hooks/useProveedorCreateModal";
+const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const {
     formData,
     errors,
@@ -13,7 +13,7 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
     handleSubmit,
     handleInputChange,
     handleFileChange,
-  } = useProveedorModal({ isOpen, onClose, onSubmit });
+  } = useProveedorCreateModal({ isOpen, onClose, onSubmit });
 
   if (!isVisible) return null;
 
@@ -203,4 +203,4 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
   );
 };
 
-export default ProveedorModal;
+export default ProveedorCreateModal;
