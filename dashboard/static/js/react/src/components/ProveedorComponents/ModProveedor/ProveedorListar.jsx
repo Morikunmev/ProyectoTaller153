@@ -11,6 +11,7 @@ import PaginacionModProveedor from "./PaginacionModProveedor";
 import ProveedorModal from "./ProveedorModal";
 import { useProveedorState } from "./hooks/useProveedorState";
 import DeleteConfirmationProveedor from "./DeleteConfirmationProveedor";
+import ProveedorCard from "./ProveedorCard";
 const ProveedorListar = () => {
   // Estados principales
   const {
@@ -81,84 +82,9 @@ const ProveedorListar = () => {
 
   // Renderizado de vistas
   const renderGridView = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
       {currentProveedores.map((proveedor) => (
-        <div
-          key={proveedor.id}
-          className="bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow"
-        >
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-              {proveedor.FotoProveedor ? (
-                <>
-                  <img
-                    src={proveedor.FotoProveedor}
-                    alt={`Foto de ${proveedor.NombreProveedor}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.style.display = "none";
-                      e.target.nextSibling.style.display = "flex";
-                    }}
-                  />
-                  <div className="hidden w-full h-full items-center justify-center">
-                    <UserCircle className="w-10 h-10 text-gray-400" />
-                  </div>
-                </>
-              ) : (
-                <UserCircle className="w-10 h-10 text-gray-400" />
-              )}
-            </div>
-            <div>
-              <h3 className="font-medium text-lg">
-                {proveedor.NombreProveedor}
-              </h3>
-              <p className="text-gray-600 text-sm">
-                {proveedor.MarcaProveedor}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div>
-              <span className="text-sm text-gray-500">RUT:</span>
-              <p className="text-gray-700">{proveedor.RutProveedor}</p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Ubicación:</span>
-              <p className="text-gray-700">
-                {[
-                  proveedor.CiudadProveedor,
-                  proveedor.RegionProveedor,
-                  proveedor.PaisProveedor,
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "-"}
-              </p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Teléfono:</span>
-              <p className="text-gray-700">
-                {proveedor.TelefonoProveedor || "-"}
-              </p>
-            </div>
-            {proveedor.ComentarioProveedor && (
-              <div>
-                <span className="text-sm text-gray-500">Comentario:</span>
-                <p
-                  className="text-gray-700 truncate"
-                  title={proveedor.ComentarioProveedor}
-                >
-                  {proveedor.ComentarioProveedor}
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex justify-center">
-            {renderActionButtons(proveedor)}
-          </div>
-        </div>
+        <ProveedorCard key={proveedor.id} proveedor={proveedor} />
       ))}
     </div>
   );
