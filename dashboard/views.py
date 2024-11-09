@@ -9,6 +9,12 @@ from django.core.exceptions import ValidationError #Importa ValidationError, que
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db import IntegrityError
 from django.shortcuts import render, redirect, get_object_or_404
+import cloudinary
+import cloudinary.uploader
+from cloudinary_storage.storage import MediaCloudinaryStorage
+import os
+
+
 
 
 
@@ -172,19 +178,51 @@ def listar_proveedores(request):
 def eliminar_proveedor(request, proveedor_id):
     if request.method == 'DELETE':
         try:
-            # Intentar obtener el proveedor o devolver 404 si no existe
+            # Obtener el proveedor
             proveedor = get_object_or_404(Proveedor, id=proveedor_id)
             
-            # Guardar el nombre para incluirlo en la respuesta
+            # Guardar el nombre para la respuesta
             nombre_proveedor = proveedor.NombreProveedor
+            
+            # Si existe una foto, eliminarla de Cloudinary
+            if proveedor.FotoProveedor:
+                try:
+                    # Obtener la URL de la imagen
+                    url = proveedor.FotoProveedor.url
+                    
+                    # Extraer el public_id del formato "proveedores/xxxxxx"
+                    # La URL será algo como: https://res.cloudinary.com/tu-cloud/image/upload/v1234567/proveedores/xxxxxx
+                    parts = url.split('/')
+                    # Obtener las dos últimas partes para formar "proveedores/xxxxxx"
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    print(f"Intentando eliminar imagen con public_id: {public_id}")
+                    
+                    # Configurar Cloudinary
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    # Eliminar la imagen especificando el tipo y resource_type
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload"
+                    )
+                    print(f"Resultado de eliminación Cloudinary: {result}")
+                    
+                except Exception as cloud_error:
+                    print(f"Error al eliminar imagen de Cloudinary: {str(cloud_error)}")
+                    print(f"URL de la imagen: {proveedor.FotoProveedor.url}")
             
             # Eliminar el proveedor
             proveedor.delete()
             
-            # Retornar respuesta exitosa
             return JsonResponse({
                 'success': True,
-                'message': f'Proveedor {nombre_proveedor} eliminado exitosamente'
+                'message': f'Proveedor {nombre_proveedor} y sus archivos asociados fueron eliminados exitosamente'
             })
             
         except Exception as e:
@@ -197,7 +235,6 @@ def eliminar_proveedor(request, proveedor_id):
         'success': False,
         'message': 'Método no permitido'
     }, status=405)
-
 #--------------------------GESTOR FACTURA --------------------------------
 @login_required(login_url='login')
 def mod_factura(request):
