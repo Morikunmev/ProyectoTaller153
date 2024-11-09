@@ -22,10 +22,12 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
-      requestAnimationFrame(() => setIsAnimating(true));
+      // Pequeño retraso para asegurar que la transición sea suave
+      setTimeout(() => setIsAnimating(true), 5);
     } else {
       setIsAnimating(false);
-      const timer = setTimeout(() => setIsVisible(false), 200);
+      // Aumentamos el tiempo para que coincida con la duración de la transición
+      const timer = setTimeout(() => setIsVisible(false), 10);
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
@@ -47,7 +49,7 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
       });
       setPreviewUrl(null);
       setErrors({});
-    }, 200);
+    }, 10);
   };
 
   const validateForm = () => {
@@ -121,7 +123,7 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center
-        transition-all duration-200 ease-out
+        transition-all duration-300 ease-in-out
         ${
           isAnimating
             ? "bg-black/50 backdrop-blur-sm"
@@ -131,19 +133,24 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
       onClick={handleClose}
     >
       <div
-        className={`bg-white w-full max-w-md rounded-lg shadow-lg my-8 flex flex-col max-h-[calc(100vh-4rem)]
-          transition-all duration-200 ease-out
-          ${isAnimating ? "scale-100 translate-y-0" : "scale-95 translate-y-4"}
+        className={`bg-white w-full max-w-md rounded-lg shadow-xl my-8 flex flex-col max-h-[calc(100vh-4rem)]
+          transition-all duration-300 ease-in-out
+          ${isAnimating ? "scale-100 translate-y-0" : "scale-95 translate-y-8"}
           ${isAnimating ? "opacity-100" : "opacity-0"}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header fijo */}
-        <div className="p-6 border-b">
+        <div
+          className={`p-6 border-b transition-transform duration-300 ${
+            isAnimating ? "translate-y-0" : "translate-y-2"
+          }`}
+        >
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">Nuevo Proveedor</h2>
             <button
               onClick={handleClose}
-              className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-1.5 hover:bg-gray-100 rounded-full transition-all duration-200
+                       hover:rotate-90 transform active:scale-95"
             >
               <X className="h-5 w-5" />
             </button>
@@ -151,7 +158,14 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
         </div>
 
         {/* Contenido scrolleable */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div
+          className={`p-6 overflow-y-auto flex-1 transition-all duration-300 delay-100
+          ${
+            isAnimating
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-4"
+          }`}
+        >
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Campos obligatorios */}
             <div className="space-y-4">
@@ -290,7 +304,8 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
                   />
                   <label
                     htmlFor="foto-proveedor"
-                    className="px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+                    className="px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 
+                             transition-all duration-200 hover:shadow-md active:scale-95"
                   >
                     Seleccionar imagen
                   </label>
@@ -298,7 +313,7 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
                     <img
                       src={previewUrl}
                       alt="Vista previa"
-                      className="h-16 w-16 object-cover rounded"
+                      className="h-16 w-16 object-cover rounded transition-all duration-200"
                     />
                   )}
                 </div>
@@ -314,20 +329,32 @@ const ProveedorModal = ({ isOpen, onClose, onSubmit }) => {
         </div>
 
         {/* Footer fijo */}
-        <div className="p-6 border-t">
+        <div
+          className={`p-6 border-t transition-all duration-300 delay-150
+          ${
+            isAnimating
+              ? "opacity-100 translate-y-0"
+              : "opacity-0 translate-y-4"
+          }`}
+        >
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={handleClose}
               disabled={isSubmitting}
-              className="px-4 py-2 border rounded hover:bg-gray-50 transition-colors"
+              className="px-4 py-2 border rounded hover:bg-gray-50 
+                       transition-all duration-200 ease-in-out
+                       hover:shadow-md active:scale-95"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition-colors"
+              className="px-4 py-2 bg-black text-white rounded 
+                       hover:bg-gray-800 transition-all duration-200 
+                       ease-in-out hover:shadow-md active:scale-95
+                       disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Creando..." : "Crear"}
             </button>
