@@ -1,8 +1,12 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import EnvioForm from "./components/EnvioComponents/EnvioForm";
+import EnvioListar from "./components/ProveedorComponents/ModEnvio/EnvioListar";
 import "./styles/index.css";
 
 const container = document.getElementById("react-envio");
 const root = createRoot(container);
-root.render(<EnvioForm />);
+root.render(
+  <>
+    <EnvioListar />
+  </>
+);

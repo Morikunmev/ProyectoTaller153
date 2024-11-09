@@ -1,6 +1,6 @@
 import React from "react";
 
-const FacturaForm = () => {
+const FacturaListar = () => {
   const envios = [
     {
       destino: "Lima",
@@ -47,4 +47,4 @@ const FacturaForm = () => {
   );
 };
 
-export default FacturaForm;
+export default FacturaListar;

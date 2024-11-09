@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const EnvioForm = () => {
+const EnvioListar = () => {
   const [formData, setFormData] = useState({
     destino: "",
     fecha: "",
@@ -88,4 +88,4 @@ const EnvioForm = () => {
   );
 };
 
-export default EnvioForm;
+export default EnvioListar;

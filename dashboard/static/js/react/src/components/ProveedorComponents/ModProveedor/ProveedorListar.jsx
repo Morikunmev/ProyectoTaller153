@@ -11,7 +11,6 @@ import PaginacionModProveedor from "./PaginacionModProveedor";
 import ProveedorModal from "./ProveedorModal";
 import { useProveedorState } from "./hooks/useProveedorState";
 import DeleteConfirmationProveedor from "./DeleteConfirmationProveedor";
-
 const ProveedorListar = () => {
   // Estados principales
   const {
@@ -31,7 +30,7 @@ const ProveedorListar = () => {
     // Nuevos estados y funciones para el delete
     deleteModalOpen,
     proveedorToDelete,
-    isDeleting, // Añadido aquí
+    isDeleting,
     handleDelete,
     handleConfirmDelete,
     setDeleteModalOpen,
