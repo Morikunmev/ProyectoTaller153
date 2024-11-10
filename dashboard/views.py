@@ -240,6 +240,128 @@ def eliminar_proveedor(request, proveedor_id):
         'success': False,
         'message': 'Método no permitido'
     }, status=405)
+    
+    
+    
+    
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_proveedor(request, proveedor_id):
+    if request.method == 'PUT' or request.method == 'POST':
+        try:
+            proveedor = get_object_or_404(Proveedor, id=proveedor_id)
+            data = request.POST
+            
+            # ... (verificación de campos únicos) ...
+
+            # Manejar la actualización de la foto
+            if 'FotoProveedor' in request.FILES:
+                try:
+                    # Guardar la referencia de la foto actual
+                    foto_anterior = None
+                    if proveedor.FotoProveedor:
+                        foto_anterior = proveedor.FotoProveedor
+                        
+                    # Asignar la nueva foto
+                    proveedor.FotoProveedor = request.FILES['FotoProveedor']
+                    
+                    # Guardar el proveedor con la nueva foto
+                    proveedor.save()
+                    
+                    # Una vez confirmado que se guardó la nueva foto, eliminar la anterior
+                    if foto_anterior:
+                        try:
+                            # Obtener el public_id de la foto anterior
+                            url = foto_anterior.url
+                            parts = url.split('/')
+                            public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                            
+                            # Configurar Cloudinary
+                            cloudinary.config(
+                                cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                                api_key=os.getenv('CLOUDINARY_API_KEY'),
+                                api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                            )
+                            
+                            # Eliminar la imagen anterior
+                            result = cloudinary.uploader.destroy(
+                                public_id,
+                                resource_type="image",
+                                type="upload",
+                                invalidate=True
+                            )
+                            print(f"Resultado de eliminación Cloudinary: {result}")
+                            
+                        except Exception as cloud_error:
+                            print(f"Error al eliminar imagen anterior de Cloudinary: {str(cloud_error)}")
+                            # No lanzamos el error para que no afecte la actualización
+                
+                except Exception as e:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoProveedor': f'Error al actualizar la foto: {str(e)}'
+                        }
+                    }, status=400)
+            else:
+                # Si no hay nueva foto, actualizar los demás campos
+                proveedor.NombreProveedor = data.get('NombreProveedor')
+                proveedor.RutProveedor = data.get('RutProveedor')
+                proveedor.MarcaProveedor = data.get('MarcaProveedor')
+                proveedor.ComentarioProveedor = data.get('ComentarioProveedor')
+                proveedor.CiudadProveedor = data.get('CiudadProveedor')
+                proveedor.RegionProveedor = data.get('RegionProveedor')
+                proveedor.PaisProveedor = data.get('PaisProveedor')
+                proveedor.TelefonoProveedor = data.get('TelefonoProveedor')
+                
+                # Validar y guardar
+                try:
+                    proveedor.full_clean()
+                    proveedor.save()
+                except ValidationError as e:
+                    errores_formateados = {}
+                    for campo, errores in e.message_dict.items():
+                        errores_formateados[campo] = errores[0] if errores else str(errores)
+                    return JsonResponse({
+                        'success': False,
+                        'errors': errores_formateados
+                    }, status=400)
+
+            # Devolver respuesta exitosa
+            return JsonResponse({
+                'success': True,
+                'message': 'Proveedor actualizado exitosamente',
+                'proveedor': {
+                    'id': proveedor.id,
+                    'NombreProveedor': proveedor.NombreProveedor,
+                    'RutProveedor': proveedor.RutProveedor,
+                    'MarcaProveedor': proveedor.MarcaProveedor,
+                    'ComentarioProveedor': proveedor.ComentarioProveedor,
+                    'CiudadProveedor': proveedor.CiudadProveedor,
+                    'RegionProveedor': proveedor.RegionProveedor,
+                    'PaisProveedor': proveedor.PaisProveedor,
+                    'TelefonoProveedor': proveedor.TelefonoProveedor,
+                    'FotoProveedor': proveedor.FotoProveedor.url if proveedor.FotoProveedor else None,
+                    'FechaCreacionProveedor': proveedor.FechaCreacionProveedor.isoformat(),
+                    'FechaModificacionProveedor': proveedor.FechaModificacionProveedor.isoformat(),
+                    'EstadoProveedor': proveedor.EstadoProveedor
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'general': f'Error al actualizar el proveedor: {str(e)}'
+                }
+            }, status=400)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {
+            'general': 'Método no permitido'
+        }
+    }, status=405)
 #--------------------------GESTOR FACTURA --------------------------------
 @login_required(login_url='login')
 def mod_factura(request):

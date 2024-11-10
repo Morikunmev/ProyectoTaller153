@@ -1,6 +1,6 @@
 import React from "react";
 
-const DeleteConfirmationProveedor = ({
+const ProveedorDeleteModal = ({
   isOpen,
   onClose,
   onConfirm,
@@ -37,12 +37,12 @@ const DeleteConfirmationProveedor = ({
           Esta acción no se puede deshacer.
         </p>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex justify-center gap-4 px-4">
           <button
             onClick={onClose}
             disabled={isDeleting}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 
-                     transition-colors duration-200 disabled:opacity-50"
+            className="w-full px-6 py-2.5 text-gray-900 bg-white border border-gray-300 rounded-lg 
+                     hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -50,10 +50,9 @@ const DeleteConfirmationProveedor = ({
           <button
             onClick={onConfirm}
             disabled={isDeleting}
-            className="px-4 py-2 text-white bg-red-600 rounded-lg
+            className="w-full px-6 py-2.5 text-white bg-red-600 rounded-lg
                      hover:bg-red-700 transition-all duration-200 
-                     disabled:opacity-50 disabled:cursor-not-allowed
-                     transform active:scale-95"
+                     disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isDeleting ? "Eliminando..." : "Eliminar"}
           </button>
@@ -63,4 +62,4 @@ const DeleteConfirmationProveedor = ({
   );
 };
 
-export default DeleteConfirmationProveedor;
+export default ProveedorDeleteModal;

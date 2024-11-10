@@ -22,17 +22,17 @@ export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  // Handle modal visibility
+  // // Efecto que maneja la visibilidad del modal
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
-      setTimeout(() => setIsAnimating(true), 1);
+      setTimeout(() => setIsAnimating(true), 1);  // Inicia la animación
     } else {
       setIsAnimating(false);
       const timer = setTimeout(() => setIsVisible(false), 150);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen]); // Se ejecuta cuando isOpen cambia
 
   // Form validation
   const validateForm = () => {
@@ -61,6 +61,7 @@ export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
     setIsAnimating(false);
     setTimeout(() => {
       onClose();
+      //Es una funcion que viene como prop desde el componente padre
       setFormData({
         NombreProveedor: "",
         RutProveedor: "",
@@ -100,6 +101,7 @@ export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
     e?.preventDefault();
     if (!validateForm()) return;
 
+    //Se activa el estado que indica que el formulario se esta enviando, util para mostrar loading o deshabilitar el boton de envio
     setIsSubmitting(true);
     try {
       const formDataToSend = new FormData();

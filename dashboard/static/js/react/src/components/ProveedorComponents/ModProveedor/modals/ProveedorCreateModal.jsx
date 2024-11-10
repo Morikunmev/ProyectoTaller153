@@ -1,6 +1,6 @@
 import React from "react";
 import { X } from "lucide-react";
-import { useProveedorCreateModal } from "./hooks/useProveedorCreateModal";
+import { useProveedorCreateModal } from "../hooks/useProveedorCreateModal";
 
 const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const {
@@ -24,7 +24,7 @@ const ProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
     return "border-gray-300"; // Gris por defecto
   };
 
-  if (!isVisible) return null;
+  if (!isVisible) return null; // Si no es visible, no renderiza nada
 
   return (
     <div

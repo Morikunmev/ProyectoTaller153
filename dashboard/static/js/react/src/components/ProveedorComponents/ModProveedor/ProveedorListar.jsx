@@ -8,10 +8,11 @@ import {
   Trash2,
 } from "lucide-react";
 import PaginacionModProveedor from "./PaginacionModProveedor";
-import ProveedorCreateModal from "./ProveedorCreateModal";
+import ProveedorCreateModal from "./modals/ProveedorCreateModal";
 import { useProveedorState } from "./hooks/useProveedorState";
-import DeleteConfirmationProveedor from "./DeleteConfirmationProveedor";
-import ProveedorCard from "./views/ProveedorCard"; // Importamos el nuevo componente
+import ProveedorDeleteModal from "./modals/ProveedorDeleteModal";
+import ProveedorUpdateModal from "./modals/ProveedorUpdateModal";
+import ProveedorGrid from "./layout/ProveedorGrid"; // Importamos el nuevo componente
 
 const ProveedorListar = () => {
   // Estados principales
@@ -45,12 +46,19 @@ const ProveedorListar = () => {
     handleProveedorCreated,
     handlePreviousPage,
     handleNextPage,
+    updateModalOpen,
+    proveedorToUpdate,
+    isUpdating,
+    handleUpdateModalOpen,
+    handleUpdateModalClose,
+    handleProveedorUpdated,
   } = useProveedorState();
 
   // Renderizado de botones de acción
   const renderActionButtons = (proveedor) => (
     <div className="flex space-x-2">
       <button
+        onClick={() => handleUpdateModalOpen(proveedor)}
         className="p-1.5 text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm
                    transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
         title="Editar proveedor"
@@ -82,7 +90,7 @@ const ProveedorListar = () => {
   const renderGridView = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
       {currentProveedores.map((proveedor) => (
-        <ProveedorCard
+        <ProveedorGrid
           key={proveedor.id}
           proveedor={proveedor}
           onEdit={() => handleUpdateModalOpen(proveedor)}
@@ -290,7 +298,7 @@ const ProveedorListar = () => {
         onClose={handleCloseModal}
         onSubmit={handleProveedorCreated}
       />
-      <DeleteConfirmationProveedor
+      <ProveedorDeleteModal
         isOpen={deleteModalOpen}
         onClose={() => {
           setDeleteModalOpen(false);
@@ -299,6 +307,12 @@ const ProveedorListar = () => {
         onConfirm={handleConfirmDelete}
         proveedorName={proveedorToDelete?.NombreProveedor}
         isDeleting={isDeleting}
+      />
+      <ProveedorUpdateModal
+        isOpen={updateModalOpen}
+        onClose={handleUpdateModalClose}
+        onSubmit={handleProveedorUpdated}
+        proveedor={proveedorToUpdate}
       />
     </div>
   );

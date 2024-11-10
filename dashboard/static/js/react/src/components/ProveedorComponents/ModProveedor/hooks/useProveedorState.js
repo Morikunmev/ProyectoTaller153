@@ -23,6 +23,10 @@ export const useProveedorState = () => {
   const [isModalOpen, setIsModalOpen] = useState(false); // Controla la visibilidad del modal para crear nuevo proveedor
   const [deleteModalOpen, setDeleteModalOpen] = useState(false); // Controla la visibilidad del modal de confirmación de eliminación
 
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [proveedorToUpdate, setProveedorToUpdate] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   // Estados para el proceso de eliminación
   const [proveedorToDelete, setProveedorToDelete] = useState(null); // Almacena el proveedor que se ha seleccionado para eliminar
   const [isDeleting, setIsDeleting] = useState(false); // Indica si se está procesando una eliminación (para mostrar estados de carga durante el borrado)
@@ -34,6 +38,67 @@ export const useProveedorState = () => {
     setProveedorToDelete(proveedor);
     setDeleteModalOpen(true);
   }, []);
+  // Manejador para abrir el modal de actualización
+  const handleUpdateModalOpen = useCallback((proveedor) => {
+    setProveedorToUpdate(proveedor);
+    setUpdateModalOpen(true);
+  }, []);
+
+  // Manejador para cerrar el modal de actualización
+  const handleUpdateModalClose = useCallback(() => {
+    setUpdateModalOpen(false);
+    setProveedorToUpdate(null);
+  }, []);
+
+  // Manejador para actualizar proveedor
+  // Manejador para actualizar proveedor
+  const handleProveedorUpdated = useCallback(
+    async (formData) => {
+      if (!proveedorToUpdate) return;
+
+      setIsUpdating(true);
+      try {
+        const response = await fetch(
+          `/api/proveedores/${proveedorToUpdate.id}/`,
+          {
+            method: "POST", // Usamos POST por el FormData
+            headers: {
+              "X-CSRFToken": document.querySelector(
+                "[name=csrfmiddlewaretoken]"
+              ).value,
+            },
+            body: formData,
+            credentials: "include", // Añadido aquí
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Error al actualizar el proveedor");
+        }
+
+        // Actualizar la lista de proveedores localmente
+        setProveedores((prevProveedores) =>
+          prevProveedores.map((p) =>
+            p.id === data.proveedor.id ? data.proveedor : p
+          )
+        );
+
+        // Cerrar el modal
+        handleUpdateModalClose();
+
+        // Refrescar los datos del servidor
+        await fetchProveedores();
+      } catch (error) {
+        console.error("Error al actualizar proveedor:", error);
+        throw error;
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [proveedorToUpdate, handleUpdateModalClose, fetchProveedores]
+  );
 
   const handleConfirmDelete = async () => {
     if (!proveedorToDelete) return;
@@ -44,6 +109,7 @@ export const useProveedorState = () => {
         `/api/proveedor/${proveedorToDelete.id}/eliminar/`,
         {
           method: "DELETE",
+          credentials: "include", // Agregamos esta línea
           headers: {
             "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
               .value,
@@ -227,5 +293,12 @@ export const useProveedorState = () => {
     // Setters
     setDeleteModalOpen,
     setProveedorToDelete,
+    // Nuevos estados y manejadores para actualización
+    updateModalOpen,
+    proveedorToUpdate,
+    isUpdating,
+    handleUpdateModalOpen,
+    handleUpdateModalClose,
+    handleProveedorUpdated,
   };
 };

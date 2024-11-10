@@ -1,7 +1,7 @@
 import React from "react";
 import { Calendar, UserCircle, Pencil, Trash2 } from "lucide-react";
 
-const ProveedorCard = ({ proveedor, onEdit, onDelete }) => {
+const ProveedorGrid = ({ proveedor, onEdit, onDelete }) => {
   // Función para formatear la fecha
   const formatDate = (dateString) => {
     if (!dateString) return "Fecha no disponible";
@@ -33,8 +33,6 @@ const ProveedorCard = ({ proveedor, onEdit, onDelete }) => {
     }
   };
 
-  // Para debug - quitar después
-  console.log("Fecha recibida:", proveedor.FechaCreacionProveedor);
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
@@ -104,4 +102,4 @@ const ProveedorCard = ({ proveedor, onEdit, onDelete }) => {
   );
 };
 
-export default ProveedorCard;
+export default ProveedorGrid;
