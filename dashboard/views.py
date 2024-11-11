@@ -14,9 +14,59 @@ import cloudinary.uploader
 from cloudinary_storage.storage import MediaCloudinaryStorage
 import os
 import re
+from login.models import Usuario
+from django.http import JsonResponse
 
 
+#--------------------------LOGICA PARA MOSTRAR USUARIO --------------------------------
 
+
+# Añade esta nueva vista junto con las demás
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def get_current_user(request):
+    if request.method == 'GET':
+        try:
+            user = request.user
+            # Manejar superusuario (user.id == 1)
+            if user.id == 1:
+                return JsonResponse({
+                    'user': {
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'email': user.email,
+                    },
+                    'TipoUsuario': 'Superadmin'
+                })
+            
+            try:
+                usuario = Usuario.objects.get(user=user)
+                return JsonResponse({
+                    'user': {
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'email': user.email,
+                    },
+                    'RutUsuario': usuario.RutUsuario,
+                    'TipoUsuario': usuario.TipoUsuario,
+                    'FotoUsuario': usuario.FotoUsuario.url if usuario.FotoUsuario else None,
+                })
+            except Usuario.DoesNotExist:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Usuario no encontrado'
+                }, status=404)
+                
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, status=405)
 
 
 
@@ -28,6 +78,10 @@ def dashboard(request):
 def logout(request):
     auth_logout(request)  # Cerrar la sesión del usuario
     return redirect('login')  # Redirigir al usuario a la página de inicio de sesión
+
+
+
+
 
 
 

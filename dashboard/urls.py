@@ -5,6 +5,11 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name="dashboard"),
     path('logout/', views.logout, name='logout'),  # Ruta para cerrar sesión
     
+    #--------------------RUTA PARA EL MUESTREO DEL NAVBAR--------------------
+
+    path('api/user/current/', views.get_current_user, name='current-user'),
+
+    
     #--------------------RUTA PARA PROVEEDORES--------------------
     # Rutas para el módulo de Proveedores
     path('proveedor/', views.mod_proveedor, name='mod_proveedor'),  # Vista principal de proveedores
