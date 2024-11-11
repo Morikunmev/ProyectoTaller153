@@ -12,10 +12,9 @@ import ProveedorCreateModal from "./modals/ProveedorCreateModal";
 import { useProveedorState } from "./hooks/useProveedorState";
 import ProveedorDeleteModal from "./modals/ProveedorDeleteModal";
 import ProveedorUpdateModal from "./modals/ProveedorUpdateModal";
-import ProveedorGrid from "./layout/ProveedorGrid"; // Importamos el nuevo componente
+import ProveedorGrid from "./layout/ProveedorGrid";
 
 const ProveedorListar = () => {
-  // Estados principales
   const {
     searchTerm,
     loading,
@@ -30,15 +29,15 @@ const ProveedorListar = () => {
     startIndex,
     endIndex,
     filteredProveedores,
-    // Nuevos estados y funciones para el delete
+    // Estados de eliminación
     deleteModalOpen,
     proveedorToDelete,
     isDeleting,
-    handleDelete,
-    handleConfirmDelete,
-    setDeleteModalOpen,
-    setProveedorToDelete,
-    // Resto de los estados y funciones
+    // Estados de actualización
+    updateModalOpen,
+    proveedorToUpdate,
+    isUpdating,
+    // Manejadores
     handleOpenModal,
     handleCloseModal,
     handleSearch,
@@ -46,12 +45,13 @@ const ProveedorListar = () => {
     handleProveedorCreated,
     handlePreviousPage,
     handleNextPage,
-    updateModalOpen,
-    proveedorToUpdate,
-    isUpdating,
+    handleDelete,
+    handleConfirmDelete,
     handleUpdateModalOpen,
     handleUpdateModalClose,
     handleProveedorUpdated,
+    setDeleteModalOpen,
+    setProveedorToDelete,
   } = useProveedorState();
 
   // Renderizado de botones de acción
@@ -184,6 +184,7 @@ const ProveedorListar = () => {
       </tbody>
     </table>
   );
+
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header: Búsqueda, Vista y Botón Crear */}
@@ -292,12 +293,13 @@ const ProveedorListar = () => {
         )}
       </div>
 
-      {/* Modal de Crear Proveedor */}
+      {/* Modales */}
       <ProveedorCreateModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleProveedorCreated}
       />
+
       <ProveedorDeleteModal
         isOpen={deleteModalOpen}
         onClose={() => {
@@ -308,13 +310,15 @@ const ProveedorListar = () => {
         proveedorName={proveedorToDelete?.NombreProveedor}
         isDeleting={isDeleting}
       />
+
       <ProveedorUpdateModal
         isOpen={updateModalOpen}
         onClose={handleUpdateModalClose}
-        onSubmit={handleProveedorUpdated}
         proveedor={proveedorToUpdate}
+        onProveedorUpdated={handleProveedorUpdated} // Cambiado de onSubmit a onProveedorUpdated
       />
     </div>
   );
 };
+
 export default ProveedorListar;

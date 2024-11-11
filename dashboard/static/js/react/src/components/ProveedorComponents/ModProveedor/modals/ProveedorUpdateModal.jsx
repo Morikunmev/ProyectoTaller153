@@ -2,7 +2,12 @@ import React from "react";
 import { X } from "lucide-react";
 import { useProveedorUpdateModal } from "../hooks/useProveedorUpdateModal";
 
-const ProveedorUpdateModal = ({ isOpen, onClose, onSubmit, proveedor }) => {
+const ProveedorUpdateModal = ({
+  isOpen,
+  onClose,
+  proveedor,
+  onProveedorUpdated,
+}) => {
   const {
     formData,
     errors,
@@ -14,7 +19,12 @@ const ProveedorUpdateModal = ({ isOpen, onClose, onSubmit, proveedor }) => {
     handleSubmit,
     handleInputChange,
     handleFileChange,
-  } = useProveedorUpdateModal({ isOpen, onClose, onSubmit, proveedor });
+  } = useProveedorUpdateModal({
+    isOpen,
+    onClose,
+    proveedor,
+    onProveedorUpdated, // Reemplazamos onSubmit por onProveedorUpdated
+  });
 
   if (!isVisible) return null;
 
@@ -48,7 +58,13 @@ const ProveedorUpdateModal = ({ isOpen, onClose, onSubmit, proveedor }) => {
 
         {/* Contenido scrolleable */}
         <div className="p-6 overflow-y-auto flex-1">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+            className="space-y-4"
+          >
             {/* Campos obligatorios */}
             <div className="space-y-4">
               <h3 className="font-medium">Información Principal</h3>
@@ -199,7 +215,7 @@ const ProveedorUpdateModal = ({ isOpen, onClose, onSubmit, proveedor }) => {
                   <label
                     htmlFor="foto-proveedor"
                     className="px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 
-                transition-colors duration-150"
+                              transition-colors duration-150"
                   >
                     Seleccionar imagen
                   </label>

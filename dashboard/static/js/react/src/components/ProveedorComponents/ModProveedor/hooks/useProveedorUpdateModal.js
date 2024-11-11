@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 export const useProveedorUpdateModal = ({
   isOpen,
   onClose,
-  onSubmit,
   proveedor,
+  onProveedorUpdated,
 }) => {
   // Estados del formulario y modal
   const [formData, setFormData] = useState({
@@ -93,7 +93,6 @@ export const useProveedorUpdateModal = ({
     if (!formData.RutProveedor.trim()) {
       newErrors.RutProveedor = "El RUT es requerido";
     } else {
-      // Validación exacta del formato según el modelo
       const rutRegex = /^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$/;
       if (!rutRegex.test(formData.RutProveedor)) {
         newErrors.RutProveedor = "El RUT debe tener formato XX.XXX.XXX-X";
@@ -125,36 +124,29 @@ export const useProveedorUpdateModal = ({
       newErrors.PaisProveedor = "El país no puede exceder los 100 caracteres";
     }
 
-    // Validación del teléfono (opcional pero con longitud máxima)
+    // Validación del teléfono
     if (formData.TelefonoProveedor) {
       if (formData.TelefonoProveedor.length > 15) {
         newErrors.TelefonoProveedor =
           "El teléfono no puede exceder los 15 caracteres";
       }
-      // Validación básica de formato de teléfono
       const phoneRegex = /^\+?[\d\s-]+$/;
       if (!phoneRegex.test(formData.TelefonoProveedor)) {
         newErrors.TelefonoProveedor = "Formato de teléfono inválido";
       }
     }
 
-    // Validación de la imagen (opcional)
-    if (formData.FotoProveedor) {
+    // Validación de la imagen
+    if (formData.FotoProveedor && formData.FotoProveedor instanceof File) {
       const validImageTypes = ["image/jpeg", "image/png", "image/gif"];
       if (!validImageTypes.includes(formData.FotoProveedor.type)) {
         newErrors.FotoProveedor =
           "El archivo debe ser una imagen (JPEG, PNG o GIF)";
       }
-      // Validación de tamaño máximo
       const maxSize = 5 * 1024 * 1024; // 5MB
       if (formData.FotoProveedor.size > maxSize) {
         newErrors.FotoProveedor = "La imagen no puede exceder los 5MB";
       }
-    }
-
-    // Antes de establecer los errores, convertimos el RUT a mayúsculas
-    if (formData.RutProveedor) {
-      formData.RutProveedor = formData.RutProveedor.toUpperCase();
     }
 
     setErrors(newErrors);
@@ -187,19 +179,41 @@ export const useProveedorUpdateModal = ({
           }
         }
 
-        await onSubmit(submitData);
+        // Realizar la petición de actualización
+        const response = await fetch(`/api/proveedores/${proveedor.id}/`, {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+              .value,
+          },
+          body: submitData,
+          credentials: "include",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Error al actualizar el proveedor");
+        }
+
+        // Primero cerramos el modal
         handleClose();
+
+        // Luego notificamos al componente padre del éxito
+        if (onProveedorUpdated) {
+          await onProveedorUpdated(data.proveedor);
+        }
       } catch (error) {
         console.error("Error al actualizar el proveedor:", error);
         setErrors((prev) => ({
           ...prev,
-          general: "Error al actualizar el proveedor",
+          general: error.message || "Error al actualizar el proveedor",
         }));
       } finally {
         setIsSubmitting(false);
       }
     },
-    [formData, validateForm, onSubmit, handleClose]
+    [formData, validateForm, proveedor, handleClose, onProveedorUpdated]
   );
 
   return {
