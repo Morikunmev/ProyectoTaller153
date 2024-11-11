@@ -13,6 +13,8 @@ import cloudinary
 import cloudinary.uploader
 from cloudinary_storage.storage import MediaCloudinaryStorage
 import os
+import re
+
 
 
 
@@ -43,52 +45,85 @@ def crear_proveedor(request):
         try:
             data = request.POST
             
-            # Verificar si ya existe un proveedor con el mismo nombre
-            if Proveedor.objects.filter(NombreProveedor=data.get('NombreProveedor')).exists():
+            # Validaciones de campos requeridos
+            campos_requeridos = ['NombreProveedor', 'RutProveedor', 'MarcaProveedor']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores
+                }, status=400)
+            
+            # Normalizar RUT (convertir a mayúsculas)
+            rut = data.get('RutProveedor').upper()
+            
+            # Validar formato RUT con regex
+            rut_regex = re.compile(r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$')
+            if not rut_regex.match(rut):
                 return JsonResponse({
                     'success': False,
                     'errors': {
-                        'NombreProveedor': 'Este nombre de proveedor ya existe'
+                        'RutProveedor': 'RUT debe tener formato XX.XXX.XXX-X'
                     }
                 }, status=400)
             
-            # Verificar si ya existe un proveedor con el mismo RUT
-            if Proveedor.objects.filter(RutProveedor=data.get('RutProveedor')).exists():
-                return JsonResponse({
-                    'success': False,
-                    'errors': {
-                        'RutProveedor': 'Este RUT ya existe'
-                    }
-                }, status=400)
+            # Verificar duplicados
+            validaciones_unicidad = {
+                'NombreProveedor': 'Este nombre de proveedor ya existe',
+                'RutProveedor': 'Este RUT ya existe',
+                'MarcaProveedor': 'Esta marca ya existe'
+            }
             
-            # Verificar si ya existe un proveedor con la misma marca
-            if Proveedor.objects.filter(MarcaProveedor=data.get('MarcaProveedor')).exists():
-                return JsonResponse({
-                    'success': False,
-                    'errors': {
-                        'MarcaProveedor': 'Esta marca ya existe'
-                    }
-                }, status=400)
+            for campo, mensaje in validaciones_unicidad.items():
+                if Proveedor.objects.filter(**{campo: data.get(campo)}).exists():
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {campo: mensaje}
+                    }, status=400)
             
-            # Si no hay duplicados, crear el proveedor
+            # Crear el proveedor con los campos actualizados
             nuevo_proveedor = Proveedor(
                 NombreProveedor=data.get('NombreProveedor'),
-                RutProveedor=data.get('RutProveedor'),
+                RutProveedor=rut,
                 MarcaProveedor=data.get('MarcaProveedor'),
                 ComentarioProveedor=data.get('ComentarioProveedor'),
                 CiudadProveedor=data.get('CiudadProveedor'),
                 RegionProveedor=data.get('RegionProveedor'),
                 PaisProveedor=data.get('PaisProveedor'),
-                TelefonoProveedor=data.get('TelefonoProveedor'),
-                EstadoProveedor=True  # Por defecto, el proveedor se crea activo
+                TelefonoProveedor=data.get('TelefonoProveedor')
             )
+            
+            # Validar teléfono si se proporciona
+            if data.get('TelefonoProveedor'):
+                telefono = data.get('TelefonoProveedor')
+                if not telefono.isdigit() or len(telefono) > 15:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'TelefonoProveedor': 'El teléfono debe contener solo números y tener máximo 15 dígitos'
+                        }
+                    }, status=400)
             
             # Manejar la foto si existe
             if 'FotoProveedor' in request.FILES:
                 foto = request.FILES['FotoProveedor']
+                # Validar tipo de archivo
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif']
+                if foto.content_type not in allowed_types:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoProveedor': 'El archivo debe ser una imagen (JPEG, PNG o GIF)'
+                        }
+                    }, status=400)
                 nuevo_proveedor.FotoProveedor = foto
             
-            # Validar el modelo
+            # Validar el modelo completo
             try:
                 nuevo_proveedor.full_clean()
             except ValidationError as e:
@@ -103,7 +138,7 @@ def crear_proveedor(request):
             # Guardar el proveedor
             nuevo_proveedor.save()
             
-            # Retornar respuesta exitosa con los campos adicionales
+            # Retornar respuesta exitosa
             return JsonResponse({
                 'success': True,
                 'message': 'Proveedor creado exitosamente',
@@ -118,10 +153,8 @@ def crear_proveedor(request):
                     'PaisProveedor': nuevo_proveedor.PaisProveedor,
                     'TelefonoProveedor': nuevo_proveedor.TelefonoProveedor,
                     'FotoProveedor': nuevo_proveedor.FotoProveedor.url if nuevo_proveedor.FotoProveedor else None,
-                    # Nuevos campos de auditoría
                     'FechaCreacionProveedor': nuevo_proveedor.FechaCreacionProveedor.isoformat() if nuevo_proveedor.FechaCreacionProveedor else None,
-                    'FechaModificacionProveedor': nuevo_proveedor.FechaModificacionProveedor.isoformat() if nuevo_proveedor.FechaModificacionProveedor else None,
-                    'EstadoProveedor': nuevo_proveedor.EstadoProveedor
+                    'FechaModificacionProveedor': nuevo_proveedor.FechaModificacionProveedor.isoformat() if nuevo_proveedor.FechaModificacionProveedor else None
                 }
             })
             
@@ -139,7 +172,6 @@ def crear_proveedor(request):
             'general': 'Método no permitido'
         }
     }, status=405)
-
 
 @login_required(login_url='login')
 def listar_proveedores(request):
@@ -165,8 +197,7 @@ def listar_proveedores(request):
                     'FotoProveedor': proveedor.FotoProveedor.url if proveedor.FotoProveedor else None,
                     # Campos de auditoría
                     'FechaCreacionProveedor': proveedor.FechaCreacionProveedor.isoformat() if proveedor.FechaCreacionProveedor else None,
-                    'FechaModificacionProveedor': proveedor.FechaModificacionProveedor.isoformat() if proveedor.FechaModificacionProveedor else None,
-                    'EstadoProveedor': proveedor.EstadoProveedor
+                    'FechaModificacionProveedor': proveedor.FechaModificacionProveedor.isoformat() if proveedor.FechaModificacionProveedor else None
                 })
             return JsonResponse({
                 'success': True,
@@ -177,7 +208,11 @@ def listar_proveedores(request):
                 'success': False,
                 'message': str(e)
             }, status=500)
-    return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
+    return JsonResponse({
+        'success': False, 
+        'message': 'Método no permitido'
+    }, status=405)
+
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def eliminar_proveedor(request, proveedor_id):
@@ -252,10 +287,69 @@ def actualizar_proveedor(request, proveedor_id):
             proveedor = get_object_or_404(Proveedor, id=proveedor_id)
             data = request.POST
             
-            # ... (verificación de campos únicos) ...
+            # Validar campos requeridos
+            campos_requeridos = ['NombreProveedor', 'RutProveedor', 'MarcaProveedor']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores
+                }, status=400)
+            
+            # Validar formato del RUT
+            rut = data.get('RutProveedor').upper()
+            rut_regex = re.compile(r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$')
+            if not rut_regex.match(rut):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'RutProveedor': 'RUT debe tener formato XX.XXX.XXX-X'
+                    }
+                }, status=400)
+            
+            # Verificar campos únicos (excluyendo el registro actual)
+            validaciones_unicidad = {
+                'NombreProveedor': 'Este nombre de proveedor ya existe',
+                'RutProveedor': 'Este RUT ya existe',
+                'MarcaProveedor': 'Esta marca ya existe'
+            }
+            
+            for campo, mensaje in validaciones_unicidad.items():
+                if Proveedor.objects.filter(**{campo: data.get(campo)}).exclude(id=proveedor_id).exists():
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {campo: mensaje}
+                    }, status=400)
+            
+            # Validar teléfono si se proporciona
+            if data.get('TelefonoProveedor'):
+                telefono = data.get('TelefonoProveedor')
+                if not telefono.isdigit() or len(telefono) > 15:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'TelefonoProveedor': 'El teléfono debe contener solo números y tener máximo 15 dígitos'
+                        }
+                    }, status=400)
 
             # Manejar la actualización de la foto
             if 'FotoProveedor' in request.FILES:
+                foto = request.FILES['FotoProveedor']
+                # Validar tipo de archivo
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif']
+                if foto.content_type not in allowed_types:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoProveedor': 'El archivo debe ser una imagen (JPEG, PNG o GIF)'
+                        }
+                    }, status=400)
+                
                 try:
                     # Guardar la referencia de la foto actual
                     foto_anterior = None
@@ -263,7 +357,7 @@ def actualizar_proveedor(request, proveedor_id):
                         foto_anterior = proveedor.FotoProveedor
                         
                     # Asignar la nueva foto
-                    proveedor.FotoProveedor = request.FILES['FotoProveedor']
+                    proveedor.FotoProveedor = foto
                     
                     # Guardar el proveedor con la nueva foto
                     proveedor.save()
@@ -303,29 +397,29 @@ def actualizar_proveedor(request, proveedor_id):
                             'FotoProveedor': f'Error al actualizar la foto: {str(e)}'
                         }
                     }, status=400)
-            else:
-                # Si no hay nueva foto, actualizar los demás campos
-                proveedor.NombreProveedor = data.get('NombreProveedor')
-                proveedor.RutProveedor = data.get('RutProveedor')
-                proveedor.MarcaProveedor = data.get('MarcaProveedor')
-                proveedor.ComentarioProveedor = data.get('ComentarioProveedor')
-                proveedor.CiudadProveedor = data.get('CiudadProveedor')
-                proveedor.RegionProveedor = data.get('RegionProveedor')
-                proveedor.PaisProveedor = data.get('PaisProveedor')
-                proveedor.TelefonoProveedor = data.get('TelefonoProveedor')
-                
-                # Validar y guardar
-                try:
-                    proveedor.full_clean()
-                    proveedor.save()
-                except ValidationError as e:
-                    errores_formateados = {}
-                    for campo, errores in e.message_dict.items():
-                        errores_formateados[campo] = errores[0] if errores else str(errores)
-                    return JsonResponse({
-                        'success': False,
-                        'errors': errores_formateados
-                    }, status=400)
+
+            # Actualizar los campos del proveedor
+            proveedor.NombreProveedor = data.get('NombreProveedor')
+            proveedor.RutProveedor = rut
+            proveedor.MarcaProveedor = data.get('MarcaProveedor')
+            proveedor.ComentarioProveedor = data.get('ComentarioProveedor')
+            proveedor.CiudadProveedor = data.get('CiudadProveedor')
+            proveedor.RegionProveedor = data.get('RegionProveedor')
+            proveedor.PaisProveedor = data.get('PaisProveedor')
+            proveedor.TelefonoProveedor = data.get('TelefonoProveedor')
+            
+            # Validar y guardar
+            try:
+                proveedor.full_clean()
+                proveedor.save()
+            except ValidationError as e:
+                errores_formateados = {}
+                for campo, errores in e.message_dict.items():
+                    errores_formateados[campo] = errores[0] if errores else str(errores)
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores_formateados
+                }, status=400)
 
             # Devolver respuesta exitosa
             return JsonResponse({
@@ -342,9 +436,8 @@ def actualizar_proveedor(request, proveedor_id):
                     'PaisProveedor': proveedor.PaisProveedor,
                     'TelefonoProveedor': proveedor.TelefonoProveedor,
                     'FotoProveedor': proveedor.FotoProveedor.url if proveedor.FotoProveedor else None,
-                    'FechaCreacionProveedor': proveedor.FechaCreacionProveedor.isoformat(),
-                    'FechaModificacionProveedor': proveedor.FechaModificacionProveedor.isoformat(),
-                    'EstadoProveedor': proveedor.EstadoProveedor
+                    'FechaCreacionProveedor': proveedor.FechaCreacionProveedor.isoformat() if proveedor.FechaCreacionProveedor else None,
+                    'FechaModificacionProveedor': proveedor.FechaModificacionProveedor.isoformat() if proveedor.FechaModificacionProveedor else None
                 }
             })
             

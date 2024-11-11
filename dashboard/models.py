@@ -33,7 +33,6 @@ class Proveedor(models.Model):
     # Campos de auditoría
     FechaCreacionProveedor = models.DateTimeField(auto_now_add=True)
     FechaModificacionProveedor = models.DateTimeField(auto_now=True)
-    EstadoProveedor = models.BooleanField(default=True)  # True para activo, False para eliminado
     
     class Meta:
         verbose_name = "Proveedor"
