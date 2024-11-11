@@ -16,12 +16,95 @@ import os
 import re
 from login.models import Usuario
 from django.http import JsonResponse
+#Importaciones de EXCEL
+from django.http import HttpResponse
+import xlsxwriter
+from io import BytesIO
+from datetime import datetime
+from django.http import HttpResponse
+import xlsxwriter
+from django.utils import timezone
+
+
+
+
+
+#Exportar proveedores a Excel
+def exportar_proveedores_excel(request):
+    # Crear un buffer en memoria
+    output = BytesIO()
+    
+    # Crear un nuevo archivo Excel con la opción remove_timezone
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    worksheet = workbook.add_worksheet('Proveedores')
+    
+    # Agregar formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy hh:mm',
+    })
+    
+    # Definir encabezados
+    headers = [
+        'Nombre', 'RUT', 'Marca', 'Comentario', 'Ciudad', 
+        'Región', 'País', 'Teléfono', 'Fecha Creación', 
+        'Última Modificación'
+    ]
+    
+    # Escribir encabezados
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header, header_format)
+        worksheet.set_column(col, col, 15)  # Establecer ancho de columna
+    
+    # Obtener datos de proveedores
+    proveedores = Proveedor.objects.all().order_by('NombreProveedor')
+    
+    # Escribir datos
+    for row, proveedor in enumerate(proveedores, start=1):
+        # Convertir fechas a la zona horaria local y remover la información de zona horaria
+        fecha_creacion = timezone.localtime(proveedor.FechaCreacionProveedor).replace(tzinfo=None)
+        fecha_modificacion = timezone.localtime(proveedor.FechaModificacionProveedor).replace(tzinfo=None)
+        
+        worksheet.write(row, 0, proveedor.NombreProveedor)
+        worksheet.write(row, 1, proveedor.RutProveedor)
+        worksheet.write(row, 2, proveedor.MarcaProveedor)
+        worksheet.write(row, 3, proveedor.ComentarioProveedor or '')
+        worksheet.write(row, 4, proveedor.CiudadProveedor or '')
+        worksheet.write(row, 5, proveedor.RegionProveedor or '')
+        worksheet.write(row, 6, proveedor.PaisProveedor or '')
+        worksheet.write(row, 7, proveedor.TelefonoProveedor or '')
+        worksheet.write_datetime(row, 8, fecha_creacion, date_format)
+        worksheet.write_datetime(row, 9, fecha_modificacion, date_format)
+
+    # Ajustar anchos de columna automáticamente basado en el contenido
+    for col, header in enumerate(headers):
+        worksheet.set_column(col, col, len(header) + 2)
+    
+    workbook.close()
+    
+    # Preparar la respuesta
+    output.seek(0)
+    
+    # Generar nombre del archivo con la fecha actual
+    filename = f'Proveedores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
 
 
 #--------------------------LOGICA PARA MOSTRAR USUARIO --------------------------------
 
-
-# Añade esta nueva vista junto con las demás
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def get_current_user(request):

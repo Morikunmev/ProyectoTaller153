@@ -19,6 +19,8 @@ urlpatterns = [
     path('api/proveedor/listar/', views.listar_proveedores, name='listar_proveedores'),
     path('api/proveedor/<int:proveedor_id>/eliminar/', views.eliminar_proveedor, name='eliminar_proveedor'),
     path('api/proveedores/<int:proveedor_id>/actualizar', views.actualizar_proveedor, name='actualizar_proveedor'),
+    path('api/proveedores/exportar-excel/', views.exportar_proveedores_excel, name='exportar_proveedores_excel'),
+
 
 
     #--------------------RUTA PARA FACTURA--------------------

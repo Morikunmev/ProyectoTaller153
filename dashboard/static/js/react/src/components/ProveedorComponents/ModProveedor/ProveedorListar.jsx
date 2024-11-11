@@ -13,6 +13,7 @@ import { useProveedorState } from "./hooks/useProveedorState";
 import ProveedorDeleteModal from "./modals/ProveedorDeleteModal";
 import ProveedorUpdateModal from "./modals/ProveedorUpdateModal";
 import ProveedorGrid from "./layout/ProveedorGrid";
+import { exportToExcel } from "./utils/proveedorExport";
 
 const ProveedorListar = () => {
   const {
@@ -99,6 +100,14 @@ const ProveedorListar = () => {
       ))}
     </div>
   );
+  const handleExportClick = async () => {
+    try {
+      await exportToExcel();
+    } catch (error) {
+      // Aquí podrías mostrar una notificación de error al usuario
+      console.error("Error en la exportación:", error);
+    }
+  };
 
   const renderTableView = () => (
     <table className="w-full">
@@ -197,8 +206,8 @@ const ProveedorListar = () => {
               type="text"
               placeholder="Buscar proveedor..."
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
-                       focus:outline-none focus:ring-1 focus:ring-blue-500
-                       transition-colors duration-200"
+                 focus:outline-none focus:ring-1 focus:ring-blue-500
+                 transition-colors duration-200"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
             />
@@ -231,22 +240,52 @@ const ProveedorListar = () => {
           </div>
         </div>
 
-        {/* Botón Crear Proveedor */}
-        <button
-          onClick={handleOpenModal}
-          className="group relative bg-black text-white px-4 py-2 rounded-lg 
-                   hover:bg-gray-800 active:bg-gray-900
-                   transition-all duration-200 ease-out 
-                   hover:shadow-lg active:shadow-none
-                   transform active:scale-95"
-        >
-          <span className="flex items-center">
-            <span className="inline-block transform transition-transform duration-200 group-hover:translate-x-[-2px]">
-              +
+        {/* Contenedor para los botones de acción */}
+        <div className="flex items-center space-x-3">
+          {/* Botón Generar Excel */}
+          <button
+            onClick={handleExportClick}
+            className="group relative bg-green-600 text-white px-4 py-2 rounded-lg 
+                 hover:bg-green-700 active:bg-green-800
+                 transition-all duration-200 ease-out 
+                 hover:shadow-lg active:shadow-none
+                 transform active:scale-95"
+          >
+            <span className="flex items-center">
+              <svg
+                className="w-4 h-4 mr-2 inline-block transform transition-transform duration-200 group-hover:scale-110"
+                fill="none"
+                strokeWidth="2"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <span>Generar Excel</span>
             </span>
-            <span className="ml-1">Crear Proveedor</span>
-          </span>
-        </button>
+          </button>
+
+          {/* Botón Crear Proveedor */}
+          <button
+            onClick={handleOpenModal}
+            className="group relative bg-black text-white px-4 py-2 rounded-lg 
+               hover:bg-gray-800 active:bg-gray-900
+               transition-all duration-200 ease-out 
+               hover:shadow-lg active:shadow-none
+               transform active:scale-95"
+          >
+            <span className="flex items-center">
+              <span className="inline-block transform transition-transform duration-200 group-hover:translate-x-[-2px]">
+                +
+              </span>
+              <span className="ml-1">Crear Proveedor</span>
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Contenido Principal */}
