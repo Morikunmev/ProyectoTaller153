@@ -472,7 +472,7 @@ var ProveedorListar = function ProveedorListar() {
       return handleSearch(e.target.value);
     }
   })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "flex items-center gap-4 max-[790px]:w-full max-[790px]:justify-between"
+    className: "max-[790px]:w-full flex justify-center"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "flex bg-white border rounded-lg overflow-hidden"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
@@ -491,7 +491,9 @@ var ProveedorListar = function ProveedorListar() {
     title: "Vista de cuadr\xEDcula"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], {
     className: "w-5 h-5"
-  }))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
+  })))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "flex items-center space-x-3 max-[790px]:w-full"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     onClick: handleExportClick,
     className: "group relative bg-green-600 text-white px-4 py-2 rounded-lg \r hover:bg-green-700 active:bg-green-800\r transition-all duration-200 ease-out \r hover:shadow-lg active:shadow-none\r transform active:scale-95 max-[790px]:flex-1"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {

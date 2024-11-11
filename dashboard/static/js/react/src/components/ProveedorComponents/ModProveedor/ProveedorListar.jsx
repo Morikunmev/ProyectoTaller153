@@ -214,9 +214,8 @@ const ProveedorListar = () => {
           />
         </div>
 
-        {/* Contenedor para todos los botones */}
-        <div className="flex items-center gap-4 max-[790px]:w-full max-[790px]:justify-between">
-          {/* Botones de vista */}
+        {/* Botones de vista - ahora en su propio contenedor */}
+        <div className="max-[790px]:w-full flex justify-center">
           <div className="flex bg-white border rounded-lg overflow-hidden">
             <button
               onClick={() => handleViewChange(false)}
@@ -241,7 +240,10 @@ const ProveedorListar = () => {
               <LayoutGrid className="w-5 h-5" />
             </button>
           </div>
+        </div>
 
+        {/* Contenedor para los botones de acción */}
+        <div className="flex items-center space-x-3 max-[790px]:w-full">
           {/* Botón Generar Excel */}
           <button
             onClick={handleExportClick}
