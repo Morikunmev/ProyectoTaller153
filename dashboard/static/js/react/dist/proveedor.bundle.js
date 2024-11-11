@@ -384,7 +384,6 @@ function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) 
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
-// useProveedorModal.js
 
 var useProveedorCreateModal = function useProveedorCreateModal(_ref) {
   var isOpen = _ref.isOpen,
@@ -428,13 +427,13 @@ var useProveedorCreateModal = function useProveedorCreateModal(_ref) {
     previewUrl = _useState12[0],
     setPreviewUrl = _useState12[1];
 
-  // // Efecto que maneja la visibilidad del modal
+  // Efecto que maneja la visibilidad del modal
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
     if (isOpen) {
       setIsVisible(true);
       setTimeout(function () {
         return setIsAnimating(true);
-      }, 1); // Inicia la animación
+      }, 1);
     } else {
       setIsAnimating(false);
       var timer = setTimeout(function () {
@@ -444,33 +443,13 @@ var useProveedorCreateModal = function useProveedorCreateModal(_ref) {
         return clearTimeout(timer);
       };
     }
-  }, [isOpen]); // Se ejecuta cuando isOpen cambia
-
-  // Form validation
-  var validateForm = function validateForm() {
-    var newErrors = {};
-    if (!formData.NombreProveedor || formData.NombreProveedor.length < 3) {
-      newErrors.NombreProveedor = "El nombre debe tener al menos 3 caracteres";
-    }
-    if (!/^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$/.test(formData.RutProveedor)) {
-      newErrors.RutProveedor = "Formato inválido (XX.XXX.XXX-X)";
-    }
-    if (!formData.MarcaProveedor || formData.MarcaProveedor.length < 2) {
-      newErrors.MarcaProveedor = "La marca debe tener al menos 2 caracteres";
-    }
-    if (formData.TelefonoProveedor && formData.TelefonoProveedor.length > 15) {
-      newErrors.TelefonoProveedor = "El teléfono no puede tener más de 15 caracteres";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  }, [isOpen]);
 
   // Handle modal close
   var handleClose = function handleClose() {
     setIsAnimating(false);
     setTimeout(function () {
       onClose();
-      //Es una funcion que viene como prop desde el componente padre
       setFormData({
         NombreProveedor: "",
         RutProveedor: "",
@@ -518,22 +497,15 @@ var useProveedorCreateModal = function useProveedorCreateModal(_ref) {
         while (1) switch (_context.prev = _context.next) {
           case 0:
             e === null || e === void 0 || e.preventDefault();
-            if (validateForm()) {
-              _context.next = 3;
-              break;
-            }
-            return _context.abrupt("return");
-          case 3:
-            //Se activa el estado que indica que el formulario se esta enviando, util para mostrar loading o deshabilitar el boton de envio
             setIsSubmitting(true);
-            _context.prev = 4;
+            _context.prev = 2;
             formDataToSend = new FormData();
             Object.keys(formData).forEach(function (key) {
               if (formData[key] !== null && formData[key] !== "") {
                 formDataToSend.append(key, formData[key]);
               }
             });
-            _context.next = 9;
+            _context.next = 7;
             return fetch("/api/proveedor/crear/", {
               method: "POST",
               headers: {
@@ -542,37 +514,49 @@ var useProveedorCreateModal = function useProveedorCreateModal(_ref) {
               body: formDataToSend,
               credentials: "include"
             });
-          case 9:
+          case 7:
             response = _context.sent;
-            _context.next = 12;
+            _context.next = 10;
             return response.json();
-          case 12:
+          case 10:
             data = _context.sent;
+            if (response.ok) {
+              _context.next = 16;
+              break;
+            }
+            if (!data.errors) {
+              _context.next = 15;
+              break;
+            }
+            setErrors(data.errors);
+            throw new Error(Object.values(data.errors)[0]);
+          case 15:
+            throw new Error(data.message || "Error al crear el proveedor");
+          case 16:
             if (data.success) {
               onSubmit(data.proveedor);
               handleClose();
-            } else {
-              setErrors(data.errors || {
-                general: "Error al crear el proveedor"
-              });
             }
-            _context.next = 19;
+            _context.next = 23;
             break;
-          case 16:
-            _context.prev = 16;
-            _context.t0 = _context["catch"](4);
-            setErrors({
-              general: _context.t0.message
-            });
           case 19:
             _context.prev = 19;
+            _context.t0 = _context["catch"](2);
+            console.error("Error al crear proveedor:", _context.t0);
+            setErrors(function (prev) {
+              return _objectSpread(_objectSpread({}, prev), {}, {
+                general: _context.t0.message || "Error al crear el proveedor"
+              });
+            });
+          case 23:
+            _context.prev = 23;
             setIsSubmitting(false);
-            return _context.finish(19);
-          case 22:
+            return _context.finish(23);
+          case 26:
           case "end":
             return _context.stop();
         }
-      }, _callee, null, [[4, 16, 19, 22]]);
+      }, _callee, null, [[2, 19, 23, 26]]);
     }));
     return function handleSubmit(_x) {
       return _ref2.apply(this, arguments);
@@ -1155,74 +1139,6 @@ var useProveedorUpdateModal = function useProveedorUpdateModal(_ref) {
     }
   }, []);
 
-  // Validación del formulario
-  var validateForm = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(function () {
-    var newErrors = {};
-
-    // Validación del nombre (requerido y único)
-    if (!formData.NombreProveedor.trim()) {
-      newErrors.NombreProveedor = "El nombre es requerido";
-    } else if (formData.NombreProveedor.length > 100) {
-      newErrors.NombreProveedor = "El nombre no puede exceder los 100 caracteres";
-    }
-
-    // Validación del RUT (requerido, único y formato específico)
-    if (!formData.RutProveedor.trim()) {
-      newErrors.RutProveedor = "El RUT es requerido";
-    } else {
-      var rutRegex = /^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$/;
-      if (!rutRegex.test(formData.RutProveedor)) {
-        newErrors.RutProveedor = "El RUT debe tener formato XX.XXX.XXX-X";
-      }
-      if (formData.RutProveedor.length > 12) {
-        newErrors.RutProveedor = "El RUT no puede exceder los 12 caracteres";
-      }
-    }
-
-    // Validación de la marca (requerida y única)
-    if (!formData.MarcaProveedor.trim()) {
-      newErrors.MarcaProveedor = "La marca es requerida";
-    } else if (formData.MarcaProveedor.length > 100) {
-      newErrors.MarcaProveedor = "La marca no puede exceder los 100 caracteres";
-    }
-
-    // Validaciones de campos opcionales
-    if (formData.CiudadProveedor && formData.CiudadProveedor.length > 100) {
-      newErrors.CiudadProveedor = "La ciudad no puede exceder los 100 caracteres";
-    }
-    if (formData.RegionProveedor && formData.RegionProveedor.length > 100) {
-      newErrors.RegionProveedor = "La región no puede exceder los 100 caracteres";
-    }
-    if (formData.PaisProveedor && formData.PaisProveedor.length > 100) {
-      newErrors.PaisProveedor = "El país no puede exceder los 100 caracteres";
-    }
-
-    // Validación del teléfono
-    if (formData.TelefonoProveedor) {
-      if (formData.TelefonoProveedor.length > 15) {
-        newErrors.TelefonoProveedor = "El teléfono no puede exceder los 15 caracteres";
-      }
-      var phoneRegex = /^\+?[\d\s-]+$/;
-      if (!phoneRegex.test(formData.TelefonoProveedor)) {
-        newErrors.TelefonoProveedor = "Formato de teléfono inválido";
-      }
-    }
-
-    // Validación de la imagen
-    if (formData.FotoProveedor && formData.FotoProveedor instanceof File) {
-      var validImageTypes = ["image/jpeg", "image/png", "image/gif"];
-      if (!validImageTypes.includes(formData.FotoProveedor.type)) {
-        newErrors.FotoProveedor = "El archivo debe ser una imagen (JPEG, PNG o GIF)";
-      }
-      var maxSize = 5 * 1024 * 1024; // 5MB
-      if (formData.FotoProveedor.size > maxSize) {
-        newErrors.FotoProveedor = "La imagen no puede exceder los 5MB";
-      }
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
-
   // Manejador de cierre del modal
   var handleClose = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(function () {
     setIsAnimating(false);
@@ -1240,14 +1156,8 @@ var useProveedorUpdateModal = function useProveedorUpdateModal(_ref) {
         while (1) switch (_context.prev = _context.next) {
           case 0:
             if (e) e.preventDefault();
-            if (validateForm()) {
-              _context.next = 3;
-              break;
-            }
-            return _context.abrupt("return");
-          case 3:
             setIsSubmitting(true);
-            _context.prev = 4;
+            _context.prev = 2;
             // Crear FormData para enviar archivos
             submitData = new FormData();
             for (_i = 0, _Object$entries = Object.entries(formData); _i < _Object$entries.length; _i++) {
@@ -1258,8 +1168,8 @@ var useProveedorUpdateModal = function useProveedorUpdateModal(_ref) {
             }
 
             // Realizar la petición de actualización
-            _context.next = 9;
-            return fetch("/api/proveedores/".concat(proveedor.id, "/"), {
+            _context.next = 7;
+            return fetch("/api/proveedores/".concat(proveedor.id, "/actualizar"), {
               method: "POST",
               headers: {
                 "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
@@ -1267,54 +1177,61 @@ var useProveedorUpdateModal = function useProveedorUpdateModal(_ref) {
               body: submitData,
               credentials: "include"
             });
-          case 9:
+          case 7:
             response = _context.sent;
-            _context.next = 12;
+            _context.next = 10;
             return response.json();
-          case 12:
+          case 10:
             data = _context.sent;
             if (response.ok) {
+              _context.next = 16;
+              break;
+            }
+            if (!data.errors) {
               _context.next = 15;
               break;
             }
-            throw new Error(data.message || "Error al actualizar el proveedor");
+            setErrors(data.errors);
+            throw new Error(Object.values(data.errors)[0]);
           case 15:
+            throw new Error(data.message || "Error al actualizar el proveedor");
+          case 16:
             // Primero cerramos el modal
             handleClose();
 
             // Luego notificamos al componente padre del éxito
             if (!onProveedorUpdated) {
-              _context.next = 19;
+              _context.next = 20;
               break;
             }
-            _context.next = 19;
+            _context.next = 20;
             return onProveedorUpdated(data.proveedor);
-          case 19:
-            _context.next = 25;
+          case 20:
+            _context.next = 26;
             break;
-          case 21:
-            _context.prev = 21;
-            _context.t0 = _context["catch"](4);
+          case 22:
+            _context.prev = 22;
+            _context.t0 = _context["catch"](2);
             console.error("Error al actualizar el proveedor:", _context.t0);
             setErrors(function (prev) {
               return _objectSpread(_objectSpread({}, prev), {}, {
                 general: _context.t0.message || "Error al actualizar el proveedor"
               });
             });
-          case 25:
-            _context.prev = 25;
+          case 26:
+            _context.prev = 26;
             setIsSubmitting(false);
-            return _context.finish(25);
-          case 28:
+            return _context.finish(26);
+          case 29:
           case "end":
             return _context.stop();
         }
-      }, _callee, null, [[4, 21, 25, 28]]);
+      }, _callee, null, [[2, 22, 26, 29]]);
     }));
     return function (_x) {
       return _ref2.apply(this, arguments);
     };
-  }(), [formData, validateForm, proveedor, handleClose, onProveedorUpdated]);
+  }(), [formData, proveedor, handleClose, onProveedorUpdated]);
   return {
     formData: formData,
     errors: errors,

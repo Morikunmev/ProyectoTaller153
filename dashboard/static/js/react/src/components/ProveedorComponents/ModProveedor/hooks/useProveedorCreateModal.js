@@ -1,4 +1,3 @@
-// useProveedorModal.js
 import { useState, useEffect } from "react";
 
 export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
@@ -22,46 +21,23 @@ export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
 
-  // // Efecto que maneja la visibilidad del modal
+  // Efecto que maneja la visibilidad del modal
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
-      setTimeout(() => setIsAnimating(true), 1);  // Inicia la animación
+      setTimeout(() => setIsAnimating(true), 1);
     } else {
       setIsAnimating(false);
       const timer = setTimeout(() => setIsVisible(false), 150);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]); // Se ejecuta cuando isOpen cambia
-
-  // Form validation
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.NombreProveedor || formData.NombreProveedor.length < 3) {
-      newErrors.NombreProveedor = "El nombre debe tener al menos 3 caracteres";
-    }
-    if (
-      !/^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$/.test(formData.RutProveedor)
-    ) {
-      newErrors.RutProveedor = "Formato inválido (XX.XXX.XXX-X)";
-    }
-    if (!formData.MarcaProveedor || formData.MarcaProveedor.length < 2) {
-      newErrors.MarcaProveedor = "La marca debe tener al menos 2 caracteres";
-    }
-    if (formData.TelefonoProveedor && formData.TelefonoProveedor.length > 15) {
-      newErrors.TelefonoProveedor =
-        "El teléfono no puede tener más de 15 caracteres";
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  }, [isOpen]);
 
   // Handle modal close
   const handleClose = () => {
     setIsAnimating(false);
     setTimeout(() => {
       onClose();
-      //Es una funcion que viene como prop desde el componente padre
       setFormData({
         NombreProveedor: "",
         RutProveedor: "",
@@ -99,10 +75,8 @@ export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    if (!validateForm()) return;
-
-    //Se activa el estado que indica que el formulario se esta enviando, util para mostrar loading o deshabilitar el boton de envio
     setIsSubmitting(true);
+
     try {
       const formDataToSend = new FormData();
       Object.keys(formData).forEach((key) => {
@@ -122,14 +96,25 @@ export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
       });
 
       const data = await response.json();
+
+      if (!response.ok) {
+        if (data.errors) {
+          setErrors(data.errors);
+          throw new Error(Object.values(data.errors)[0]);
+        }
+        throw new Error(data.message || "Error al crear el proveedor");
+      }
+
       if (data.success) {
         onSubmit(data.proveedor);
         handleClose();
-      } else {
-        setErrors(data.errors || { general: "Error al crear el proveedor" });
       }
     } catch (error) {
-      setErrors({ general: error.message });
+      console.error("Error al crear proveedor:", error);
+      setErrors((prev) => ({
+        ...prev,
+        general: error.message || "Error al crear el proveedor",
+      }));
     } finally {
       setIsSubmitting(false);
     }

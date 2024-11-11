@@ -77,82 +77,6 @@ export const useProveedorUpdateModal = ({
     }
   }, []);
 
-  // Validación del formulario
-  const validateForm = useCallback(() => {
-    const newErrors = {};
-
-    // Validación del nombre (requerido y único)
-    if (!formData.NombreProveedor.trim()) {
-      newErrors.NombreProveedor = "El nombre es requerido";
-    } else if (formData.NombreProveedor.length > 100) {
-      newErrors.NombreProveedor =
-        "El nombre no puede exceder los 100 caracteres";
-    }
-
-    // Validación del RUT (requerido, único y formato específico)
-    if (!formData.RutProveedor.trim()) {
-      newErrors.RutProveedor = "El RUT es requerido";
-    } else {
-      const rutRegex = /^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$/;
-      if (!rutRegex.test(formData.RutProveedor)) {
-        newErrors.RutProveedor = "El RUT debe tener formato XX.XXX.XXX-X";
-      }
-      if (formData.RutProveedor.length > 12) {
-        newErrors.RutProveedor = "El RUT no puede exceder los 12 caracteres";
-      }
-    }
-
-    // Validación de la marca (requerida y única)
-    if (!formData.MarcaProveedor.trim()) {
-      newErrors.MarcaProveedor = "La marca es requerida";
-    } else if (formData.MarcaProveedor.length > 100) {
-      newErrors.MarcaProveedor = "La marca no puede exceder los 100 caracteres";
-    }
-
-    // Validaciones de campos opcionales
-    if (formData.CiudadProveedor && formData.CiudadProveedor.length > 100) {
-      newErrors.CiudadProveedor =
-        "La ciudad no puede exceder los 100 caracteres";
-    }
-
-    if (formData.RegionProveedor && formData.RegionProveedor.length > 100) {
-      newErrors.RegionProveedor =
-        "La región no puede exceder los 100 caracteres";
-    }
-
-    if (formData.PaisProveedor && formData.PaisProveedor.length > 100) {
-      newErrors.PaisProveedor = "El país no puede exceder los 100 caracteres";
-    }
-
-    // Validación del teléfono
-    if (formData.TelefonoProveedor) {
-      if (formData.TelefonoProveedor.length > 15) {
-        newErrors.TelefonoProveedor =
-          "El teléfono no puede exceder los 15 caracteres";
-      }
-      const phoneRegex = /^\+?[\d\s-]+$/;
-      if (!phoneRegex.test(formData.TelefonoProveedor)) {
-        newErrors.TelefonoProveedor = "Formato de teléfono inválido";
-      }
-    }
-
-    // Validación de la imagen
-    if (formData.FotoProveedor && formData.FotoProveedor instanceof File) {
-      const validImageTypes = ["image/jpeg", "image/png", "image/gif"];
-      if (!validImageTypes.includes(formData.FotoProveedor.type)) {
-        newErrors.FotoProveedor =
-          "El archivo debe ser una imagen (JPEG, PNG o GIF)";
-      }
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (formData.FotoProveedor.size > maxSize) {
-        newErrors.FotoProveedor = "La imagen no puede exceder los 5MB";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [formData]);
-
   // Manejador de cierre del modal
   const handleClose = useCallback(() => {
     setIsAnimating(false);
@@ -167,8 +91,6 @@ export const useProveedorUpdateModal = ({
     async (e) => {
       if (e) e.preventDefault();
 
-      if (!validateForm()) return;
-
       setIsSubmitting(true);
       try {
         // Crear FormData para enviar archivos
@@ -180,19 +102,27 @@ export const useProveedorUpdateModal = ({
         }
 
         // Realizar la petición de actualización
-        const response = await fetch(`/api/proveedores/${proveedor.id}/`, {
-          method: "POST",
-          headers: {
-            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
-              .value,
-          },
-          body: submitData,
-          credentials: "include",
-        });
+        const response = await fetch(
+          `/api/proveedores/${proveedor.id}/actualizar`,
+          {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": document.querySelector(
+                "[name=csrfmiddlewaretoken]"
+              ).value,
+            },
+            body: submitData,
+            credentials: "include",
+          }
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
+          if (data.errors) {
+            setErrors(data.errors);
+            throw new Error(Object.values(data.errors)[0]);
+          }
           throw new Error(data.message || "Error al actualizar el proveedor");
         }
 
@@ -213,7 +143,7 @@ export const useProveedorUpdateModal = ({
         setIsSubmitting(false);
       }
     },
-    [formData, validateForm, proveedor, handleClose, onProveedorUpdated]
+    [formData, proveedor, handleClose, onProveedorUpdated]
   );
 
   return {
