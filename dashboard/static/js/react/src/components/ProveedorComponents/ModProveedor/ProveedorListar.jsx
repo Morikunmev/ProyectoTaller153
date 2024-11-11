@@ -197,7 +197,9 @@ const ProveedorListar = () => {
   return (
     <div className="max-w-7xl mx-auto p-6">
       {/* Header: Búsqueda, Vista y Botón Crear */}
-      <div className="flex justify-between items-center mb-6">
+
+      {/* Header: Búsqueda, Vista y Botón Crear */}
+      <div className="flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4">
         <div className="flex items-center gap-4">
           {/* Barra de búsqueda */}
           <div className="relative w-[300px]">
@@ -206,8 +208,8 @@ const ProveedorListar = () => {
               type="text"
               placeholder="Buscar proveedor..."
               className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
-                 focus:outline-none focus:ring-1 focus:ring-blue-500
-                 transition-colors duration-200"
+           focus:outline-none focus:ring-1 focus:ring-blue-500
+           transition-colors duration-200"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
             />
@@ -241,17 +243,18 @@ const ProveedorListar = () => {
         </div>
 
         {/* Contenedor para los botones de acción */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-3 max-[790px]:w-full">
+          {/* Botón Generar Excel */}
           {/* Botón Generar Excel */}
           <button
             onClick={handleExportClick}
             className="group relative bg-green-600 text-white px-4 py-2 rounded-lg 
-                 hover:bg-green-700 active:bg-green-800
-                 transition-all duration-200 ease-out 
-                 hover:shadow-lg active:shadow-none
-                 transform active:scale-95"
+       hover:bg-green-700 active:bg-green-800
+       transition-all duration-200 ease-out 
+       hover:shadow-lg active:shadow-none
+       transform active:scale-95 max-[790px]:flex-1"
           >
-            <span className="flex items-center">
+            <span className="flex items-center max-[790px]:justify-center">
               <svg
                 className="w-4 h-4 mr-2 inline-block transform transition-transform duration-200 group-hover:scale-110"
                 fill="none"
@@ -273,12 +276,12 @@ const ProveedorListar = () => {
           <button
             onClick={handleOpenModal}
             className="group relative bg-black text-white px-4 py-2 rounded-lg 
-               hover:bg-gray-800 active:bg-gray-900
-               transition-all duration-200 ease-out 
-               hover:shadow-lg active:shadow-none
-               transform active:scale-95"
+       hover:bg-gray-800 active:bg-gray-900
+       transition-all duration-200 ease-out 
+       hover:shadow-lg active:shadow-none
+       transform active:scale-95 max-[790px]:flex-1"
           >
-            <span className="flex items-center">
+            <span className="flex items-center max-[790px]:justify-center">
               <span className="inline-block transform transition-transform duration-200 group-hover:translate-x-[-2px]">
                 +
               </span>
