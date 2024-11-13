@@ -47,16 +47,42 @@ class Proveedor(models.Model):
             
 #------------------------------MODULO FACTURA------------------------------
 class Factura(models.Model):
-    # Campos obligatorios y únicos
-    FechaEmision = models.DateField(null=False, blank=False)
-    # Campos multimedia
-    FotoFactura = CloudinaryField('imagen',folder='facturas/',null=True, blank=True)
-    # Campo FK
-    Proveedor = models.ForeignKey('Proveedor',on_delete=models.CASCADE,null=False, blank=False)
+    # Campos obligatorios
+    FechaEmision = models.DateField(
+        null=False, 
+        blank=False,
+        verbose_name="Fecha de Emisión"
+    )
+
+    # Campos multimedia opcionales
+    FotoFactura = CloudinaryField(
+        "Foto de Factura",  # Este es el verbose_name
+        folder='facturas/',
+        null=True, 
+        blank=True
+    )
+    DocumentoFactura = CloudinaryField(
+        "Documento de Factura",  # Este es el verbose_name
+        folder='facturas/documentos/',
+        resource_type='raw',
+        null=True, 
+        blank=True
+    )
+
+    # Campo de relación
+    Proveedor = models.ForeignKey(
+        'Proveedor',
+        on_delete=models.CASCADE,
+        null=False, 
+        blank=False,
+        verbose_name="Proveedor"
+    )
+    
     class Meta:
         verbose_name = "Factura"
         verbose_name_plural = "Facturas"
         ordering = ['-FechaEmision']  # Ordena por fecha de emisión descendente
+    
 
 #------------------------------MODULO ENVIO------------------------------
 class Envio(models.Model):
