@@ -734,7 +734,7 @@ def crear_factura(request):
                     }, status=400)
 
                 # Validar tamaño (10MB)
-                if foto.size > 10 * 1024 * 1024:  # 10MB en bytes
+                if foto.size > 10 * 1024 * 1024:
                     return JsonResponse({
                         'success': False,
                         'errors': {
@@ -743,6 +743,20 @@ def crear_factura(request):
                     }, status=400)
 
                 nueva_factura.FotoFactura = foto
+
+            # Manejar el documento si existe
+            if 'DocumentoFactura' in request.FILES:
+                documento = request.FILES['DocumentoFactura']
+                # Validar tamaño (10MB)
+                if documento.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'DocumentoFactura': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'
+                        }
+                    }, status=400)
+
+                nueva_factura.DocumentoFactura = documento
             
             # Validar el modelo completo
             try:
@@ -768,7 +782,8 @@ def crear_factura(request):
                         'NombreProveedor': nueva_factura.Proveedor.NombreProveedor,
                         'RutProveedor': nueva_factura.Proveedor.RutProveedor
                     },
-                    'FotoFactura': nueva_factura.FotoFactura.url if nueva_factura.FotoFactura else None
+                    'FotoFactura': nueva_factura.FotoFactura.url if nueva_factura.FotoFactura else None,
+                    'DocumentoFactura': nueva_factura.DocumentoFactura.url if nueva_factura.DocumentoFactura else None
                 }
             })
             
@@ -787,7 +802,6 @@ def crear_factura(request):
         }
     }, status=405)
 
-
 @login_required(login_url='login')
 def listar_facturas(request):
     if request.method == 'GET':
@@ -797,17 +811,15 @@ def listar_facturas(request):
             for factura in facturas:
                 data.append({
                     'id': factura.id,
-                    # Campo de fecha
                     'FechaEmision': factura.FechaEmision.isoformat() if factura.FechaEmision else None,
-                    # Información del proveedor relacionado
                     'Proveedor': {
                         'id': factura.Proveedor.id,
                         'NombreProveedor': factura.Proveedor.NombreProveedor,
                         'RutProveedor': factura.Proveedor.RutProveedor,
                         'MarcaProveedor': factura.Proveedor.MarcaProveedor
                     },
-                    # Campo multimedia
                     'FotoFactura': factura.FotoFactura.url if factura.FotoFactura else None,
+                    'DocumentoFactura': factura.DocumentoFactura.url if factura.DocumentoFactura else None
                 })
             return JsonResponse({
                 'success': True,
@@ -828,47 +840,38 @@ def listar_facturas(request):
 def eliminar_factura(request, factura_id):
     if request.method == 'DELETE':
         try:
-            # Obtener la factura
             factura = get_object_or_404(Factura, id=factura_id)
             
-            # Guardar información relevante para la respuesta
             fecha_emision = factura.FechaEmision
             nombre_proveedor = factura.Proveedor.NombreProveedor
             
-            # Si existe una foto, eliminarla de Cloudinary
-            if factura.FotoFactura:
-                try:
-                    # Obtener la URL de la imagen
-                    url = factura.FotoFactura.url
-                    
-                    # Extraer el public_id del formato "facturas/xxxxxx"
-                    # La URL será algo como: https://res.cloudinary.com/tu-cloud/image/upload/v1234567/facturas/xxxxxx
-                    parts = url.split('/')
-                    # Obtener las dos últimas partes para formar "facturas/xxxxxx"
-                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
-                    
-                    print(f"Intentando eliminar imagen con public_id: {public_id}")
-                    
-                    # Configurar Cloudinary
-                    cloudinary.config(
-                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
-                        api_key=os.getenv('CLOUDINARY_API_KEY'),
-                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
-                    )
-                    
-                    # Eliminar la imagen especificando el tipo y resource_type
-                    result = cloudinary.uploader.destroy(
-                        public_id,
-                        resource_type="image",
-                        type="upload"
-                    )
-                    print(f"Resultado de eliminación Cloudinary: {result}")
-                    
-                except Exception as cloud_error:
-                    print(f"Error al eliminar imagen de Cloudinary: {str(cloud_error)}")
-                    print(f"URL de la imagen: {factura.FotoFactura.url}")
+            # Manejar eliminación de archivos en Cloudinary
+            archivos = ['FotoFactura', 'DocumentoFactura']
+            for archivo in archivos:
+                archivo_field = getattr(factura, archivo)
+                if archivo_field:
+                    try:
+                        url = archivo_field.url
+                        parts = url.split('/')
+                        public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                        
+                        cloudinary.config(
+                            cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                            api_key=os.getenv('CLOUDINARY_API_KEY'),
+                            api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                        )
+                        
+                        # Determinar el resource_type basado en el campo
+                        resource_type = "raw" if archivo == "DocumentoFactura" else "image"
+                        
+                        cloudinary.uploader.destroy(
+                            public_id,
+                            resource_type=resource_type,
+                            type="upload"
+                        )
+                    except Exception as cloud_error:
+                        print(f"Error al eliminar {archivo} de Cloudinary: {str(cloud_error)}")
             
-            # Eliminar la factura
             factura.delete()
             
             return JsonResponse({
@@ -896,7 +899,6 @@ def actualizar_factura(request, factura_id):
             factura = get_object_or_404(Factura, id=factura_id)
             data = request.POST
             
-            # Validar campos requeridos
             campos_requeridos = ['FechaEmision', 'Proveedor']
             errores = {}
             
@@ -923,64 +925,70 @@ def actualizar_factura(request, factura_id):
                     'errors': {'Proveedor': 'Proveedor no válido'}
                 }, status=400)
 
-            # Manejar la actualización de la foto
-            if 'FotoFactura' in request.FILES:
-                foto = request.FILES['FotoFactura']
-                
-                # Validar tipo de archivo
-                if foto.content_type not in ALLOWED_FILE_TYPES:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {
-                            'FotoFactura': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF'
-                        }
-                    }, status=400)
-
-                # Validar tamaño (10MB)
-                if foto.size > 10 * 1024 * 1024:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {
-                            'FotoFactura': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'
-                        }
-                    }, status=400)
-                
-                try:
-                    # Guardar la referencia de la foto actual
-                    foto_anterior = factura.FotoFactura if factura.FotoFactura else None
+            # Manejar actualización de archivos
+            archivos = {
+                'FotoFactura': {'field': 'FotoFactura', 'resource_type': 'image'},
+                'DocumentoFactura': {'field': 'DocumentoFactura', 'resource_type': 'raw'}
+            }
+            
+            for archivo_key, archivo_info in archivos.items():
+                if archivo_key in request.FILES:
+                    nuevo_archivo = request.FILES[archivo_key]
                     
-                    # Asignar la nueva foto
-                    factura.FotoFactura = foto
+                    # Validación de tamaño para ambos tipos de archivo
+                    if nuevo_archivo.size > 10 * 1024 * 1024:
+                        return JsonResponse({
+                            'success': False,
+                            'errors': {
+                                archivo_key: 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'
+                            }
+                        }, status=400)
                     
-                    # Si hay foto anterior, eliminarla de Cloudinary
-                    if foto_anterior:
-                        try:
-                            url = foto_anterior.url
-                            parts = url.split('/')
-                            public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
-                            
-                            cloudinary.config(
-                                cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
-                                api_key=os.getenv('CLOUDINARY_API_KEY'),
-                                api_secret=os.getenv('CLOUDINARY_API_SECRET')
-                            )
-                            
-                            cloudinary.uploader.destroy(
-                                public_id,
-                                resource_type="raw",  # Cambiado para soportar todos los tipos
-                                type="upload",
-                                invalidate=True
-                            )
-                        except Exception as cloud_error:
-                            print(f"Error al eliminar archivo anterior de Cloudinary: {str(cloud_error)}")
-                
-                except Exception as e:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {'FotoFactura': f'Error al actualizar el archivo: {str(e)}'}
-                    }, status=400)
+                    # Validación adicional de tipo solo para FotoFactura
+                    if archivo_key == 'FotoFactura' and nuevo_archivo.content_type not in ALLOWED_FILE_TYPES:
+                        return JsonResponse({
+                            'success': False,
+                            'errors': {
+                                archivo_key: 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF'
+                            }
+                        }, status=400)
+                    
+                    try:
+                        # Guardar referencia del archivo actual
+                        archivo_anterior = getattr(factura, archivo_key)
+                        
+                        # Asignar nuevo archivo
+                        setattr(factura, archivo_key, nuevo_archivo)
+                        
+                        # Eliminar archivo anterior de Cloudinary si existe
+                        if archivo_anterior:
+                            try:
+                                url = archivo_anterior.url
+                                parts = url.split('/')
+                                public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                                
+                                cloudinary.config(
+                                    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                                    api_key=os.getenv('CLOUDINARY_API_KEY'),
+                                    api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                                )
+                                
+                                cloudinary.uploader.destroy(
+                                    public_id,
+                                    resource_type=archivo_info['resource_type'],
+                                    type="upload",
+                                    invalidate=True
+                                )
+                            except Exception as cloud_error:
+                                print(f"Error al eliminar archivo anterior de Cloudinary: {str(cloud_error)}")
+                    
+                    except Exception as e:
+                        return JsonResponse({
+                            'success': False,
+                            'errors': {archivo_key: f'Error al actualizar el archivo: {str(e)}'}
+                        }, status=400)
 
-            # Actualizar campos
+            # Actualizar campos básicos
             factura.FechaEmision = fecha_emision
             factura.Proveedor = proveedor
             
@@ -1004,7 +1012,8 @@ def actualizar_factura(request, factura_id):
                         'RutProveedor': factura.Proveedor.RutProveedor,
                         'MarcaProveedor': factura.Proveedor.MarcaProveedor
                     },
-                    'FotoFactura': factura.FotoFactura.url if factura.FotoFactura else None
+                    'FotoFactura': factura.FotoFactura.url if factura.FotoFactura else None,
+                    'DocumentoFactura': factura.DocumentoFactura.url if factura.DocumentoFactura else None
                 }
             })
             
