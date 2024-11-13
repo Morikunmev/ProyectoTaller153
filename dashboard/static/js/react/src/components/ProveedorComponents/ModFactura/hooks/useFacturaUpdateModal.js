@@ -10,6 +10,8 @@ export const useFacturaUpdateModal = ({
   const [formData, setFormData] = useState({
     FechaEmision: "",
     Proveedor: "",
+    FotoFactura: null,
+    DocumentoFactura: null,
   });
 
   const [errors, setErrors] = useState({});
@@ -17,6 +19,7 @@ export const useFacturaUpdateModal = ({
   const [isAnimating, setIsAnimating] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [previewUrl, setPreviewUrl] = useState("");
+  const [documentPreviewUrl, setDocumentPreviewUrl] = useState("");
   const [proveedores, setProveedores] = useState([]);
 
   // Efecto para manejar la animación de apertura/cierre
@@ -59,8 +62,11 @@ export const useFacturaUpdateModal = ({
       setFormData({
         FechaEmision: factura.FechaEmision || "",
         Proveedor: factura.Proveedor?.id || "",
+        FotoFactura: null,
+        DocumentoFactura: null,
       });
       setPreviewUrl(factura.FotoFactura || "");
+      setDocumentPreviewUrl(factura.DocumentoFactura || "");
     }
   }, [factura, isOpen]);
 
@@ -71,23 +77,97 @@ export const useFacturaUpdateModal = ({
       ...prev,
       [name]: value,
     }));
+    
+    // Limpiar error del campo cuando cambia
+    if (errors[name]) {
+      setErrors((prev) => ({
+        ...prev,
+        [name]: null,
+      }));
+    }
+  }, [errors]);
+
+  // Función de validación de archivos
+  const validateFile = useCallback((file, type) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (file.size > maxSize) {
+      return "El archivo es demasiado grande. El tamaño máximo permitido es 10MB";
+    }
+
+    if (type === "foto") {
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/bmp",
+        "image/webp",
+        "image/tiff",
+        "image/svg+xml",
+        "application/pdf",
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        return "Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF";
+      }
+    }
+
+    return null;
   }, []);
 
-  // Manejador de cambios en el archivo de imagen
-  const handleFileChange = useCallback((e) => {
-    const file = e.target.files[0];
+  // Manejador de cambios en la foto
+  const handleFotoChange = useCallback((e) => {
+    const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-        setFormData((prev) => ({
-          ...prev,
-          FotoFactura: file,
-        }));
-      };
-      reader.readAsDataURL(file);
+      const error = validateFile(file, "foto");
+      if (error) {
+        setErrors((prev) => ({ ...prev, FotoFactura: error }));
+        e.target.value = "";
+        return;
+      }
+
+      // Limpiar error previo si existe
+      if (errors.FotoFactura) {
+        setErrors((prev) => ({ ...prev, FotoFactura: null }));
+      }
+
+      setFormData((prev) => ({ ...prev, FotoFactura: file }));
+
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewUrl(reader.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setPreviewUrl("/path/to/pdf-icon.png");
+      }
     }
-  }, []);
+  }, [errors, validateFile]);
+
+  // Manejador de cambios en el documento
+  const handleDocumentoChange = useCallback((e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const error = validateFile(file, "documento");
+      if (error) {
+        setErrors((prev) => ({ ...prev, DocumentoFactura: error }));
+        e.target.value = "";
+        return;
+      }
+
+      // Limpiar error previo si existe
+      if (errors.DocumentoFactura) {
+        setErrors((prev) => ({ ...prev, DocumentoFactura: null }));
+      }
+
+      setFormData((prev) => ({ ...prev, DocumentoFactura: file }));
+      setDocumentPreviewUrl(URL.createObjectURL(file));
+
+      return () => URL.revokeObjectURL(documentPreviewUrl);
+    }
+  }, [errors, validateFile, documentPreviewUrl]);
 
   // Manejador de cierre del modal
   const handleClose = useCallback(() => {
@@ -121,13 +201,17 @@ export const useFacturaUpdateModal = ({
 
         // Crear FormData para enviar archivos
         const submitData = new FormData();
-        for (const [key, value] of Object.entries(formData)) {
-          if (value instanceof File || value) {
-            submitData.append(key, value);
-          }
+        submitData.append("FechaEmision", formData.FechaEmision);
+        submitData.append("Proveedor", formData.Proveedor);
+        
+        if (formData.FotoFactura instanceof File) {
+          submitData.append("FotoFactura", formData.FotoFactura);
+        }
+        
+        if (formData.DocumentoFactura instanceof File) {
+          submitData.append("DocumentoFactura", formData.DocumentoFactura);
         }
 
-        // Realizar la petición de actualización
         const response = await fetch(`/api/factura/${factura.id}/actualizar/`, {
           method: "POST",
           headers: {
@@ -148,10 +232,8 @@ export const useFacturaUpdateModal = ({
           throw new Error(data.message || "Error al actualizar la factura");
         }
 
-        // Primero cerramos el modal
         handleClose();
 
-        // Luego notificamos al componente padre del éxito
         if (onFacturaUpdated) {
           await onFacturaUpdated(data.factura);
         }
@@ -175,11 +257,13 @@ export const useFacturaUpdateModal = ({
     isAnimating,
     isVisible,
     previewUrl,
+    documentPreviewUrl,
     proveedores,
     handleClose,
     handleSubmit,
     handleInputChange,
-    handleFileChange,
+    handleFotoChange,
+    handleDocumentoChange,
   };
 };
 

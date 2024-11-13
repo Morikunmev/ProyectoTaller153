@@ -179,9 +179,10 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/pencil.js");
 /* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/trash-2.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/search.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/list.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/layout-grid.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file-text.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/search.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/list.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/layout-grid.js");
 /* harmony import */ var _PaginacionModFactura__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./PaginacionModFactura */ "./src/components/ProveedorComponents/ModFactura/PaginacionModFactura.jsx");
 /* harmony import */ var _modals_FacturaCreateModal__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./modals/FacturaCreateModal */ "./src/components/ProveedorComponents/ModFactura/modals/FacturaCreateModal.jsx");
 /* harmony import */ var _hooks_useFacturaState__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./hooks/useFacturaState */ "./src/components/ProveedorComponents/ModFactura/hooks/useFacturaState.js");
@@ -237,8 +238,6 @@ var FacturaListar = function FacturaListar() {
     handleFacturaUpdated = _useFacturaState.handleFacturaUpdated,
     setDeleteModalOpen = _useFacturaState.setDeleteModalOpen,
     setFacturaToDelete = _useFacturaState.setFacturaToDelete;
-
-  // Renderizado de botones de acción
   var renderActionButtons = function renderActionButtons(factura) {
     return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: "flex space-x-2"
@@ -264,8 +263,6 @@ var FacturaListar = function FacturaListar() {
       className: "relative z-10"
     }, "Eliminar")));
   };
-
-  // Renderizado de vistas
   var renderGridView = function renderGridView() {
     return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4"
@@ -315,6 +312,8 @@ var FacturaListar = function FacturaListar() {
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
       className: "p-4 font-medium w-16"
     }, "FOTO"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
+      className: "p-4 font-medium w-16"
+    }, "DOC"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
       className: "p-4 font-medium"
     }, "FECHA EMISI\xD3N"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
       className: "p-4 font-medium"
@@ -342,6 +341,91 @@ var FacturaListar = function FacturaListar() {
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
         className: "text-gray-400 text-xs"
       }, "Sin foto")))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
+        className: "p-4"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+        className: "w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center"
+      }, factura.DocumentoFactura ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
+        onClick: /*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+          var _document$querySelect, csrfToken, response, contentType, errorData, data;
+          return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+            while (1) switch (_context2.prev = _context2.next) {
+              case 0:
+                _context2.prev = 0;
+                // Obtener el token CSRF
+                csrfToken = (_document$querySelect = document.querySelector("[name=csrfmiddlewaretoken]")) === null || _document$querySelect === void 0 ? void 0 : _document$querySelect.value;
+                if (csrfToken) {
+                  _context2.next = 4;
+                  break;
+                }
+                throw new Error("Token CSRF no encontrado");
+              case 4:
+                _context2.next = 6;
+                return fetch("/api/factura/".concat(factura.id, "/ver-documento/"), {
+                  method: "GET",
+                  credentials: "include",
+                  headers: {
+                    "X-CSRFToken": csrfToken
+                  }
+                });
+              case 6:
+                response = _context2.sent;
+                if (response.ok) {
+                  _context2.next = 17;
+                  break;
+                }
+                contentType = response.headers.get("content-type");
+                if (!(contentType && contentType.includes("application/json"))) {
+                  _context2.next = 16;
+                  break;
+                }
+                _context2.next = 12;
+                return response.json();
+              case 12:
+                errorData = _context2.sent;
+                throw new Error(errorData.error || "Error al acceder al documento");
+              case 16:
+                throw new Error("Error ".concat(response.status, ": ").concat(response.statusText));
+              case 17:
+                _context2.next = 19;
+                return response.json();
+              case 19:
+                data = _context2.sent;
+                // Abrir el documento en una nueva pestaña
+                window.open(data.url, "_blank");
+                _context2.next = 27;
+                break;
+              case 23:
+                _context2.prev = 23;
+                _context2.t0 = _context2["catch"](0);
+                console.error("Error al acceder al documento:", _context2.t0);
+
+                // Mostrar error al usuario
+                if (typeof showAlert === "function") {
+                  showAlert({
+                    type: "error",
+                    title: "Error al acceder al documento",
+                    message: _context2.t0.message || "Hubo un problema al acceder al documento"
+                  });
+                } else {
+                  alert(_context2.t0.message || "Hubo un problema al acceder al documento. Por favor, inténtelo de nuevo.");
+                }
+              case 27:
+              case "end":
+                return _context2.stop();
+            }
+          }, _callee2, null, [[0, 23]]);
+        })),
+        className: "flex items-center justify-center w-full h-full hover:bg-gray-200 transition-colors group relative",
+        title: "Ver documento"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], {
+        className: "w-5 h-5 text-gray-600 group-hover:text-gray-800 transition-colors"
+      }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+        className: "absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap"
+      }, "Ver documento")) : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+        className: "w-full h-full flex items-center justify-center bg-gray-200"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+        className: "text-gray-400 text-xs"
+      }, "Sin doc")))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
         className: "p-4 font-medium"
       }, factura.FechaEmision), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
         className: "p-4 text-gray-600"
@@ -358,7 +442,7 @@ var FacturaListar = function FacturaListar() {
     className: "flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "relative w-[300px] max-[790px]:w-full"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], {
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], {
     className: "absolute left-3 top-2.5 h-4 w-4 text-gray-400"
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "text",
@@ -378,7 +462,7 @@ var FacturaListar = function FacturaListar() {
     },
     className: "p-2 transition-colors duration-200 ".concat(!isGridView ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-700"),
     title: "Vista de lista"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], {
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], {
     className: "w-5 h-5"
   })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     onClick: function onClick() {
@@ -386,7 +470,7 @@ var FacturaListar = function FacturaListar() {
     },
     className: "p-2 transition-colors duration-200 ".concat(isGridView ? "bg-gray-100 text-gray-900" : "text-gray-500 hover:text-gray-700"),
     title: "Vista de cuadr\xEDcula"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], {
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], {
     className: "w-5 h-5"
   })))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "flex items-center space-x-3 max-[790px]:w-full"
@@ -574,7 +658,8 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
   var _useState = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)({
       FechaEmision: today,
       Proveedor: "",
-      FotoFactura: null
+      FotoFactura: null,
+      DocumentoFactura: null
     }),
     _useState2 = _slicedToArray(_useState, 2),
     formData = _useState2[0],
@@ -601,26 +686,30 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
     _useState12 = _slicedToArray(_useState11, 2),
     previewUrl = _useState12[0],
     setPreviewUrl = _useState12[1];
-  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]),
+  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null),
     _useState14 = _slicedToArray(_useState13, 2),
-    proveedores = _useState14[0],
-    setProveedores = _useState14[1];
+    documentPreviewUrl = _useState14[0],
+    setDocumentPreviewUrl = _useState14[1];
+  var _useState15 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]),
+    _useState16 = _slicedToArray(_useState15, 2),
+    proveedores = _useState16[0],
+    setProveedores = _useState16[1];
 
-  // Efecto para cargar la lista de proveedores
+  // Efecto para cargar la lista de proveedores y resetear el formulario
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
     if (isOpen) {
       fetchProveedores();
       setFormData({
         FechaEmision: today,
         Proveedor: "",
-        FotoFactura: null
+        FotoFactura: null,
+        DocumentoFactura: null
       });
       setPreviewUrl(null);
+      setDocumentPreviewUrl(null);
       setErrors({});
     }
   }, [isOpen, today]);
-
-  // Función para obtener la lista de proveedores
   var fetchProveedores = /*#__PURE__*/function () {
     var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
       var response, data;
@@ -679,8 +768,6 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
       return _ref2.apply(this, arguments);
     };
   }();
-
-  // Efecto que maneja la visibilidad del modal
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
     if (isOpen) {
       setIsVisible(true);
@@ -697,8 +784,6 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
       };
     }
   }, [isOpen]);
-
-  // Handle modal close
   var handleClose = function handleClose() {
     setIsAnimating(false);
     setTimeout(function () {
@@ -706,14 +791,14 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
       setFormData({
         FechaEmision: today,
         Proveedor: "",
-        FotoFactura: null
+        FotoFactura: null,
+        DocumentoFactura: null
       });
       setPreviewUrl(null);
+      setDocumentPreviewUrl(null);
       setErrors({});
     }, 150);
   };
-
-  // Handle input changes
   var handleInputChange = function handleInputChange(e) {
     var _e$target = e.target,
       name = _e$target.name,
@@ -721,67 +806,54 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
     setFormData(function (prev) {
       return _objectSpread(_objectSpread({}, prev), {}, _defineProperty({}, name, value));
     });
-    // Limpiar error del campo cuando cambia
     if (errors[name]) {
       setErrors(function (prev) {
         return _objectSpread(_objectSpread({}, prev), {}, _defineProperty({}, name, null));
       });
     }
   };
+  var validateFile = function validateFile(file, fieldName) {
+    var maxSize = 10 * 1024 * 1024; // 10MB en bytes
 
-  // Handle file input
-  var handleFileChange = function handleFileChange(e) {
+    if (file.size > maxSize) {
+      return "El archivo es demasiado grande. El tama\xF1o m\xE1ximo permitido es 10MB";
+    }
+    if (fieldName === "FotoFactura") {
+      var allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/bmp", "image/webp", "image/tiff", "image/svg+xml", "application/pdf"];
+      if (!allowedTypes.includes(file.type)) {
+        return "Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF";
+      }
+    }
+    return null;
+  };
+  var handleFotoChange = function handleFotoChange(e) {
     var _e$target$files;
     var file = (_e$target$files = e.target.files) === null || _e$target$files === void 0 ? void 0 : _e$target$files[0];
     if (file) {
-      // Lista de tipos MIME de imágenes permitidos
-      var allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/bmp", "image/webp", "image/tiff", "image/svg+xml", "application/pdf" // Incluir PDF si quieres permitirlo
-      ];
-
-      // Verificar el tamaño del archivo (ejemplo: 10MB máximo)
-      var maxSize = 10 * 1024 * 1024; // 10MB en bytes
-
-      if (!allowedTypes.includes(file.type)) {
+      var error = validateFile(file, "FotoFactura");
+      if (error) {
         setErrors(function (prev) {
           return _objectSpread(_objectSpread({}, prev), {}, {
-            FotoFactura: "Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF"
+            FotoFactura: error
           });
         });
         e.target.value = "";
         return;
       }
-      if (file.size > maxSize) {
-        setErrors(function (prev) {
-          return _objectSpread(_objectSpread({}, prev), {}, {
-            FotoFactura: "El archivo es demasiado grande. El tamaño máximo permitido es 10MB"
-          });
-        });
-        e.target.value = "";
-        return;
-      }
-
-      // Si pasa las validaciones, proceder con el archivo
       setFormData(function (prev) {
         return _objectSpread(_objectSpread({}, prev), {}, {
           FotoFactura: file
         });
       });
-
-      // Solo crear preview para imágenes (no PDF)
       if (file.type.startsWith("image/")) {
         var objectUrl = URL.createObjectURL(file);
         setPreviewUrl(objectUrl);
-
-        // Limpiar la URL del objeto cuando ya no se necesite
         return function () {
           return URL.revokeObjectURL(objectUrl);
         };
       } else {
-        // Para PDFs, mostrar un icono o mensaje en lugar de preview
-        setPreviewUrl("/path/to/pdf-icon.png"); // Podrías usar un ícono de PDF
+        setPreviewUrl("/path/to/pdf-icon.png");
       }
-
-      // Limpiar error si existe
       if (errors.FotoFactura) {
         setErrors(function (prev) {
           return _objectSpread(_objectSpread({}, prev), {}, {
@@ -791,8 +863,39 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
       }
     }
   };
-
-  // Validate form data
+  var handleDocumentoChange = function handleDocumentoChange(e) {
+    var _e$target$files2;
+    var file = (_e$target$files2 = e.target.files) === null || _e$target$files2 === void 0 ? void 0 : _e$target$files2[0];
+    if (file) {
+      var error = validateFile(file, "DocumentoFactura");
+      if (error) {
+        setErrors(function (prev) {
+          return _objectSpread(_objectSpread({}, prev), {}, {
+            DocumentoFactura: error
+          });
+        });
+        e.target.value = "";
+        return;
+      }
+      setFormData(function (prev) {
+        return _objectSpread(_objectSpread({}, prev), {}, {
+          DocumentoFactura: file
+        });
+      });
+      var objectUrl = URL.createObjectURL(file);
+      setDocumentPreviewUrl(objectUrl);
+      if (errors.DocumentoFactura) {
+        setErrors(function (prev) {
+          return _objectSpread(_objectSpread({}, prev), {}, {
+            DocumentoFactura: null
+          });
+        });
+      }
+      return function () {
+        return URL.revokeObjectURL(objectUrl);
+      };
+    }
+  };
   var validateForm = function validateForm() {
     var newErrors = {};
     if (!formData.FechaEmision) {
@@ -803,8 +906,6 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
     }
     return newErrors;
   };
-
-  // Handle form submission
   var handleSubmit = /*#__PURE__*/function () {
     var _ref3 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(e) {
       var validationErrors, formDataToSend, response, data;
@@ -828,7 +929,10 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
             if (formData.FotoFactura) {
               formDataToSend.append("FotoFactura", formData.FotoFactura);
             }
-            _context2.next = 13;
+            if (formData.DocumentoFactura) {
+              formDataToSend.append("DocumentoFactura", formData.DocumentoFactura);
+            }
+            _context2.next = 14;
             return fetch("/api/factura/crear/", {
               method: "POST",
               headers: {
@@ -837,33 +941,33 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
               body: formDataToSend,
               credentials: "include"
             });
-          case 13:
+          case 14:
             response = _context2.sent;
-            _context2.next = 16;
+            _context2.next = 17;
             return response.json();
-          case 16:
+          case 17:
             data = _context2.sent;
             if (response.ok) {
-              _context2.next = 22;
+              _context2.next = 23;
               break;
             }
             if (!data.errors) {
-              _context2.next = 21;
+              _context2.next = 22;
               break;
             }
             setErrors(data.errors);
             throw new Error(Object.values(data.errors)[0]);
-          case 21:
-            throw new Error(data.message || "Error al crear la factura");
           case 22:
+            throw new Error(data.message || "Error al crear la factura");
+          case 23:
             if (data.success) {
               onSubmit(data.factura);
               handleClose();
             }
-            _context2.next = 29;
+            _context2.next = 30;
             break;
-          case 25:
-            _context2.prev = 25;
+          case 26:
+            _context2.prev = 26;
             _context2.t0 = _context2["catch"](6);
             console.error("Error al crear factura:", _context2.t0);
             setErrors(function (prev) {
@@ -871,15 +975,15 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
                 general: _context2.t0.message || "Error al crear la factura"
               });
             });
-          case 29:
-            _context2.prev = 29;
+          case 30:
+            _context2.prev = 30;
             setIsSubmitting(false);
-            return _context2.finish(29);
-          case 32:
+            return _context2.finish(30);
+          case 33:
           case "end":
             return _context2.stop();
         }
-      }, _callee2, null, [[6, 25, 29, 32]]);
+      }, _callee2, null, [[6, 26, 30, 33]]);
     }));
     return function handleSubmit(_x) {
       return _ref3.apply(this, arguments);
@@ -892,11 +996,13 @@ var useFacturaCreateModal = function useFacturaCreateModal(_ref) {
     isAnimating: isAnimating,
     isVisible: isVisible,
     previewUrl: previewUrl,
+    documentPreviewUrl: documentPreviewUrl,
     proveedores: proveedores,
     handleClose: handleClose,
     handleSubmit: handleSubmit,
     handleInputChange: handleInputChange,
-    handleFileChange: handleFileChange
+    handleFotoChange: handleFotoChange,
+    handleDocumentoChange: handleDocumentoChange
   };
 };
 
@@ -920,6 +1026,11 @@ function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread n
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _regeneratorRuntime() { "use strict"; /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/facebook/regenerator/blob/main/LICENSE */ _regeneratorRuntime = function _regeneratorRuntime() { return e; }; var t, e = {}, r = Object.prototype, n = r.hasOwnProperty, o = Object.defineProperty || function (t, e, r) { t[e] = r.value; }, i = "function" == typeof Symbol ? Symbol : {}, a = i.iterator || "@@iterator", c = i.asyncIterator || "@@asyncIterator", u = i.toStringTag || "@@toStringTag"; function define(t, e, r) { return Object.defineProperty(t, e, { value: r, enumerable: !0, configurable: !0, writable: !0 }), t[e]; } try { define({}, ""); } catch (t) { define = function define(t, e, r) { return t[e] = r; }; } function wrap(t, e, r, n) { var i = e && e.prototype instanceof Generator ? e : Generator, a = Object.create(i.prototype), c = new Context(n || []); return o(a, "_invoke", { value: makeInvokeMethod(t, r, c) }), a; } function tryCatch(t, e, r) { try { return { type: "normal", arg: t.call(e, r) }; } catch (t) { return { type: "throw", arg: t }; } } e.wrap = wrap; var h = "suspendedStart", l = "suspendedYield", f = "executing", s = "completed", y = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} var p = {}; define(p, a, function () { return this; }); var d = Object.getPrototypeOf, v = d && d(d(values([]))); v && v !== r && n.call(v, a) && (p = v); var g = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(p); function defineIteratorMethods(t) { ["next", "throw", "return"].forEach(function (e) { define(t, e, function (t) { return this._invoke(e, t); }); }); } function AsyncIterator(t, e) { function invoke(r, o, i, a) { var c = tryCatch(t[r], t, o); if ("throw" !== c.type) { var u = c.arg, h = u.value; return h && "object" == _typeof(h) && n.call(h, "__await") ? e.resolve(h.__await).then(function (t) { invoke("next", t, i, a); }, function (t) { invoke("throw", t, i, a); }) : e.resolve(h).then(function (t) { u.value = t, i(u); }, function (t) { return invoke("throw", t, i, a); }); } a(c.arg); } var r; o(this, "_invoke", { value: function value(t, n) { function callInvokeWithMethodAndArg() { return new e(function (e, r) { invoke(t, n, e, r); }); } return r = r ? r.then(callInvokeWithMethodAndArg, callInvokeWithMethodAndArg) : callInvokeWithMethodAndArg(); } }); } function makeInvokeMethod(e, r, n) { var o = h; return function (i, a) { if (o === f) throw Error("Generator is already running"); if (o === s) { if ("throw" === i) throw a; return { value: t, done: !0 }; } for (n.method = i, n.arg = a;;) { var c = n.delegate; if (c) { var u = maybeInvokeDelegate(c, n); if (u) { if (u === y) continue; return u; } } if ("next" === n.method) n.sent = n._sent = n.arg;else if ("throw" === n.method) { if (o === h) throw o = s, n.arg; n.dispatchException(n.arg); } else "return" === n.method && n.abrupt("return", n.arg); o = f; var p = tryCatch(e, r, n); if ("normal" === p.type) { if (o = n.done ? s : l, p.arg === y) continue; return { value: p.arg, done: n.done }; } "throw" === p.type && (o = s, n.method = "throw", n.arg = p.arg); } }; } function maybeInvokeDelegate(e, r) { var n = r.method, o = e.iterator[n]; if (o === t) return r.delegate = null, "throw" === n && e.iterator["return"] && (r.method = "return", r.arg = t, maybeInvokeDelegate(e, r), "throw" === r.method) || "return" !== n && (r.method = "throw", r.arg = new TypeError("The iterator does not provide a '" + n + "' method")), y; var i = tryCatch(o, e.iterator, r.arg); if ("throw" === i.type) return r.method = "throw", r.arg = i.arg, r.delegate = null, y; var a = i.arg; return a ? a.done ? (r[e.resultName] = a.value, r.next = e.nextLoc, "return" !== r.method && (r.method = "next", r.arg = t), r.delegate = null, y) : a : (r.method = "throw", r.arg = new TypeError("iterator result is not an object"), r.delegate = null, y); } function pushTryEntry(t) { var e = { tryLoc: t[0] }; 1 in t && (e.catchLoc = t[1]), 2 in t && (e.finallyLoc = t[2], e.afterLoc = t[3]), this.tryEntries.push(e); } function resetTryEntry(t) { var e = t.completion || {}; e.type = "normal", delete e.arg, t.completion = e; } function Context(t) { this.tryEntries = [{ tryLoc: "root" }], t.forEach(pushTryEntry, this), this.reset(!0); } function values(e) { if (e || "" === e) { var r = e[a]; if (r) return r.call(e); if ("function" == typeof e.next) return e; if (!isNaN(e.length)) { var o = -1, i = function next() { for (; ++o < e.length;) if (n.call(e, o)) return next.value = e[o], next.done = !1, next; return next.value = t, next.done = !0, next; }; return i.next = i; } } throw new TypeError(_typeof(e) + " is not iterable"); } return GeneratorFunction.prototype = GeneratorFunctionPrototype, o(g, "constructor", { value: GeneratorFunctionPrototype, configurable: !0 }), o(GeneratorFunctionPrototype, "constructor", { value: GeneratorFunction, configurable: !0 }), GeneratorFunction.displayName = define(GeneratorFunctionPrototype, u, "GeneratorFunction"), e.isGeneratorFunction = function (t) { var e = "function" == typeof t && t.constructor; return !!e && (e === GeneratorFunction || "GeneratorFunction" === (e.displayName || e.name)); }, e.mark = function (t) { return Object.setPrototypeOf ? Object.setPrototypeOf(t, GeneratorFunctionPrototype) : (t.__proto__ = GeneratorFunctionPrototype, define(t, u, "GeneratorFunction")), t.prototype = Object.create(g), t; }, e.awrap = function (t) { return { __await: t }; }, defineIteratorMethods(AsyncIterator.prototype), define(AsyncIterator.prototype, c, function () { return this; }), e.AsyncIterator = AsyncIterator, e.async = function (t, r, n, o, i) { void 0 === i && (i = Promise); var a = new AsyncIterator(wrap(t, r, n, o), i); return e.isGeneratorFunction(r) ? a : a.next().then(function (t) { return t.done ? t.value : a.next(); }); }, defineIteratorMethods(g), define(g, u, "Generator"), define(g, a, function () { return this; }), define(g, "toString", function () { return "[object Generator]"; }), e.keys = function (t) { var e = Object(t), r = []; for (var n in e) r.push(n); return r.reverse(), function next() { for (; r.length;) { var t = r.pop(); if (t in e) return next.value = t, next.done = !1, next; } return next.done = !0, next; }; }, e.values = values, Context.prototype = { constructor: Context, reset: function reset(e) { if (this.prev = 0, this.next = 0, this.sent = this._sent = t, this.done = !1, this.delegate = null, this.method = "next", this.arg = t, this.tryEntries.forEach(resetTryEntry), !e) for (var r in this) "t" === r.charAt(0) && n.call(this, r) && !isNaN(+r.slice(1)) && (this[r] = t); }, stop: function stop() { this.done = !0; var t = this.tryEntries[0].completion; if ("throw" === t.type) throw t.arg; return this.rval; }, dispatchException: function dispatchException(e) { if (this.done) throw e; var r = this; function handle(n, o) { return a.type = "throw", a.arg = e, r.next = n, o && (r.method = "next", r.arg = t), !!o; } for (var o = this.tryEntries.length - 1; o >= 0; --o) { var i = this.tryEntries[o], a = i.completion; if ("root" === i.tryLoc) return handle("end"); if (i.tryLoc <= this.prev) { var c = n.call(i, "catchLoc"), u = n.call(i, "finallyLoc"); if (c && u) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } else if (c) { if (this.prev < i.catchLoc) return handle(i.catchLoc, !0); } else { if (!u) throw Error("try statement without catch or finally"); if (this.prev < i.finallyLoc) return handle(i.finallyLoc); } } } }, abrupt: function abrupt(t, e) { for (var r = this.tryEntries.length - 1; r >= 0; --r) { var o = this.tryEntries[r]; if (o.tryLoc <= this.prev && n.call(o, "finallyLoc") && this.prev < o.finallyLoc) { var i = o; break; } } i && ("break" === t || "continue" === t) && i.tryLoc <= e && e <= i.finallyLoc && (i = null); var a = i ? i.completion : {}; return a.type = t, a.arg = e, i ? (this.method = "next", this.next = i.finallyLoc, y) : this.complete(a); }, complete: function complete(t, e) { if ("throw" === t.type) throw t.arg; return "break" === t.type || "continue" === t.type ? this.next = t.arg : "return" === t.type ? (this.rval = this.arg = t.arg, this.method = "return", this.next = "end") : "normal" === t.type && e && (this.next = e), y; }, finish: function finish(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.finallyLoc === t) return this.complete(r.completion, r.afterLoc), resetTryEntry(r), y; } }, "catch": function _catch(t) { for (var e = this.tryEntries.length - 1; e >= 0; --e) { var r = this.tryEntries[e]; if (r.tryLoc === t) { var n = r.completion; if ("throw" === n.type) { var o = n.arg; resetTryEntry(r); } return o; } } throw Error("illegal catch attempt"); }, delegateYield: function delegateYield(e, r, n) { return this.delegate = { iterator: values(e), resultName: r, nextLoc: n }, "next" === this.method && (this.arg = t), y; } }, e; }
+function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
+function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
@@ -1006,7 +1117,7 @@ var useFacturaState = function useFacturaState() {
   // Fetch de datos
   var fetchFacturas = /*#__PURE__*/function () {
     var _ref = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
-      var response, data;
+      var response, data, facturasConArchivos;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
         while (1) switch (_context.prev = _context.next) {
           case 0:
@@ -1028,31 +1139,38 @@ var useFacturaState = function useFacturaState() {
           case 10:
             data = _context.sent;
             if (!data.success) {
-              _context.next = 15;
+              _context.next = 16;
               break;
             }
-            setFacturas(data.facturas);
-            _context.next = 16;
+            // Asegurarse de que los campos de archivos tengan URLs válidas
+            facturasConArchivos = data.facturas.map(function (factura) {
+              return _objectSpread(_objectSpread({}, factura), {}, {
+                FotoFactura: factura.FotoFactura || null,
+                DocumentoFactura: factura.DocumentoFactura || null
+              });
+            });
+            setFacturas(facturasConArchivos);
+            _context.next = 17;
             break;
-          case 15:
-            throw new Error(data.message || "Error al cargar las facturas");
           case 16:
-            _context.next = 22;
+            throw new Error(data.message || "Error al cargar las facturas");
+          case 17:
+            _context.next = 23;
             break;
-          case 18:
-            _context.prev = 18;
+          case 19:
+            _context.prev = 19;
             _context.t0 = _context["catch"](0);
             console.error("Error al cargar facturas:", _context.t0);
             setError("No se pudieron cargar las facturas");
-          case 22:
-            _context.prev = 22;
+          case 23:
+            _context.prev = 23;
             setLoading(false);
-            return _context.finish(22);
-          case 25:
+            return _context.finish(23);
+          case 26:
           case "end":
             return _context.stop();
         }
-      }, _callee, null, [[0, 18, 22, 25]]);
+      }, _callee, null, [[0, 19, 23, 26]]);
     }));
     return function fetchFacturas() {
       return _ref.apply(this, arguments);
@@ -1090,33 +1208,36 @@ var useFacturaState = function useFacturaState() {
   // Manejador para la actualización de la factura
   var handleFacturaUpdated = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(/*#__PURE__*/function () {
     var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(updatedFactura) {
+      var facturaConArchivos;
       return _regeneratorRuntime().wrap(function _callee2$(_context2) {
         while (1) switch (_context2.prev = _context2.next) {
           case 0:
             _context2.prev = 0;
-            // Primero actualizamos localmente
+            // Asegurarse de que los campos de archivos se mantengan
+            facturaConArchivos = _objectSpread(_objectSpread({}, updatedFactura), {}, {
+              FotoFactura: updatedFactura.FotoFactura || null,
+              DocumentoFactura: updatedFactura.DocumentoFactura || null
+            });
             setFacturas(function (prevFacturas) {
               return prevFacturas.map(function (f) {
-                return f.id === updatedFactura.id ? updatedFactura : f;
+                return f.id === facturaConArchivos.id ? facturaConArchivos : f;
               });
             });
-
-            // Luego actualizamos desde el servidor
-            _context2.next = 4;
+            _context2.next = 5;
             return fetchFacturas();
-          case 4:
-            _context2.next = 10;
+          case 5:
+            _context2.next = 11;
             break;
-          case 6:
-            _context2.prev = 6;
+          case 7:
+            _context2.prev = 7;
             _context2.t0 = _context2["catch"](0);
             console.error("Error al actualizar el estado:", _context2.t0);
             setError("Error al actualizar la factura");
-          case 10:
+          case 11:
           case "end":
             return _context2.stop();
         }
-      }, _callee2, null, [[0, 6]]);
+      }, _callee2, null, [[0, 7]]);
     }));
     return function (_x) {
       return _ref2.apply(this, arguments);
@@ -1229,32 +1350,36 @@ var useFacturaState = function useFacturaState() {
   // Manejador para crear nueva factura
   var handleFacturaCreated = /*#__PURE__*/function () {
     var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee4(nuevaFactura) {
-      var newTotalPages;
+      var facturaConArchivos, newTotalPages;
       return _regeneratorRuntime().wrap(function _callee4$(_context4) {
         while (1) switch (_context4.prev = _context4.next) {
           case 0:
             _context4.prev = 0;
-            setFacturas(function (prevFacturas) {
-              return [].concat(_toConsumableArray(prevFacturas), [nuevaFactura]);
+            facturaConArchivos = _objectSpread(_objectSpread({}, nuevaFactura), {}, {
+              FotoFactura: nuevaFactura.FotoFactura || null,
+              DocumentoFactura: nuevaFactura.DocumentoFactura || null
             });
-            _context4.next = 4;
+            setFacturas(function (prevFacturas) {
+              return [].concat(_toConsumableArray(prevFacturas), [facturaConArchivos]);
+            });
+            _context4.next = 5;
             return fetchFacturas();
-          case 4:
+          case 5:
             newTotalPages = Math.ceil((facturas.length + 1) / itemsPerPage);
             setCurrentPage(newTotalPages);
             handleCloseModal();
-            _context4.next = 13;
+            _context4.next = 14;
             break;
-          case 9:
-            _context4.prev = 9;
+          case 10:
+            _context4.prev = 10;
             _context4.t0 = _context4["catch"](0);
             console.error("Error al crear factura:", _context4.t0);
             setError("Error al crear la factura");
-          case 13:
+          case 14:
           case "end":
             return _context4.stop();
         }
-      }, _callee4, null, [[0, 9]]);
+      }, _callee4, null, [[0, 10]]);
     }));
     return function handleFacturaCreated(_x2) {
       return _ref4.apply(this, arguments);
@@ -1366,7 +1491,9 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
   // Estados del formulario y modal
   var _useState = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)({
       FechaEmision: "",
-      Proveedor: ""
+      Proveedor: "",
+      FotoFactura: null,
+      DocumentoFactura: null
     }),
     _useState2 = _slicedToArray(_useState, 2),
     formData = _useState2[0],
@@ -1391,10 +1518,14 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
     _useState12 = _slicedToArray(_useState11, 2),
     previewUrl = _useState12[0],
     setPreviewUrl = _useState12[1];
-  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]),
+  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(""),
     _useState14 = _slicedToArray(_useState13, 2),
-    proveedores = _useState14[0],
-    setProveedores = _useState14[1];
+    documentPreviewUrl = _useState14[0],
+    setDocumentPreviewUrl = _useState14[1];
+  var _useState15 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]),
+    _useState16 = _slicedToArray(_useState15, 2),
+    proveedores = _useState16[0],
+    setProveedores = _useState16[1];
 
   // Efecto para manejar la animación de apertura/cierre
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
@@ -1463,9 +1594,12 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
       var _factura$Proveedor;
       setFormData({
         FechaEmision: factura.FechaEmision || "",
-        Proveedor: ((_factura$Proveedor = factura.Proveedor) === null || _factura$Proveedor === void 0 ? void 0 : _factura$Proveedor.id) || ""
+        Proveedor: ((_factura$Proveedor = factura.Proveedor) === null || _factura$Proveedor === void 0 ? void 0 : _factura$Proveedor.id) || "",
+        FotoFactura: null,
+        DocumentoFactura: null
       });
       setPreviewUrl(factura.FotoFactura || "");
+      setDocumentPreviewUrl(factura.DocumentoFactura || "");
     }
   }, [factura, isOpen]);
 
@@ -1477,24 +1611,107 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
     setFormData(function (prev) {
       return _objectSpread(_objectSpread({}, prev), {}, _defineProperty({}, name, value));
     });
+
+    // Limpiar error del campo cuando cambia
+    if (errors[name]) {
+      setErrors(function (prev) {
+        return _objectSpread(_objectSpread({}, prev), {}, _defineProperty({}, name, null));
+      });
+    }
+  }, [errors]);
+
+  // Función de validación de archivos
+  var validateFile = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(function (file, type) {
+    var maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (file.size > maxSize) {
+      return "El archivo es demasiado grande. El tamaño máximo permitido es 10MB";
+    }
+    if (type === "foto") {
+      var allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/bmp", "image/webp", "image/tiff", "image/svg+xml", "application/pdf"];
+      if (!allowedTypes.includes(file.type)) {
+        return "Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF";
+      }
+    }
+    return null;
   }, []);
 
-  // Manejador de cambios en el archivo de imagen
-  var handleFileChange = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(function (e) {
-    var file = e.target.files[0];
+  // Manejador de cambios en la foto
+  var handleFotoChange = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(function (e) {
+    var _e$target$files;
+    var file = (_e$target$files = e.target.files) === null || _e$target$files === void 0 ? void 0 : _e$target$files[0];
     if (file) {
-      var reader = new FileReader();
-      reader.onloadend = function () {
-        setPreviewUrl(reader.result);
-        setFormData(function (prev) {
+      var error = validateFile(file, "foto");
+      if (error) {
+        setErrors(function (prev) {
           return _objectSpread(_objectSpread({}, prev), {}, {
-            FotoFactura: file
+            FotoFactura: error
           });
         });
-      };
-      reader.readAsDataURL(file);
+        e.target.value = "";
+        return;
+      }
+
+      // Limpiar error previo si existe
+      if (errors.FotoFactura) {
+        setErrors(function (prev) {
+          return _objectSpread(_objectSpread({}, prev), {}, {
+            FotoFactura: null
+          });
+        });
+      }
+      setFormData(function (prev) {
+        return _objectSpread(_objectSpread({}, prev), {}, {
+          FotoFactura: file
+        });
+      });
+      if (file.type.startsWith("image/")) {
+        var reader = new FileReader();
+        reader.onloadend = function () {
+          setPreviewUrl(reader.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setPreviewUrl("/path/to/pdf-icon.png");
+      }
     }
-  }, []);
+  }, [errors, validateFile]);
+
+  // Manejador de cambios en el documento
+  var handleDocumentoChange = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(function (e) {
+    var _e$target$files2;
+    var file = (_e$target$files2 = e.target.files) === null || _e$target$files2 === void 0 ? void 0 : _e$target$files2[0];
+    if (file) {
+      var error = validateFile(file, "documento");
+      if (error) {
+        setErrors(function (prev) {
+          return _objectSpread(_objectSpread({}, prev), {}, {
+            DocumentoFactura: error
+          });
+        });
+        e.target.value = "";
+        return;
+      }
+
+      // Limpiar error previo si existe
+      if (errors.DocumentoFactura) {
+        setErrors(function (prev) {
+          return _objectSpread(_objectSpread({}, prev), {}, {
+            DocumentoFactura: null
+          });
+        });
+      }
+      setFormData(function (prev) {
+        return _objectSpread(_objectSpread({}, prev), {}, {
+          DocumentoFactura: file
+        });
+      });
+      setDocumentPreviewUrl(URL.createObjectURL(file));
+      return function () {
+        return URL.revokeObjectURL(documentPreviewUrl);
+      };
+    }
+  }, [errors, validateFile, documentPreviewUrl]);
 
   // Manejador de cierre del modal
   var handleClose = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(function () {
@@ -1508,7 +1725,7 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
   // Manejador de envío del formulario
   var handleSubmit = (0,react__WEBPACK_IMPORTED_MODULE_0__.useCallback)(/*#__PURE__*/function () {
     var _ref3 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(e) {
-      var newErrors, submitData, _i, _Object$entries, _Object$entries$_i, key, value, response, data;
+      var newErrors, submitData, response, data;
       return _regeneratorRuntime().wrap(function _callee2$(_context2) {
         while (1) switch (_context2.prev = _context2.next) {
           case 0:
@@ -1532,15 +1749,15 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
           case 9:
             // Crear FormData para enviar archivos
             submitData = new FormData();
-            for (_i = 0, _Object$entries = Object.entries(formData); _i < _Object$entries.length; _i++) {
-              _Object$entries$_i = _slicedToArray(_Object$entries[_i], 2), key = _Object$entries$_i[0], value = _Object$entries$_i[1];
-              if (value instanceof File || value) {
-                submitData.append(key, value);
-              }
+            submitData.append("FechaEmision", formData.FechaEmision);
+            submitData.append("Proveedor", formData.Proveedor);
+            if (formData.FotoFactura instanceof File) {
+              submitData.append("FotoFactura", formData.FotoFactura);
             }
-
-            // Realizar la petición de actualización
-            _context2.next = 13;
+            if (formData.DocumentoFactura instanceof File) {
+              submitData.append("DocumentoFactura", formData.DocumentoFactura);
+            }
+            _context2.next = 16;
             return fetch("/api/factura/".concat(factura.id, "/actualizar/"), {
               method: "POST",
               headers: {
@@ -1549,40 +1766,37 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
               body: submitData,
               credentials: "include"
             });
-          case 13:
-            response = _context2.sent;
-            _context2.next = 16;
-            return response.json();
           case 16:
+            response = _context2.sent;
+            _context2.next = 19;
+            return response.json();
+          case 19:
             data = _context2.sent;
             if (response.ok) {
-              _context2.next = 22;
+              _context2.next = 25;
               break;
             }
             if (!data.errors) {
-              _context2.next = 21;
+              _context2.next = 24;
               break;
             }
             setErrors(data.errors);
             throw new Error(Object.values(data.errors)[0]);
-          case 21:
+          case 24:
             throw new Error(data.message || "Error al actualizar la factura");
-          case 22:
-            // Primero cerramos el modal
+          case 25:
             handleClose();
-
-            // Luego notificamos al componente padre del éxito
             if (!onFacturaUpdated) {
-              _context2.next = 26;
+              _context2.next = 29;
               break;
             }
-            _context2.next = 26;
+            _context2.next = 29;
             return onFacturaUpdated(data.factura);
-          case 26:
-            _context2.next = 32;
+          case 29:
+            _context2.next = 35;
             break;
-          case 28:
-            _context2.prev = 28;
+          case 31:
+            _context2.prev = 31;
             _context2.t0 = _context2["catch"](2);
             console.error("Error al actualizar la factura:", _context2.t0);
             setErrors(function (prev) {
@@ -1590,15 +1804,15 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
                 general: _context2.t0.message || "Error al actualizar la factura"
               });
             });
-          case 32:
-            _context2.prev = 32;
-            setIsSubmitting(false);
-            return _context2.finish(32);
           case 35:
+            _context2.prev = 35;
+            setIsSubmitting(false);
+            return _context2.finish(35);
+          case 38:
           case "end":
             return _context2.stop();
         }
-      }, _callee2, null, [[2, 28, 32, 35]]);
+      }, _callee2, null, [[2, 31, 35, 38]]);
     }));
     return function (_x) {
       return _ref3.apply(this, arguments);
@@ -1611,11 +1825,13 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
     isAnimating: isAnimating,
     isVisible: isVisible,
     previewUrl: previewUrl,
+    documentPreviewUrl: documentPreviewUrl,
     proveedores: proveedores,
     handleClose: handleClose,
     handleSubmit: handleSubmit,
     handleInputChange: handleInputChange,
-    handleFileChange: handleFileChange
+    handleFotoChange: handleFotoChange,
+    handleDocumentoChange: handleDocumentoChange
   };
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (useFacturaUpdateModal);
@@ -1721,12 +1937,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/x.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file-text.js");
 /* harmony import */ var _hooks_useFacturaCreateModal__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../hooks/useFacturaCreateModal */ "./src/components/ProveedorComponents/ModFactura/hooks/useFacturaCreateModal.js");
 
 
 
 var FacturaCreateModal = function FacturaCreateModal(_ref) {
-  var _formData$FotoFactura, _formData$FotoFactura2;
+  var _formData$FotoFactura, _formData$FotoFactura2, _formData$DocumentoFa;
   var isOpen = _ref.isOpen,
     onClose = _ref.onClose,
     onSubmit = _ref.onSubmit;
@@ -1741,18 +1958,18 @@ var FacturaCreateModal = function FacturaCreateModal(_ref) {
     isAnimating = _useFacturaCreateModa.isAnimating,
     isVisible = _useFacturaCreateModa.isVisible,
     previewUrl = _useFacturaCreateModa.previewUrl,
+    documentPreviewUrl = _useFacturaCreateModa.documentPreviewUrl,
     proveedores = _useFacturaCreateModa.proveedores,
     handleClose = _useFacturaCreateModa.handleClose,
     handleSubmit = _useFacturaCreateModa.handleSubmit,
     handleInputChange = _useFacturaCreateModa.handleInputChange,
-    handleFileChange = _useFacturaCreateModa.handleFileChange;
-
-  // Función auxiliar para determinar la clase del borde basada en el contenido
+    handleFotoChange = _useFacturaCreateModa.handleFotoChange,
+    handleDocumentoChange = _useFacturaCreateModa.handleDocumentoChange;
   var getInputBorderClass = function getInputBorderClass(value) {
     if (value && value.trim() !== "") {
-      return "border-green-400"; // Verde cuando hay contenido
+      return "border-green-400";
     }
-    return "border-gray-300"; // Gris por defecto
+    return "border-gray-300";
   };
   if (!isVisible) return null;
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -1797,17 +2014,16 @@ var FacturaCreateModal = function FacturaCreateModal(_ref) {
     className: "text-sm font-medium"
   }, "Proveedor*"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", {
     name: "Proveedor",
-    value: formData.Proveedor || "" // Asegurar que siempre hay un valor
-    ,
+    value: formData.Proveedor || "",
     onChange: handleInputChange,
-    className: "w-full px-3 py-2 border-2 rounded mt-1 \n              focus:ring-2 focus:ring-blue-500 focus:outline-none\n              transition-colors duration-200\n              ".concat(getInputBorderClass(formData.Proveedor))
+    className: "w-full px-3 py-2 border-2 rounded mt-1 \n                            focus:ring-2 focus:ring-blue-500 focus:outline-none\n                            transition-colors duration-200\n                            ".concat(getInputBorderClass(formData.Proveedor))
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
     value: ""
   }, "Seleccione un proveedor"), proveedores.map(function (proveedor) {
     return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
       key: proveedor.id,
       value: proveedor.id.toString()
-    }, " ", proveedor.NombreProveedor);
+    }, proveedor.NombreProveedor);
   })), errors.Proveedor && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
     className: "text-sm text-red-500 mt-1"
   }, errors.Proveedor))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
@@ -1816,15 +2032,14 @@ var FacturaCreateModal = function FacturaCreateModal(_ref) {
     className: "mt-1 flex items-center space-x-4"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "file",
-    accept: "image/*,.pdf" // Actualizado para aceptar todos los tipos de imagen y PDF
-    ,
-    onChange: handleFileChange,
+    accept: "image/*,.pdf",
+    onChange: handleFotoChange,
     className: "hidden",
     id: "foto-factura"
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
     htmlFor: "foto-factura",
     className: "px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 \r transition-colors duration-150"
-  }, "Seleccionar archivo"), previewUrl && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+  }, "Seleccionar imagen"), previewUrl && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "relative group"
   }, (_formData$FotoFactura = formData.FotoFactura) !== null && _formData$FotoFactura !== void 0 && _formData$FotoFactura.type.startsWith("image/") ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", {
     src: previewUrl,
@@ -1840,7 +2055,31 @@ var FacturaCreateModal = function FacturaCreateModal(_ref) {
     className: "text-sm text-red-500 mt-1"
   }, errors.FotoFactura), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
     className: "text-xs text-gray-500 mt-1"
-  }, "Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF. Tama\xF1o m\xE1ximo: 10MB")), errors.general && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+  }, "Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF. Tama\xF1o m\xE1ximo: 10MB")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+    className: "text-sm font-medium"
+  }, "Documento de la Factura"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "mt-1 flex items-center space-x-4"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
+    type: "file",
+    onChange: handleDocumentoChange,
+    className: "hidden",
+    id: "documento-factura"
+  }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+    htmlFor: "documento-factura",
+    className: "px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 \r transition-colors duration-150"
+  }, "Seleccionar documento"), documentPreviewUrl && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "relative group"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "h-16 w-16 flex items-center justify-center bg-gray-100 rounded"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], {
+    className: "w-8 h-8 text-gray-500"
+  })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "text-xs mt-1 text-gray-500"
+  }, (_formData$DocumentoFa = formData.DocumentoFactura) === null || _formData$DocumentoFa === void 0 ? void 0 : _formData$DocumentoFa.name))), errors.DocumentoFactura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-sm text-red-500 mt-1"
+  }, errors.DocumentoFactura), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-xs text-gray-500 mt-1"
+  }, "Tama\xF1o m\xE1ximo: 10MB")), errors.general && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "p-4 bg-red-50 text-red-600 rounded"
   }, errors.general))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "p-6 border-t"
@@ -1873,13 +2112,29 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/triangle-alert.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file-image.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file-text.js");
+
 
 var FacturaDeleteModal = function FacturaDeleteModal(_ref) {
+  var _factura$Proveedor;
   var isOpen = _ref.isOpen,
     onClose = _ref.onClose,
     onConfirm = _ref.onConfirm,
     facturaId = _ref.facturaId,
-    isDeleting = _ref.isDeleting;
+    isDeleting = _ref.isDeleting,
+    factura = _ref.factura;
+  // Helper function to format date
+  var formatDate = function formatDate(dateString) {
+    if (!dateString) return "";
+    var date = new Date(dateString);
+    return date.toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    });
+  };
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ".concat(isOpen ? "opacity-100" : "opacity-0 pointer-events-none")
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -1887,23 +2142,83 @@ var FacturaDeleteModal = function FacturaDeleteModal(_ref) {
     onClick: onClose
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "bg-white rounded-lg shadow-xl p-6 w-full max-w-md m-4 relative transform transition-all duration-300 ".concat(isOpen ? "scale-100 opacity-100" : "scale-95 opacity-0")
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", {
-    className: "text-lg font-semibold text-gray-900 mb-2"
-  }, "Confirmar Eliminaci\xF3n"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-gray-600 mb-6"
-  }, "\xBFEst\xE1s seguro que deseas eliminar la factura", " ", /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "flex items-center gap-3 mb-4"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "flex-shrink-0"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_1__["default"], {
+    className: "h-6 w-6 text-red-500"
+  })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", {
+    className: "text-lg font-semibold text-gray-900"
+  }, "Confirmar Eliminaci\xF3n")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "space-y-4"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-gray-600"
+  }, "\xBFEst\xE1s seguro que deseas eliminar esta factura? Esta acci\xF3n eliminar\xE1 permanentemente:"), factura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "bg-gray-50 p-4 rounded-lg space-y-3"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "grid grid-cols-2 gap-2 text-sm"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "text-gray-500"
+  }, "Factura ID:"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
     className: "font-medium text-gray-900"
-  }, "#", facturaId), "? Esta acci\xF3n no se puede deshacer."), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "flex justify-center gap-4 px-4"
+  }, "#", facturaId), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "text-gray-500"
+  }, "Fecha:"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "font-medium text-gray-900"
+  }, formatDate(factura.FechaEmision)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "text-gray-500"
+  }, "Proveedor:"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "font-medium text-gray-900"
+  }, (_factura$Proveedor = factura.Proveedor) === null || _factura$Proveedor === void 0 ? void 0 : _factura$Proveedor.NombreProveedor)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "border-t pt-3"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-sm text-gray-500 mb-2"
+  }, "Archivos adjuntos:"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "space-y-2"
+  }, factura.FotoFactura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "flex items-center gap-2 text-sm"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_2__["default"], {
+    className: "h-4 w-4 text-blue-500"
+  }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "text-gray-600"
+  }, "Foto de factura")), factura.DocumentoFactura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "flex items-center gap-2 text-sm"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], {
+    className: "h-4 w-4 text-blue-500"
+  }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "text-gray-600"
+  }, "Documento adjunto")), !factura.FotoFactura && !factura.DocumentoFactura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "text-sm text-gray-500 italic"
+  }, "No hay archivos adjuntos")))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-sm text-red-600"
+  }, "Esta acci\xF3n no se puede deshacer y eliminar\xE1 permanentemente todos los archivos asociados.")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "flex justify-center gap-4 px-4 mt-6"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     onClick: onClose,
     disabled: isDeleting,
-    className: "w-full px-6 py-2.5 text-gray-900 bg-white border border-gray-300 rounded-lg \r hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
+    className: "w-full px-6 py-2.5 text-gray-900 bg-white border border-gray-300 rounded-lg \r hover:bg-gray-50 transition-colors duration-200 \r disabled:opacity-50 disabled:cursor-not-allowed"
   }, "Cancelar"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     onClick: onConfirm,
     disabled: isDeleting,
-    className: "w-full px-6 py-2.5 text-white bg-red-600 rounded-lg\r hover:bg-red-700 transition-all duration-200 \r disabled:opacity-50 disabled:cursor-not-allowed"
-  }, isDeleting ? "Eliminando..." : "Eliminar"))));
+    className: "w-full px-6 py-2.5 text-white bg-red-600 rounded-lg\r hover:bg-red-700 transition-all duration-200 \r disabled:opacity-50 disabled:cursor-not-allowed\r flex items-center justify-center gap-2"
+  }, isDeleting ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("svg", {
+    className: "animate-spin h-4 w-4",
+    xmlns: "http://www.w3.org/2000/svg",
+    fill: "none",
+    viewBox: "0 0 24 24"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("circle", {
+    className: "opacity-25",
+    cx: "12",
+    cy: "12",
+    r: "10",
+    stroke: "currentColor",
+    strokeWidth: "4"
+  }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("path", {
+    className: "opacity-75",
+    fill: "currentColor",
+    d: "M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+  })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", null, "Eliminando")) : "Eliminar"))));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (FacturaDeleteModal);
 
@@ -1922,11 +2237,13 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/x.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/file-text.js");
 /* harmony import */ var _hooks_useFacturaUpdateModal__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../hooks/useFacturaUpdateModal */ "./src/components/ProveedorComponents/ModFactura/hooks/useFacturaUpdateModal.js");
 
 
 
 var FacturaUpdateModal = function FacturaUpdateModal(_ref) {
+  var _formData$FotoFactura, _formData$FotoFactura2;
   var isOpen = _ref.isOpen,
     onClose = _ref.onClose,
     factura = _ref.factura,
@@ -1943,10 +2260,12 @@ var FacturaUpdateModal = function FacturaUpdateModal(_ref) {
     isAnimating = _useFacturaUpdateModa.isAnimating,
     isVisible = _useFacturaUpdateModa.isVisible,
     previewUrl = _useFacturaUpdateModa.previewUrl,
+    documentPreviewUrl = _useFacturaUpdateModa.documentPreviewUrl,
     handleClose = _useFacturaUpdateModa.handleClose,
     handleSubmit = _useFacturaUpdateModa.handleSubmit,
     handleInputChange = _useFacturaUpdateModa.handleInputChange,
-    handleFileChange = _useFacturaUpdateModa.handleFileChange,
+    handleFotoChange = _useFacturaUpdateModa.handleFotoChange,
+    handleDocumentoChange = _useFacturaUpdateModa.handleDocumentoChange,
     proveedores = _useFacturaUpdateModa.proveedores;
   if (!isVisible) return null;
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -2012,20 +2331,52 @@ var FacturaUpdateModal = function FacturaUpdateModal(_ref) {
     className: "mt-1 flex items-center space-x-4"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "file",
-    accept: "image/*",
-    onChange: handleFileChange,
+    accept: "image/*,.pdf",
+    onChange: handleFotoChange,
     className: "hidden",
     id: "foto-factura"
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
     htmlFor: "foto-factura",
     className: "px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 \r transition-colors duration-150"
-  }, "Seleccionar imagen"), previewUrl && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", {
+  }, "Seleccionar imagen"), previewUrl && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "relative group"
+  }, (_formData$FotoFactura = formData.FotoFactura) !== null && _formData$FotoFactura !== void 0 && (_formData$FotoFactura = _formData$FotoFactura.type) !== null && _formData$FotoFactura !== void 0 && _formData$FotoFactura.startsWith("image/") || !((_formData$FotoFactura2 = formData.FotoFactura) !== null && _formData$FotoFactura2 !== void 0 && _formData$FotoFactura2.type) && previewUrl ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", {
     src: previewUrl,
     alt: "Vista previa",
     className: "h-16 w-16 object-cover rounded"
-  })), errors.FotoFactura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+  }) : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "h-16 w-16 flex items-center justify-center bg-gray-100 rounded"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+    className: "text-xs text-gray-500"
+  }, "PDF")))), errors.FotoFactura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
     className: "text-sm text-red-500 mt-1"
-  }, errors.FotoFactura)), errors.general && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+  }, errors.FotoFactura), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-xs text-gray-500 mt-1"
+  }, "Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF. Tama\xF1o m\xE1ximo: 10MB")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+    className: "text-sm font-medium"
+  }, "Documento de la Factura"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "mt-1 flex items-center space-x-4"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
+    type: "file",
+    onChange: handleDocumentoChange,
+    className: "hidden",
+    id: "documento-factura"
+  }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+    htmlFor: "documento-factura",
+    className: "px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 \r transition-colors duration-150"
+  }, "Seleccionar documento"), (documentPreviewUrl || formData.DocumentoFactura) && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "relative group"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "h-16 w-16 flex items-center justify-center bg-gray-100 rounded"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], {
+    className: "w-8 h-8 text-gray-500"
+  })), formData.DocumentoFactura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "text-xs mt-1 text-gray-500"
+  }, formData.DocumentoFactura instanceof File ? formData.DocumentoFactura.name : 'Documento actual'))), errors.DocumentoFactura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-sm text-red-500 mt-1"
+  }, errors.DocumentoFactura), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-xs text-gray-500 mt-1"
+  }, "Tama\xF1o m\xE1ximo: 10MB")), errors.general && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "p-4 bg-red-50 text-red-600 rounded"
   }, errors.general))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "p-6 border-t"
@@ -2719,6 +3070,12 @@ video {
 .top-2\\.5 {
   top: 0.625rem;
 }
+.bottom-full {
+  bottom: 100%;
+}
+.left-1\\/2 {
+  left: 50%;
+}
 .z-0 {
   z-index: 0;
 }
@@ -2768,6 +3125,9 @@ video {
 }
 .mt-4 {
   margin-top: 1rem;
+}
+.mt-6 {
+  margin-top: 1.5rem;
 }
 .block {
   display: block;
@@ -2847,9 +3207,6 @@ video {
 .w-full {
   width: 100%;
 }
-.min-w-full {
-  min-width: 100%;
-}
 .max-w-7xl {
   max-width: 80rem;
 }
@@ -2864,6 +3221,10 @@ video {
 }
 .flex-shrink-0 {
   flex-shrink: 0;
+}
+.-translate-x-1\\/2 {
+  --tw-translate-x: -50%;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 .scale-100 {
   --tw-scale-x: 1;
@@ -2887,6 +3248,15 @@ video {
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+@keyframes spin {
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
 .cursor-not-allowed {
   cursor: not-allowed;
 }
@@ -2907,14 +3277,8 @@ video {
 .flex-col {
   flex-direction: column;
 }
-.items-start {
-  align-items: flex-start;
-}
 .items-center {
   align-items: center;
-}
-.justify-end {
-  justify-content: flex-end;
 }
 .justify-center {
   justify-content: center;
@@ -2933,6 +3297,9 @@ video {
 }
 .gap-6 {
   gap: 1.5rem;
+}
+.gap-3 {
+  gap: 0.75rem;
 }
 .-space-x-px > :not([hidden]) ~ :not([hidden]) {
   --tw-space-x-reverse: 0;
@@ -2988,6 +3355,9 @@ video {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.whitespace-nowrap {
+  white-space: nowrap;
+}
 .rounded {
   border-radius: 0.25rem;
 }
@@ -3020,6 +3390,9 @@ video {
 .border-t {
   border-top-width: 1px;
 }
+.border-b-2 {
+  border-bottom-width: 2px;
+}
 .border-blue-600 {
   --tw-border-opacity: 1;
   border-color: rgb(37 99 235 / var(--tw-border-opacity));
@@ -3044,9 +3417,9 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(220 38 38 / var(--tw-border-opacity));
 }
-.border-green-600 {
+.border-gray-600 {
   --tw-border-opacity: 1;
-  border-color: rgb(22 163 74 / var(--tw-border-opacity));
+  border-color: rgb(75 85 99 / var(--tw-border-opacity));
 }
 .bg-black {
   --tw-bg-opacity: 1;
@@ -3065,6 +3438,10 @@ video {
 .bg-gray-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(243 244 246 / var(--tw-bg-opacity));
+}
+.bg-gray-200 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity));
 }
 .bg-gray-50 {
   --tw-bg-opacity: 1;
@@ -3094,9 +3471,8 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
 }
-.bg-gray-200 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(229 231 235 / var(--tw-bg-opacity));
+.bg-opacity-75 {
+  --tw-bg-opacity: 0.75;
 }
 .object-cover {
   -o-object-fit: cover;
@@ -3107,9 +3483,6 @@ video {
 }
 .p-2 {
   padding: 0.5rem;
-}
-.p-3 {
-  padding: 0.75rem;
 }
 .p-4 {
   padding: 1rem;
@@ -3147,6 +3520,14 @@ video {
 .py-3 {
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
+}
+.px-2 {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+.py-1 {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
 }
 .pb-8 {
   padding-bottom: 2rem;
@@ -3201,6 +3582,9 @@ video {
 .font-semibold {
   font-weight: 600;
 }
+.italic {
+  font-style: italic;
+}
 .tracking-wide {
   letter-spacing: 0.025em;
 }
@@ -3240,9 +3624,9 @@ video {
   --tw-text-opacity: 1;
   color: rgb(255 255 255 / var(--tw-text-opacity));
 }
-.text-green-600 {
+.text-blue-500 {
   --tw-text-opacity: 1;
-  color: rgb(22 163 74 / var(--tw-text-opacity));
+  color: rgb(59 130 246 / var(--tw-text-opacity));
 }
 .opacity-0 {
   opacity: 0;
@@ -3252,6 +3636,12 @@ video {
 }
 .opacity-40 {
   opacity: 0.4;
+}
+.opacity-25 {
+  opacity: 0.25;
+}
+.opacity-75 {
+  opacity: 0.75;
 }
 .shadow {
   --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
@@ -3350,10 +3740,6 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(153 27 27 / var(--tw-border-opacity));
 }
-.hover\\:border-green-800:hover {
-  --tw-border-opacity: 1;
-  border-color: rgb(22 101 52 / var(--tw-border-opacity));
-}
 .hover\\:bg-blue-50:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(239 246 255 / var(--tw-bg-opacity));
@@ -3394,10 +3780,6 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(185 28 28 / var(--tw-bg-opacity));
 }
-.hover\\:bg-green-50:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(240 253 244 / var(--tw-bg-opacity));
-}
 .hover\\:text-blue-800:hover {
   --tw-text-opacity: 1;
   color: rgb(30 64 175 / var(--tw-text-opacity));
@@ -3410,10 +3792,6 @@ video {
   --tw-text-opacity: 1;
   color: rgb(153 27 27 / var(--tw-text-opacity));
 }
-.hover\\:text-green-800:hover {
-  --tw-text-opacity: 1;
-  color: rgb(22 101 52 / var(--tw-text-opacity));
-}
 .hover\\:shadow:hover {
   --tw-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --tw-shadow-colored: 0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
@@ -3422,16 +3800,6 @@ video {
 .hover\\:shadow-lg:hover {
   --tw-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   --tw-shadow-colored: 0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
-}
-.hover\\:shadow-md:hover {
-  --tw-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --tw-shadow-colored: 0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);
-  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
-}
-.hover\\:shadow-sm:hover {
-  --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 .focus\\:outline-none:focus {
@@ -3465,10 +3833,6 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(22 101 52 / var(--tw-bg-opacity));
 }
-.active\\:bg-gray-100:active {
-  --tw-bg-opacity: 1;
-  background-color: rgb(243 244 246 / var(--tw-bg-opacity));
-}
 .active\\:shadow-none:active {
   --tw-shadow: 0 0 #0000;
   --tw-shadow-colored: 0 0 #0000;
@@ -3492,6 +3856,10 @@ video {
   --tw-scale-x: 1.1;
   --tw-scale-y: 1.1;
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+.group:hover .group-hover\\:text-gray-800 {
+  --tw-text-opacity: 1;
+  color: rgb(31 41 55 / var(--tw-text-opacity));
 }
 .group:hover .group-hover\\:opacity-100 {
   opacity: 1;
@@ -3559,7 +3927,7 @@ video {
     padding-left: 2rem;
     padding-right: 2rem;
   }
-}`, "",{"version":3,"sources":["webpack://./src/styles/index.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\r\n@tailwind components;\r\n@tailwind utilities;"],"sourceRoot":""}]);
+}`, "",{"version":3,"sources":["webpack://./src/styles/index.css"],"names":[],"mappings":"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","sourcesContent":["@tailwind base;\r\n@tailwind components;\r\n@tailwind utilities;"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 
@@ -3951,6 +4319,39 @@ const CircleUser = (0,_createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__["default
 
 /***/ }),
 
+/***/ "./node_modules/lucide-react/dist/esm/icons/file-image.js":
+/*!****************************************************************!*\
+  !*** ./node_modules/lucide-react/dist/esm/icons/file-image.js ***!
+  \****************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ FileImage)
+/* harmony export */ });
+/* harmony import */ var _createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../createLucideIcon.js */ "./node_modules/lucide-react/dist/esm/createLucideIcon.js");
+/**
+ * @license lucide-react v0.454.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+
+
+
+const FileImage = (0,_createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__["default"])("FileImage", [
+  ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
+  ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
+  ["circle", { cx: "10", cy: "12", r: "2", key: "737tya" }],
+  ["path", { d: "m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22", key: "wt3hpn" }]
+]);
+
+
+//# sourceMappingURL=file-image.js.map
+
+
+/***/ }),
+
 /***/ "./node_modules/lucide-react/dist/esm/icons/file-text.js":
 /*!***************************************************************!*\
   !*** ./node_modules/lucide-react/dist/esm/icons/file-text.js ***!
@@ -4151,6 +4552,44 @@ const Trash2 = (0,_createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__["default"])(
 
 
 //# sourceMappingURL=trash-2.js.map
+
+
+/***/ }),
+
+/***/ "./node_modules/lucide-react/dist/esm/icons/triangle-alert.js":
+/*!********************************************************************!*\
+  !*** ./node_modules/lucide-react/dist/esm/icons/triangle-alert.js ***!
+  \********************************************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (/* binding */ TriangleAlert)
+/* harmony export */ });
+/* harmony import */ var _createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../createLucideIcon.js */ "./node_modules/lucide-react/dist/esm/createLucideIcon.js");
+/**
+ * @license lucide-react v0.454.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+
+
+
+const TriangleAlert = (0,_createLucideIcon_js__WEBPACK_IMPORTED_MODULE_0__["default"])("TriangleAlert", [
+  [
+    "path",
+    {
+      d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
+      key: "wmoenq"
+    }
+  ],
+  ["path", { d: "M12 9v4", key: "juzpu7" }],
+  ["path", { d: "M12 17h.01", key: "p32p05" }]
+]);
+
+
+//# sourceMappingURL=triangle-alert.js.map
 
 
 /***/ }),

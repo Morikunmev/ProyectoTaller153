@@ -1,5 +1,5 @@
 import React from "react";
-import { X } from "lucide-react";
+import { X, FileText } from "lucide-react";
 import { useFacturaCreateModal } from "../hooks/useFacturaCreateModal";
 
 const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
@@ -10,19 +10,20 @@ const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     isAnimating,
     isVisible,
     previewUrl,
+    documentPreviewUrl,
     proveedores,
     handleClose,
     handleSubmit,
     handleInputChange,
-    handleFileChange,
+    handleFotoChange,
+    handleDocumentoChange,
   } = useFacturaCreateModal({ isOpen, onClose, onSubmit });
 
-  // Función auxiliar para determinar la clase del borde basada en el contenido
   const getInputBorderClass = (value) => {
     if (value && value.trim() !== "") {
-      return "border-green-400"; // Verde cuando hay contenido
+      return "border-green-400";
     }
-    return "border-gray-300"; // Gris por defecto
+    return "border-gray-300";
   };
 
   if (!isVisible) return null;
@@ -87,18 +88,16 @@ const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
                 <label className="text-sm font-medium">Proveedor*</label>
                 <select
                   name="Proveedor"
-                  value={formData.Proveedor || ""} // Asegurar que siempre hay un valor
+                  value={formData.Proveedor || ""}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-2 border-2 rounded mt-1 
-              focus:ring-2 focus:ring-blue-500 focus:outline-none
-              transition-colors duration-200
-              ${getInputBorderClass(formData.Proveedor)}`}
+                            focus:ring-2 focus:ring-blue-500 focus:outline-none
+                            transition-colors duration-200
+                            ${getInputBorderClass(formData.Proveedor)}`}
                 >
                   <option value="">Seleccione un proveedor</option>
                   {proveedores.map((proveedor) => (
                     <option key={proveedor.id} value={proveedor.id.toString()}>
-                      {" "}
-                      {/* Convertir a string */}
                       {proveedor.NombreProveedor}
                     </option>
                   ))}
@@ -117,17 +116,17 @@ const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
               <div className="mt-1 flex items-center space-x-4">
                 <input
                   type="file"
-                  accept="image/*,.pdf" // Actualizado para aceptar todos los tipos de imagen y PDF
-                  onChange={handleFileChange}
+                  accept="image/*,.pdf"
+                  onChange={handleFotoChange}
                   className="hidden"
                   id="foto-factura"
                 />
                 <label
                   htmlFor="foto-factura"
                   className="px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 
-               transition-colors duration-150"
+                           transition-colors duration-150"
                 >
-                  Seleccionar archivo
+                  Seleccionar imagen
                 </label>
                 {previewUrl && (
                   <div className="relative group">
@@ -157,6 +156,44 @@ const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
                 Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF.
                 Tamaño máximo: 10MB
               </p>
+            </div>
+
+            {/* Documento de la Factura */}
+            <div>
+              <label className="text-sm font-medium">
+                Documento de la Factura
+              </label>
+              <div className="mt-1 flex items-center space-x-4">
+                <input
+                  type="file"
+                  onChange={handleDocumentoChange}
+                  className="hidden"
+                  id="documento-factura"
+                />
+                <label
+                  htmlFor="documento-factura"
+                  className="px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 
+                           transition-colors duration-150"
+                >
+                  Seleccionar documento
+                </label>
+                {documentPreviewUrl && (
+                  <div className="relative group">
+                    <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
+                      <FileText className="w-8 h-8 text-gray-500" />
+                    </div>
+                    <div className="text-xs mt-1 text-gray-500">
+                      {formData.DocumentoFactura?.name}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {errors.DocumentoFactura && (
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.DocumentoFactura}
+                </p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">Tamaño máximo: 10MB</p>
             </div>
 
             {errors.general && (

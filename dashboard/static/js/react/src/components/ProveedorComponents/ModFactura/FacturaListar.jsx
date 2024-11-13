@@ -1,5 +1,12 @@
 import React from "react";
-import { Search, LayoutGrid, List, Pencil, Trash2 } from "lucide-react";
+import {
+  Search,
+  LayoutGrid,
+  List,
+  Pencil,
+  Trash2,
+  FileText,
+} from "lucide-react";
 import PaginacionModFactura from "./PaginacionModFactura";
 import FacturaCreateModal from "./modals/FacturaCreateModal";
 import { useFacturaState } from "./hooks/useFacturaState";
@@ -23,15 +30,12 @@ const FacturaListar = () => {
     startIndex,
     endIndex,
     filteredFacturas,
-    // Estados de eliminación
     deleteModalOpen,
     facturaToDelete,
     isDeleting,
-    // Estados de actualización
     updateModalOpen,
     facturaToUpdate,
     isUpdating,
-    // Manejadores
     handleOpenModal,
     handleCloseModal,
     handleSearch,
@@ -48,7 +52,6 @@ const FacturaListar = () => {
     setFacturaToDelete,
   } = useFacturaState();
 
-  // Renderizado de botones de acción
   const renderActionButtons = (factura) => (
     <div className="flex space-x-2">
       <button
@@ -80,7 +83,6 @@ const FacturaListar = () => {
     </div>
   );
 
-  // Renderizado de vistas
   const renderGridView = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
       {currentFacturas.map((factura) => (
@@ -101,12 +103,12 @@ const FacturaListar = () => {
       console.error("Error en la exportación:", error);
     }
   };
-
   const renderTableView = () => (
     <table className="w-full">
       <thead>
         <tr className="text-left text-gray-500 text-sm border-b bg-gray-50">
           <th className="p-4 font-medium w-16">FOTO</th>
+          <th className="p-4 font-medium w-16">DOC</th>
           <th className="p-4 font-medium">FECHA EMISIÓN</th>
           <th className="p-4 font-medium">PROVEEDOR</th>
           <th className="p-4 font-medium text-center">ACCIONES</th>
@@ -134,6 +136,92 @@ const FacturaListar = () => {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
                     <span className="text-gray-400 text-xs">Sin foto</span>
+                  </div>
+                )}
+              </div>
+            </td>
+            <td className="p-4">
+              <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                {factura.DocumentoFactura ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        // Obtener el token CSRF
+                        const csrfToken = document.querySelector(
+                          "[name=csrfmiddlewaretoken]"
+                        )?.value;
+                        if (!csrfToken) {
+                          throw new Error("Token CSRF no encontrado");
+                        }
+
+                        // Realizar la petición
+                        const response = await fetch(
+                          `/api/factura/${factura.id}/ver-documento/`,
+                          {
+                            method: "GET",
+                            credentials: "include",
+                            headers: {
+                              "X-CSRFToken": csrfToken,
+                            },
+                          }
+                        );
+
+                        if (!response.ok) {
+                          const contentType =
+                            response.headers.get("content-type");
+                          if (
+                            contentType &&
+                            contentType.includes("application/json")
+                          ) {
+                            const errorData = await response.json();
+                            throw new Error(
+                              errorData.error || "Error al acceder al documento"
+                            );
+                          } else {
+                            throw new Error(
+                              `Error ${response.status}: ${response.statusText}`
+                            );
+                          }
+                        }
+
+                        // Obtener la URL del documento
+                        const data = await response.json();
+
+                        // Abrir el documento en una nueva pestaña
+                        window.open(data.url, "_blank");
+                      } catch (error) {
+                        console.error("Error al acceder al documento:", error);
+
+                        // Mostrar error al usuario
+                        if (typeof showAlert === "function") {
+                          showAlert({
+                            type: "error",
+                            title: "Error al acceder al documento",
+                            message:
+                              error.message ||
+                              "Hubo un problema al acceder al documento",
+                          });
+                        } else {
+                          alert(
+                            error.message ||
+                              "Hubo un problema al acceder al documento. Por favor, inténtelo de nuevo."
+                          );
+                        }
+                      }
+                    }}
+                    className="flex items-center justify-center w-full h-full hover:bg-gray-200 transition-colors group relative"
+                    title="Ver documento"
+                  >
+                    <FileText className="w-5 h-5 text-gray-600 group-hover:text-gray-800 transition-colors" />
+
+                    {/* Tooltip */}
+                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                      Ver documento
+                    </span>
+                  </button>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                    <span className="text-gray-400 text-xs">Sin doc</span>
                   </div>
                 )}
               </div>
@@ -263,7 +351,6 @@ const FacturaListar = () => {
           </div>
         ) : (
           <>
-            {/* Vista de Facturas */}
             <div className="overflow-x-auto">
               <div
                 className={`transition-opacity duration-300 ease-in-out
@@ -277,7 +364,6 @@ const FacturaListar = () => {
               </div>
             </div>
 
-            {/* Paginación */}
             <div className="border-t">
               <PaginacionModFactura
                 currentPage={currentPage}

@@ -1,29 +1,51 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import logout as auth_logout
-from django.contrib.auth.decorators import login_required  # Importa el decorador
-from django.http import JsonResponse # Importa JsonResponse para enviar respuestas JSON en vistas de Django.
-from django.views.decorators.csrf import csrf_exempt #Importa el decorador csrf_exempt para deshabilitar la verificación CSRF en una vista específica.
-import json #Importa la biblioteca json para trabajar con datos en formato JSON.
-from .models import Proveedor, Factura
-from django.core.exceptions import ValidationError #Importa ValidationError, que se usa para manejar errores de validacion en los modelos de Django
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.db import IntegrityError
-from django.shortcuts import render, redirect, get_object_or_404
-import cloudinary
-import cloudinary.uploader
-from cloudinary_storage.storage import MediaCloudinaryStorage
+import json
+import logging
 import os
 import re
-from login.models import Usuario
-from django.http import JsonResponse
-#Importaciones de EXCEL
-from django.http import HttpResponse
-import xlsxwriter
-from io import BytesIO
+import requests
 from datetime import datetime
-from django.http import HttpResponse
-import xlsxwriter
+from io import BytesIO
+
+# Django imports
+from django.contrib.auth import logout as auth_logout
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+from django.db import IntegrityError, models
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+import time
+import hashlib
+import base64
+
+
+
+# Cloudinary imports
+import cloudinary
+import cloudinary.api
+import cloudinary.uploader
+from cloudinary.models import CloudinaryField
+from cloudinary.utils import cloudinary_url
+from cloudinary_storage.storage import MediaCloudinaryStorage
+from cloudinary.exceptions import Error as CloudinaryError
+
+# Excel imports
+import xlsxwriter
+
+# Local imports
+from .models import Proveedor, Factura
+from login.models import Usuario
+from django.http import FileResponse, HttpResponse
+from django.shortcuts import get_object_or_404
+import requests
+from urllib.parse import urlparse
+import os
+import mimetypes
+
+# Configurar logging
+logger = logging.getLogger(__name__)
 
 
 
@@ -693,7 +715,6 @@ def crear_factura(request):
                     'errors': errores
                 }, status=400)
             
-            # Validar que la fecha tenga el formato correcto
             try:
                 fecha_emision = datetime.strptime(data.get('FechaEmision'), '%Y-%m-%d').date()
             except ValueError:
@@ -704,7 +725,6 @@ def crear_factura(request):
                     }
                 }, status=400)
             
-            # Validar que el proveedor exista
             try:
                 proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
             except (Proveedor.DoesNotExist, ValueError):
@@ -715,16 +735,14 @@ def crear_factura(request):
                     }
                 }, status=400)
             
-            # Crear la factura
             nueva_factura = Factura(
                 FechaEmision=fecha_emision,
                 Proveedor=proveedor
             )
             
-            # Manejar la foto si existe
+            # Manejar la foto
             if 'FotoFactura' in request.FILES:
                 foto = request.FILES['FotoFactura']
-                # Validar tipo de archivo
                 if foto.content_type not in ALLOWED_FILE_TYPES:
                     return JsonResponse({
                         'success': False,
@@ -733,7 +751,6 @@ def crear_factura(request):
                         }
                     }, status=400)
 
-                # Validar tamaño (10MB)
                 if foto.size > 10 * 1024 * 1024:
                     return JsonResponse({
                         'success': False,
@@ -744,10 +761,9 @@ def crear_factura(request):
 
                 nueva_factura.FotoFactura = foto
 
-            # Manejar el documento si existe
+            # Manejar el documento
             if 'DocumentoFactura' in request.FILES:
                 documento = request.FILES['DocumentoFactura']
-                # Validar tamaño (10MB)
                 if documento.size > 10 * 1024 * 1024:
                     return JsonResponse({
                         'success': False,
@@ -756,9 +772,34 @@ def crear_factura(request):
                         }
                     }, status=400)
 
-                nueva_factura.DocumentoFactura = documento
-            
-            # Validar el modelo completo
+                try:
+                    # Configurar Cloudinary
+                    cloudinary.config( 
+                        cloud_name = "dfqlvd3d4", 
+                        api_key = "576329879718141", 
+                        api_secret = "ji5zZ-PxQ2z8hzmN4rdYypGH12M"
+                    )
+
+                    logger.info("Iniciando subida de documento a Cloudinary")
+                    upload_result = cloudinary.uploader.upload(
+                        documento,
+                        resource_type='raw',
+                        folder='facturas/documentos/',
+                        public_id=f'factura_doc_{datetime.now().strftime("%Y%m%d_%H%M%S")}'
+                    )
+                    
+                    logger.info(f"Documento subido exitosamente. Public ID: {upload_result.get('public_id')}")
+                    nueva_factura.DocumentoFactura = upload_result['url']
+
+                except CloudinaryError as e:
+                    logger.error(f"Error al subir documento a Cloudinary: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'DocumentoFactura': f'Error al subir el documento: {str(e)}'
+                        }
+                    }, status=400)
+
             try:
                 nueva_factura.full_clean()
             except ValidationError as e:
@@ -788,6 +829,7 @@ def crear_factura(request):
             })
             
         except Exception as e:
+            logger.error(f"Error al crear factura: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'errors': {
@@ -840,38 +882,82 @@ def listar_facturas(request):
 def eliminar_factura(request, factura_id):
     if request.method == 'DELETE':
         try:
+            # Obtener la factura
             factura = get_object_or_404(Factura, id=factura_id)
             
+            # Guardar información para la respuesta
             fecha_emision = factura.FechaEmision
             nombre_proveedor = factura.Proveedor.NombreProveedor
             
-            # Manejar eliminación de archivos en Cloudinary
-            archivos = ['FotoFactura', 'DocumentoFactura']
-            for archivo in archivos:
-                archivo_field = getattr(factura, archivo)
-                if archivo_field:
-                    try:
-                        url = archivo_field.url
-                        parts = url.split('/')
-                        public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
-                        
+            # Si existe un documento, eliminarlo de Cloudinary
+            if factura.DocumentoFactura:
+                try:
+                    # Obtener la URL del documento como string
+                    url = str(factura.DocumentoFactura)
+                    print(f"URL original del documento: {url}")
+                    
+                    # Extraer el public_id del formato "facturas/documentos/xxxxx"
+                    if 'facturas/documentos' in url:
+                        start_idx = url.find('facturas/documentos')
+                        # Añadir .pdf al final si no está presente
+                        public_id = url[start_idx:]
+                        if not public_id.endswith('.pdf'):
+                            public_id = f"{public_id}.pdf"
+                    
+                    print(f"Intentando eliminar documento con public_id: {public_id}")
+                    
+                    # Configurar Cloudinary
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    # Eliminar el documento
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="raw",
+                        type="upload"
+                    )
+                    print(f"Resultado de eliminación documento Cloudinary: {result}")
+                    
+                except Exception as cloud_error:
+                    print(f"Error al eliminar documento de Cloudinary: {str(cloud_error)}")
+                    print(f"URL del documento: {url}")
+            
+            # Si existe una foto, eliminarla de Cloudinary
+            if factura.FotoFactura:
+                try:
+                    # Obtener la URL de la imagen
+                    url = factura.FotoFactura.url
+                    
+                    # Extraer el public_id
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    print(f"Intentando eliminar foto con public_id: {public_id}")
+                    
+                    # Configurar Cloudinary (no necesario si ya se configuró arriba)
+                    if not factura.DocumentoFactura:
                         cloudinary.config(
                             cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
                             api_key=os.getenv('CLOUDINARY_API_KEY'),
                             api_secret=os.getenv('CLOUDINARY_API_SECRET')
                         )
-                        
-                        # Determinar el resource_type basado en el campo
-                        resource_type = "raw" if archivo == "DocumentoFactura" else "image"
-                        
-                        cloudinary.uploader.destroy(
-                            public_id,
-                            resource_type=resource_type,
-                            type="upload"
-                        )
-                    except Exception as cloud_error:
-                        print(f"Error al eliminar {archivo} de Cloudinary: {str(cloud_error)}")
+                    
+                    # Eliminar la foto
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload"
+                    )
+                    print(f"Resultado de eliminación foto Cloudinary: {result}")
+                    
+                except Exception as cloud_error:
+                    print(f"Error al eliminar foto de Cloudinary: {str(cloud_error)}")
+                    print(f"URL de la foto: {factura.FotoFactura.url}")
             
+            # Eliminar la factura
             factura.delete()
             
             return JsonResponse({
@@ -1027,6 +1113,96 @@ def actualizar_factura(request, factura_id):
         'success': False,
         'errors': {'general': 'Método no permitido'}
     }, status=405)
+    
+    
+@login_required(login_url='login')
+def ver_documento_factura(request, factura_id):
+    try:
+        # Obtener la factura
+        factura = get_object_or_404(Factura, id=factura_id)
+        
+        if not factura.DocumentoFactura:
+            return JsonResponse({
+                'success': False,
+                'error': 'La factura no tiene un documento adjunto'
+            }, status=404)
+        
+        try:
+            # Configurar Cloudinary
+            cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME')
+            api_key = os.getenv('CLOUDINARY_API_KEY')
+            api_secret = os.getenv('CLOUDINARY_API_SECRET')
+            
+            cloudinary.config(
+                cloud_name=cloud_name,
+                api_key=api_key,
+                api_secret=api_secret
+            )
+            
+            # Obtener el documento_url
+            documento_url = str(factura.DocumentoFactura)
+            print(f"URL original: {documento_url}")
+            
+            # Asegurarse que la URL use HTTPS
+            if documento_url.startswith('http:'):
+                documento_url = 'https:' + documento_url[5:]
+            
+            # Generar una URL firmada para visualización
+            timestamp = str(int(time.time()))
+            
+            params = {
+                'timestamp': timestamp,
+                'resource_type': 'raw'
+            }
+            
+            # Generar firma
+            signature = cloudinary.utils.api_sign_request(
+                params,
+                api_secret
+            )
+            
+            # Construir URL final
+            url_visualizacion = (
+                f"{documento_url}?"
+                f"timestamp={timestamp}&"
+                f"api_key={api_key}&"
+                f"signature={signature}"
+            )
+            
+            print(f"URL de visualización generada: {url_visualizacion}")
+            
+            # Devolver la URL para que el frontend la use
+            return JsonResponse({
+                'success': True,
+                'url': url_visualizacion
+            })
+            
+        except Exception as e:
+            error_msg = f"Error al generar URL del documento: {str(e)}"
+            print(error_msg)
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return JsonResponse({
+                'success': False,
+                'error': error_msg
+            }, status=500)
+            
+    except Exception as e:
+        error_msg = f"Error general: {str(e)}"
+        print(error_msg)
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'error': error_msg
+        }, status=500)
+
+
+#------------------------------------------------------------------------------
+#------------------------------GESTOR PROVEEDORES------------------------------
+#------------------------------------------------------------------------------
+
+
 #--------------------------GESTOR ENVIO --------------------------------
 @login_required(login_url='login')
 def mod_envio(request):

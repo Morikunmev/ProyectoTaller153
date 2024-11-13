@@ -2,6 +2,16 @@ from django.db import models
 from cloudinary.models import CloudinaryField
 from django.core.validators import RegexValidator
 from django.core.exceptions import ValidationError
+import cloudinary
+import cloudinary.api
+from cloudinary.exceptions import Error as CloudinaryError
+import logging
+import requests
+
+logger = logging.getLogger(__name__)
+
+
+
 
 #------------------------------------------------------------------------------
 #------------------------------GESTOR PROVEEDORES------------------------------
@@ -82,6 +92,10 @@ class Factura(models.Model):
         verbose_name = "Factura"
         verbose_name_plural = "Facturas"
         ordering = ['-FechaEmision']  # Ordena por fecha de emisión descendente
+
+    def __str__(self):
+        return f"Factura {self.id} - {self.FechaEmision} - {self.Proveedor}"
+    
     
 
 #------------------------------MODULO ENVIO------------------------------

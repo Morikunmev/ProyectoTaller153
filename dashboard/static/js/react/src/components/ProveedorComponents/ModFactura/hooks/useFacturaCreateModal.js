@@ -8,6 +8,7 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     FechaEmision: today,
     Proveedor: "",
     FotoFactura: null,
+    DocumentoFactura: null,
   });
 
   // UI States
@@ -16,9 +17,10 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [documentPreviewUrl, setDocumentPreviewUrl] = useState(null);
   const [proveedores, setProveedores] = useState([]);
 
-  // Efecto para cargar la lista de proveedores
+  // Efecto para cargar la lista de proveedores y resetear el formulario
   useEffect(() => {
     if (isOpen) {
       fetchProveedores();
@@ -26,13 +28,14 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
         FechaEmision: today,
         Proveedor: "",
         FotoFactura: null,
+        DocumentoFactura: null,
       });
       setPreviewUrl(null);
+      setDocumentPreviewUrl(null);
       setErrors({});
     }
   }, [isOpen, today]);
 
-  // Función para obtener la lista de proveedores
   const fetchProveedores = async () => {
     try {
       const response = await fetch("/api/proveedor/listar/", {
@@ -62,7 +65,6 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
-  // Efecto que maneja la visibilidad del modal
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
@@ -74,7 +76,6 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }
   }, [isOpen]);
 
-  // Handle modal close
   const handleClose = () => {
     setIsAnimating(false);
     setTimeout(() => {
@@ -83,20 +84,20 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
         FechaEmision: today,
         Proveedor: "",
         FotoFactura: null,
+        DocumentoFactura: null,
       });
       setPreviewUrl(null);
+      setDocumentPreviewUrl(null);
       setErrors({});
     }, 150);
   };
 
-  // Handle input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-    // Limpiar error del campo cuando cambia
     if (errors[name]) {
       setErrors((prev) => ({
         ...prev,
@@ -105,11 +106,14 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
-  // Handle file input
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Lista de tipos MIME de imágenes permitidos
+  const validateFile = (file, fieldName) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB en bytes
+
+    if (file.size > maxSize) {
+      return `El archivo es demasiado grande. El tamaño máximo permitido es 10MB`;
+    }
+
+    if (fieldName === "FotoFactura") {
       const allowedTypes = [
         "image/jpeg",
         "image/jpg",
@@ -119,58 +123,65 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
         "image/webp",
         "image/tiff",
         "image/svg+xml",
-        "application/pdf", // Incluir PDF si quieres permitirlo
+        "application/pdf",
       ];
 
-      // Verificar el tamaño del archivo (ejemplo: 10MB máximo)
-      const maxSize = 10 * 1024 * 1024; // 10MB en bytes
-
       if (!allowedTypes.includes(file.type)) {
-        setErrors((prev) => ({
-          ...prev,
-          FotoFactura:
-            "Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF",
-        }));
+        return "Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF";
+      }
+    }
+
+    return null;
+  };
+
+  const handleFotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const error = validateFile(file, "FotoFactura");
+      if (error) {
+        setErrors((prev) => ({ ...prev, FotoFactura: error }));
         e.target.value = "";
         return;
       }
 
-      if (file.size > maxSize) {
-        setErrors((prev) => ({
-          ...prev,
-          FotoFactura:
-            "El archivo es demasiado grande. El tamaño máximo permitido es 10MB",
-        }));
-        e.target.value = "";
-        return;
-      }
-
-      // Si pasa las validaciones, proceder con el archivo
       setFormData((prev) => ({ ...prev, FotoFactura: file }));
 
-      // Solo crear preview para imágenes (no PDF)
       if (file.type.startsWith("image/")) {
         const objectUrl = URL.createObjectURL(file);
         setPreviewUrl(objectUrl);
-
-        // Limpiar la URL del objeto cuando ya no se necesite
         return () => URL.revokeObjectURL(objectUrl);
       } else {
-        // Para PDFs, mostrar un icono o mensaje en lugar de preview
-        setPreviewUrl("/path/to/pdf-icon.png"); // Podrías usar un ícono de PDF
+        setPreviewUrl("/path/to/pdf-icon.png");
       }
 
-      // Limpiar error si existe
       if (errors.FotoFactura) {
-        setErrors((prev) => ({
-          ...prev,
-          FotoFactura: null,
-        }));
+        setErrors((prev) => ({ ...prev, FotoFactura: null }));
       }
     }
   };
 
-  // Validate form data
+  const handleDocumentoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const error = validateFile(file, "DocumentoFactura");
+      if (error) {
+        setErrors((prev) => ({ ...prev, DocumentoFactura: error }));
+        e.target.value = "";
+        return;
+      }
+
+      setFormData((prev) => ({ ...prev, DocumentoFactura: file }));
+      const objectUrl = URL.createObjectURL(file);
+      setDocumentPreviewUrl(objectUrl);
+
+      if (errors.DocumentoFactura) {
+        setErrors((prev) => ({ ...prev, DocumentoFactura: null }));
+      }
+
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+  };
+
   const validateForm = () => {
     const newErrors = {};
 
@@ -185,7 +196,6 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     return newErrors;
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e?.preventDefault();
 
@@ -201,8 +211,13 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
       const formDataToSend = new FormData();
       formDataToSend.append("FechaEmision", formData.FechaEmision);
       formDataToSend.append("Proveedor", formData.Proveedor);
+
       if (formData.FotoFactura) {
         formDataToSend.append("FotoFactura", formData.FotoFactura);
+      }
+
+      if (formData.DocumentoFactura) {
+        formDataToSend.append("DocumentoFactura", formData.DocumentoFactura);
       }
 
       const response = await fetch("/api/factura/crear/", {
@@ -247,10 +262,12 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     isAnimating,
     isVisible,
     previewUrl,
+    documentPreviewUrl,
     proveedores,
     handleClose,
     handleSubmit,
     handleInputChange,
-    handleFileChange,
+    handleFotoChange,
+    handleDocumentoChange,
   };
 };

@@ -1,5 +1,5 @@
 import React from "react";
-import { X } from "lucide-react";
+import { X, FileText } from "lucide-react";
 import { useFacturaUpdateModal } from "../hooks/useFacturaUpdateModal";
 
 const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
@@ -10,11 +10,13 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
     isAnimating,
     isVisible,
     previewUrl,
+    documentPreviewUrl,
     handleClose,
     handleSubmit,
     handleInputChange,
-    handleFileChange,
-    proveedores, // Lista de proveedores para el select
+    handleFotoChange,
+    handleDocumentoChange,
+    proveedores,
   } = useFacturaUpdateModal({
     isOpen,
     onClose,
@@ -113,9 +115,7 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
                   ))}
                 </select>
                 {errors.Proveedor && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {errors.Proveedor}
-                  </p>
+                  <p className="text-sm text-red-500 mt-1">{errors.Proveedor}</p>
                 )}
               </div>
             </div>
@@ -126,8 +126,8 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
               <div className="mt-1 flex items-center space-x-4">
                 <input
                   type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
+                  accept="image/*,.pdf"
+                  onChange={handleFotoChange}
                   className="hidden"
                   id="foto-factura"
                 />
@@ -139,18 +139,71 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
                   Seleccionar imagen
                 </label>
                 {previewUrl && (
-                  <img
-                    src={previewUrl}
-                    alt="Vista previa"
-                    className="h-16 w-16 object-cover rounded"
-                  />
+                  <div className="relative group">
+                    {formData.FotoFactura?.type?.startsWith("image/") || 
+                     (!formData.FotoFactura?.type && previewUrl) ? (
+                      <img
+                        src={previewUrl}
+                        alt="Vista previa"
+                        className="h-16 w-16 object-cover rounded"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
+                        <span className="text-xs text-gray-500">PDF</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               {errors.FotoFactura && (
+                <p className="text-sm text-red-500 mt-1">{errors.FotoFactura}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF.
+                Tamaño máximo: 10MB
+              </p>
+            </div>
+
+            {/* Documento de la Factura */}
+            <div>
+              <label className="text-sm font-medium">Documento de la Factura</label>
+              <div className="mt-1 flex items-center space-x-4">
+                <input
+                  type="file"
+                  onChange={handleDocumentoChange}
+                  className="hidden"
+                  id="documento-factura"
+                />
+                <label
+                  htmlFor="documento-factura"
+                  className="px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 
+                           transition-colors duration-150"
+                >
+                  Seleccionar documento
+                </label>
+                {(documentPreviewUrl || formData.DocumentoFactura) && (
+                  <div className="relative group">
+                    <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
+                      <FileText className="w-8 h-8 text-gray-500" />
+                    </div>
+                    {formData.DocumentoFactura && (
+                      <div className="text-xs mt-1 text-gray-500">
+                        {formData.DocumentoFactura instanceof File 
+                          ? formData.DocumentoFactura.name
+                          : 'Documento actual'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+              {errors.DocumentoFactura && (
                 <p className="text-sm text-red-500 mt-1">
-                  {errors.FotoFactura}
+                  {errors.DocumentoFactura}
                 </p>
               )}
+              <p className="text-xs text-gray-500 mt-1">
+                Tamaño máximo: 10MB
+              </p>
             </div>
 
             {errors.general && (

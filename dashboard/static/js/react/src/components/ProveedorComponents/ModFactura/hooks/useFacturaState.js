@@ -44,7 +44,13 @@ export const useFacturaState = () => {
 
       const data = await response.json();
       if (data.success) {
-        setFacturas(data.facturas);
+        // Asegurarse de que los campos de archivos tengan URLs válidas
+        const facturasConArchivos = data.facturas.map(factura => ({
+          ...factura,
+          FotoFactura: factura.FotoFactura || null,
+          DocumentoFactura: factura.DocumentoFactura || null,
+        }));
+        setFacturas(facturasConArchivos);
       } else {
         throw new Error(data.message || "Error al cargar las facturas");
       }
@@ -88,14 +94,19 @@ export const useFacturaState = () => {
   const handleFacturaUpdated = useCallback(
     async (updatedFactura) => {
       try {
-        // Primero actualizamos localmente
+        // Asegurarse de que los campos de archivos se mantengan
+        const facturaConArchivos = {
+          ...updatedFactura,
+          FotoFactura: updatedFactura.FotoFactura || null,
+          DocumentoFactura: updatedFactura.DocumentoFactura || null,
+        };
+
         setFacturas((prevFacturas) =>
           prevFacturas.map((f) =>
-            f.id === updatedFactura.id ? updatedFactura : f
+            f.id === facturaConArchivos.id ? facturaConArchivos : f
           )
         );
 
-        // Luego actualizamos desde el servidor
         await fetchFacturas();
       } catch (error) {
         console.error("Error al actualizar el estado:", error);
@@ -176,7 +187,13 @@ export const useFacturaState = () => {
   // Manejador para crear nueva factura
   const handleFacturaCreated = async (nuevaFactura) => {
     try {
-      setFacturas((prevFacturas) => [...prevFacturas, nuevaFactura]);
+      const facturaConArchivos = {
+        ...nuevaFactura,
+        FotoFactura: nuevaFactura.FotoFactura || null,
+        DocumentoFactura: nuevaFactura.DocumentoFactura || null,
+      };
+
+      setFacturas((prevFacturas) => [...prevFacturas, facturaConArchivos]);
       await fetchFacturas();
       const newTotalPages = Math.ceil((facturas.length + 1) / itemsPerPage);
       setCurrentPage(newTotalPages);
