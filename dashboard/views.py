@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required  # Importa el decorado
 from django.http import JsonResponse # Importa JsonResponse para enviar respuestas JSON en vistas de Django.
 from django.views.decorators.csrf import csrf_exempt #Importa el decorador csrf_exempt para deshabilitar la verificación CSRF en una vista específica.
 import json #Importa la biblioteca json para trabajar con datos en formato JSON.
-from .models import Proveedor
+from .models import Proveedor, Factura
 from django.core.exceptions import ValidationError #Importa ValidationError, que se usa para manejar errores de validacion en los modelos de Django
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.db import IntegrityError
@@ -93,6 +93,69 @@ def exportar_proveedores_excel(request):
     
     # Generar nombre del archivo con la fecha actual
     filename = f'Proveedores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+def exportar_facturas_excel(request):
+    # Crear un buffer en memoria
+    output = BytesIO()
+    
+    # Crear un nuevo archivo Excel con la opción remove_timezone
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    worksheet = workbook.add_worksheet('Facturas')
+    
+    # Agregar formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy',  # Solo fecha sin hora para FechaEmision
+    })
+    
+    # Definir encabezados
+    headers = [
+        'Fecha Emisión', 
+        'Nombre Proveedor', 
+        'RUT Proveedor', 
+        'Marca Proveedor'
+    ]
+    
+    # Escribir encabezados
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header, header_format)
+        worksheet.set_column(col, col, 15)  # Establecer ancho de columna
+    
+    # Obtener datos de facturas con sus proveedores relacionados
+    facturas = Factura.objects.all().select_related('Proveedor').order_by('-FechaEmision')
+    
+    # Escribir datos
+    for row, factura in enumerate(facturas, start=1):
+        worksheet.write_datetime(row, 0, factura.FechaEmision, date_format)
+        worksheet.write(row, 1, factura.Proveedor.NombreProveedor)
+        worksheet.write(row, 2, factura.Proveedor.RutProveedor)
+        worksheet.write(row, 3, factura.Proveedor.MarcaProveedor)
+
+    # Ajustar anchos de columna automáticamente basado en el contenido
+    for col, header in enumerate(headers):
+        worksheet.set_column(col, col, len(header) + 2)
+    
+    workbook.close()
+    
+    # Preparar la respuesta
+    output.seek(0)
+    
+    # Generar nombre del archivo con la fecha actual
+    filename = f'Facturas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
     response = HttpResponse(
         output.read(),
@@ -597,10 +660,364 @@ def actualizar_proveedor(request, proveedor_id):
 def mod_factura(request):
     return render(request, 'proveedor/factura.html')
 
+ALLOWED_FILE_TYPES = {
+    'image/jpeg': '.jpg',
+    'image/jpg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/bmp': '.bmp',
+    'image/webp': '.webp',
+    'image/tiff': '.tiff',
+    'image/svg+xml': '.svg',
+    'application/pdf': '.pdf'
+}
+
+@login_required(login_url='login')
+@ensure_csrf_cookie 
+def crear_factura(request):
+    if request.method == 'POST':
+        try:
+            data = request.POST
+            
+            # Validaciones de campos requeridos
+            campos_requeridos = ['FechaEmision', 'Proveedor']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores
+                }, status=400)
+            
+            # Validar que la fecha tenga el formato correcto
+            try:
+                fecha_emision = datetime.strptime(data.get('FechaEmision'), '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'FechaEmision': 'El formato de fecha debe ser YYYY-MM-DD'
+                    }
+                }, status=400)
+            
+            # Validar que el proveedor exista
+            try:
+                proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
+            except (Proveedor.DoesNotExist, ValueError):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'Proveedor': 'Proveedor no válido'
+                    }
+                }, status=400)
+            
+            # Crear la factura
+            nueva_factura = Factura(
+                FechaEmision=fecha_emision,
+                Proveedor=proveedor
+            )
+            
+            # Manejar la foto si existe
+            if 'FotoFactura' in request.FILES:
+                foto = request.FILES['FotoFactura']
+                # Validar tipo de archivo
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoFactura': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF'
+                        }
+                    }, status=400)
+
+                # Validar tamaño (10MB)
+                if foto.size > 10 * 1024 * 1024:  # 10MB en bytes
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoFactura': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'
+                        }
+                    }, status=400)
+
+                nueva_factura.FotoFactura = foto
+            
+            # Validar el modelo completo
+            try:
+                nueva_factura.full_clean()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores_formateados
+                }, status=400)
+            
+            nueva_factura.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Factura creada exitosamente',
+                'factura': {
+                    'id': nueva_factura.id,
+                    'FechaEmision': nueva_factura.FechaEmision.isoformat(),
+                    'Proveedor': {
+                        'id': nueva_factura.Proveedor.id,
+                        'NombreProveedor': nueva_factura.Proveedor.NombreProveedor,
+                        'RutProveedor': nueva_factura.Proveedor.RutProveedor
+                    },
+                    'FotoFactura': nueva_factura.FotoFactura.url if nueva_factura.FotoFactura else None
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'general': f'Error al crear la factura: {str(e)}'
+                }
+            }, status=400)
+    
+    return JsonResponse({
+        'success': False,
+        'errors': {
+            'general': 'Método no permitido'
+        }
+    }, status=405)
 
 
+@login_required(login_url='login')
+def listar_facturas(request):
+    if request.method == 'GET':
+        try:
+            facturas = Factura.objects.all().select_related('Proveedor')
+            data = []
+            for factura in facturas:
+                data.append({
+                    'id': factura.id,
+                    # Campo de fecha
+                    'FechaEmision': factura.FechaEmision.isoformat() if factura.FechaEmision else None,
+                    # Información del proveedor relacionado
+                    'Proveedor': {
+                        'id': factura.Proveedor.id,
+                        'NombreProveedor': factura.Proveedor.NombreProveedor,
+                        'RutProveedor': factura.Proveedor.RutProveedor,
+                        'MarcaProveedor': factura.Proveedor.MarcaProveedor
+                    },
+                    # Campo multimedia
+                    'FotoFactura': factura.FotoFactura.url if factura.FotoFactura else None,
+                })
+            return JsonResponse({
+                'success': True,
+                'facturas': data
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+    return JsonResponse({
+        'success': False, 
+        'message': 'Método no permitido'
+    }, status=405)
 
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_factura(request, factura_id):
+    if request.method == 'DELETE':
+        try:
+            # Obtener la factura
+            factura = get_object_or_404(Factura, id=factura_id)
+            
+            # Guardar información relevante para la respuesta
+            fecha_emision = factura.FechaEmision
+            nombre_proveedor = factura.Proveedor.NombreProveedor
+            
+            # Si existe una foto, eliminarla de Cloudinary
+            if factura.FotoFactura:
+                try:
+                    # Obtener la URL de la imagen
+                    url = factura.FotoFactura.url
+                    
+                    # Extraer el public_id del formato "facturas/xxxxxx"
+                    # La URL será algo como: https://res.cloudinary.com/tu-cloud/image/upload/v1234567/facturas/xxxxxx
+                    parts = url.split('/')
+                    # Obtener las dos últimas partes para formar "facturas/xxxxxx"
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    print(f"Intentando eliminar imagen con public_id: {public_id}")
+                    
+                    # Configurar Cloudinary
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    # Eliminar la imagen especificando el tipo y resource_type
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload"
+                    )
+                    print(f"Resultado de eliminación Cloudinary: {result}")
+                    
+                except Exception as cloud_error:
+                    print(f"Error al eliminar imagen de Cloudinary: {str(cloud_error)}")
+                    print(f"URL de la imagen: {factura.FotoFactura.url}")
+            
+            # Eliminar la factura
+            factura.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Factura del {fecha_emision} del proveedor {nombre_proveedor} y sus archivos asociados fueron eliminados exitosamente'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al eliminar la factura: {str(e)}'
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, status=405)
+    
+    
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_factura(request, factura_id):
+    if request.method in ['PUT', 'POST']:
+        try:
+            factura = get_object_or_404(Factura, id=factura_id)
+            data = request.POST
+            
+            # Validar campos requeridos
+            campos_requeridos = ['FechaEmision', 'Proveedor']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({'success': False, 'errors': errores}, status=400)
+            
+            try:
+                fecha_emision = datetime.strptime(data.get('FechaEmision'), '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'FechaEmision': 'El formato de fecha debe ser YYYY-MM-DD'}
+                }, status=400)
+            
+            try:
+                proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
+            except (Proveedor.DoesNotExist, ValueError):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'Proveedor': 'Proveedor no válido'}
+                }, status=400)
 
+            # Manejar la actualización de la foto
+            if 'FotoFactura' in request.FILES:
+                foto = request.FILES['FotoFactura']
+                
+                # Validar tipo de archivo
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoFactura': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF'
+                        }
+                    }, status=400)
+
+                # Validar tamaño (10MB)
+                if foto.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoFactura': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'
+                        }
+                    }, status=400)
+                
+                try:
+                    # Guardar la referencia de la foto actual
+                    foto_anterior = factura.FotoFactura if factura.FotoFactura else None
+                    
+                    # Asignar la nueva foto
+                    factura.FotoFactura = foto
+                    
+                    # Si hay foto anterior, eliminarla de Cloudinary
+                    if foto_anterior:
+                        try:
+                            url = foto_anterior.url
+                            parts = url.split('/')
+                            public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                            
+                            cloudinary.config(
+                                cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                                api_key=os.getenv('CLOUDINARY_API_KEY'),
+                                api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                            )
+                            
+                            cloudinary.uploader.destroy(
+                                public_id,
+                                resource_type="raw",  # Cambiado para soportar todos los tipos
+                                type="upload",
+                                invalidate=True
+                            )
+                        except Exception as cloud_error:
+                            print(f"Error al eliminar archivo anterior de Cloudinary: {str(cloud_error)}")
+                
+                except Exception as e:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoFactura': f'Error al actualizar el archivo: {str(e)}'}
+                    }, status=400)
+
+            # Actualizar campos
+            factura.FechaEmision = fecha_emision
+            factura.Proveedor = proveedor
+            
+            try:
+                factura.full_clean()
+                factura.save()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Factura actualizada exitosamente',
+                'factura': {
+                    'id': factura.id,
+                    'FechaEmision': factura.FechaEmision.isoformat(),
+                    'Proveedor': {
+                        'id': factura.Proveedor.id,
+                        'NombreProveedor': factura.Proveedor.NombreProveedor,
+                        'RutProveedor': factura.Proveedor.RutProveedor,
+                        'MarcaProveedor': factura.Proveedor.MarcaProveedor
+                    },
+                    'FotoFactura': factura.FotoFactura.url if factura.FotoFactura else None
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {'general': f'Error al actualizar la factura: {str(e)}'}
+            }, status=400)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {'general': 'Método no permitido'}
+    }, status=405)
 #--------------------------GESTOR ENVIO --------------------------------
 @login_required(login_url='login')
 def mod_envio(request):
