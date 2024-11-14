@@ -59,35 +59,13 @@ class Proveedor(models.Model):
 #------------------------------MODULO FACTURA------------------------------
 class Factura(models.Model):
     # Campos obligatorios
-    FechaEmision = models.DateField(
-        null=False, 
-        blank=False,
-        verbose_name="Fecha de Emisión"
-    )
-
+    FechaEmision = models.DateField(null=False, blank=False,verbose_name="Fecha de Emisión")
     # Campos multimedia opcionales
-    FotoFactura = CloudinaryField(
-        "Foto de Factura",
-        folder='facturas/',
-        null=True, 
-        blank=True
-    )
-    DocumentoFactura = CloudinaryField(
-        "Documento de Factura",
-        folder='facturas/documentos/',
-        resource_type='raw',
-        null=True, 
-        blank=True
-    )
+    FotoFactura = CloudinaryField("Foto de Factura",folder='facturas/',null=True, blank=True)
+    DocumentoFactura = CloudinaryField("Documento de Factura",folder='facturas/documentos/',resource_type='raw',null=True, blank=True)
     
     # Este campo es NECESARIO mantenerlo
-    documento_asset_id = models.CharField(
-        "Asset ID del Documento",
-        max_length=255,
-        blank=True,
-        null=True,
-        help_text="ID único del documento en Cloudinary"
-    )
+    documento_asset_id = models.CharField("Asset ID del Documento",max_length=255,blank=True,null=True,help_text="ID único del documento en Cloudinary")
 
     # Campo de relación
     Proveedor = models.ForeignKey(

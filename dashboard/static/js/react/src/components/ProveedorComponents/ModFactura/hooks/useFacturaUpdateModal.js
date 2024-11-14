@@ -21,6 +21,10 @@ export const useFacturaUpdateModal = ({
   const [previewUrl, setPreviewUrl] = useState("");
   const [documentPreviewUrl, setDocumentPreviewUrl] = useState("");
   const [proveedores, setProveedores] = useState([]);
+  const [removedFiles, setRemovedFiles] = useState({
+    foto: false,
+    documento: false,
+  });
 
   // Efecto para manejar la animación de apertura/cierre
   useEffect(() => {
@@ -67,25 +71,28 @@ export const useFacturaUpdateModal = ({
       });
       setPreviewUrl(factura.FotoFactura || "");
       setDocumentPreviewUrl(factura.DocumentoFactura || "");
+      setRemovedFiles({ foto: false, documento: false });
     }
   }, [factura, isOpen]);
 
   // Manejador de cambios en los inputs
-  const handleInputChange = useCallback((e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    
-    // Limpiar error del campo cuando cambia
-    if (errors[name]) {
-      setErrors((prev) => ({
+  const handleInputChange = useCallback(
+    (e) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({
         ...prev,
-        [name]: null,
+        [name]: value,
       }));
-    }
-  }, [errors]);
+
+      if (errors[name]) {
+        setErrors((prev) => ({
+          ...prev,
+          [name]: null,
+        }));
+      }
+    },
+    [errors]
+  );
 
   // Función de validación de archivos
   const validateFile = useCallback((file, type) => {
@@ -117,57 +124,81 @@ export const useFacturaUpdateModal = ({
   }, []);
 
   // Manejador de cambios en la foto
-  const handleFotoChange = useCallback((e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const error = validateFile(file, "foto");
-      if (error) {
-        setErrors((prev) => ({ ...prev, FotoFactura: error }));
-        e.target.value = "";
-        return;
-      }
+  const handleFotoChange = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const error = validateFile(file, "foto");
+        if (error) {
+          setErrors((prev) => ({ ...prev, FotoFactura: error }));
+          e.target.value = "";
+          return;
+        }
 
-      // Limpiar error previo si existe
-      if (errors.FotoFactura) {
-        setErrors((prev) => ({ ...prev, FotoFactura: null }));
-      }
+        if (errors.FotoFactura) {
+          setErrors((prev) => ({ ...prev, FotoFactura: null }));
+        }
 
-      setFormData((prev) => ({ ...prev, FotoFactura: file }));
+        setFormData((prev) => ({ ...prev, FotoFactura: file }));
+        setRemovedFiles((prev) => ({ ...prev, foto: false }));
 
-      if (file.type.startsWith("image/")) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreviewUrl(reader.result);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setPreviewUrl("/path/to/pdf-icon.png");
+        if (file.type.startsWith("image/")) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setPreviewUrl(reader.result);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          setPreviewUrl("/path/to/pdf-icon.png");
+        }
       }
-    }
-  }, [errors, validateFile]);
+    },
+    [errors, validateFile]
+  );
+
+  // Manejador para eliminar la foto
+  const handleRemoveFoto = useCallback(() => {
+    setFormData((prev) => ({ ...prev, FotoFactura: null }));
+    setPreviewUrl("");
+    setRemovedFiles((prev) => ({ ...prev, foto: true }));
+    const fileInput = document.getElementById("foto-factura");
+    if (fileInput) fileInput.value = "";
+  }, []);
 
   // Manejador de cambios en el documento
-  const handleDocumentoChange = useCallback((e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const error = validateFile(file, "documento");
-      if (error) {
-        setErrors((prev) => ({ ...prev, DocumentoFactura: error }));
-        e.target.value = "";
-        return;
+  const handleDocumentoChange = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const error = validateFile(file, "documento");
+        if (error) {
+          setErrors((prev) => ({ ...prev, DocumentoFactura: error }));
+          e.target.value = "";
+          return;
+        }
+
+        if (errors.DocumentoFactura) {
+          setErrors((prev) => ({ ...prev, DocumentoFactura: null }));
+        }
+
+        setFormData((prev) => ({ ...prev, DocumentoFactura: file }));
+        setRemovedFiles((prev) => ({ ...prev, documento: false }));
+        setDocumentPreviewUrl(URL.createObjectURL(file));
+
+        return () => URL.revokeObjectURL(documentPreviewUrl);
       }
+    },
+    [errors, validateFile, documentPreviewUrl]
+  );
 
-      // Limpiar error previo si existe
-      if (errors.DocumentoFactura) {
-        setErrors((prev) => ({ ...prev, DocumentoFactura: null }));
-      }
-
-      setFormData((prev) => ({ ...prev, DocumentoFactura: file }));
-      setDocumentPreviewUrl(URL.createObjectURL(file));
-
-      return () => URL.revokeObjectURL(documentPreviewUrl);
-    }
-  }, [errors, validateFile, documentPreviewUrl]);
+  // Manejador para eliminar el documento
+  const handleRemoveDocumento = useCallback(() => {
+    setFormData((prev) => ({ ...prev, DocumentoFactura: null }));
+    setDocumentPreviewUrl("");
+    setRemovedFiles((prev) => ({ ...prev, documento: true }));
+    const fileInput = document.getElementById("documento-factura");
+    if (fileInput) fileInput.value = "";
+  }, []);
 
   // Manejador de cierre del modal
   const handleClose = useCallback(() => {
@@ -185,7 +216,6 @@ export const useFacturaUpdateModal = ({
 
       setIsSubmitting(true);
       try {
-        // Validar campos requeridos
         const newErrors = {};
         if (!formData.FechaEmision) {
           newErrors.FechaEmision = "La fecha de emisión es requerida";
@@ -199,15 +229,16 @@ export const useFacturaUpdateModal = ({
           throw new Error("Por favor complete todos los campos requeridos");
         }
 
-        // Crear FormData para enviar archivos
         const submitData = new FormData();
         submitData.append("FechaEmision", formData.FechaEmision);
         submitData.append("Proveedor", formData.Proveedor);
-        
+        submitData.append("removeFoto", removedFiles.foto);
+        submitData.append("removeDocumento", removedFiles.documento);
+
         if (formData.FotoFactura instanceof File) {
           submitData.append("FotoFactura", formData.FotoFactura);
         }
-        
+
         if (formData.DocumentoFactura instanceof File) {
           submitData.append("DocumentoFactura", formData.DocumentoFactura);
         }
@@ -247,7 +278,7 @@ export const useFacturaUpdateModal = ({
         setIsSubmitting(false);
       }
     },
-    [formData, factura, handleClose, onFacturaUpdated]
+    [formData, factura, handleClose, onFacturaUpdated, removedFiles]
   );
 
   return {
@@ -264,6 +295,8 @@ export const useFacturaUpdateModal = ({
     handleInputChange,
     handleFotoChange,
     handleDocumentoChange,
+    handleRemoveFoto,
+    handleRemoveDocumento,
   };
 };
 

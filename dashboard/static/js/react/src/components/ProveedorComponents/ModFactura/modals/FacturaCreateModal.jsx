@@ -1,5 +1,5 @@
 import React from "react";
-import { X, FileText } from "lucide-react";
+import { X, FileText, XCircle } from "lucide-react";
 import { useFacturaCreateModal } from "../hooks/useFacturaCreateModal";
 
 const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
@@ -17,6 +17,8 @@ const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     handleInputChange,
     handleFotoChange,
     handleDocumentoChange,
+    handleRemoveFoto,
+    handleRemoveDocumento,
   } = useFacturaCreateModal({ isOpen, onClose, onSubmit });
 
   const getInputBorderClass = (value) => {
@@ -130,17 +132,27 @@ const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
                 </label>
                 {previewUrl && (
                   <div className="relative group">
-                    {formData.FotoFactura?.type.startsWith("image/") ? (
-                      <img
-                        src={previewUrl}
-                        alt="Vista previa"
-                        className="h-16 w-16 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
-                        <span className="text-xs text-gray-500">PDF</span>
-                      </div>
-                    )}
+                    <div className="relative">
+                      {formData.FotoFactura?.type.startsWith("image/") ? (
+                        <img
+                          src={previewUrl}
+                          alt="Vista previa"
+                          className="h-16 w-16 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
+                          <span className="text-xs text-gray-500">PDF</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleRemoveFoto}
+                        className="absolute -top-2 -right-2 bg-white rounded-full shadow-md 
+                                 hover:bg-gray-100 p-0.5 transition-colors duration-150"
+                      >
+                        <XCircle className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
                     <div className="text-xs mt-1 text-gray-500">
                       {formData.FotoFactura?.name}
                     </div>
@@ -179,8 +191,18 @@ const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
                 </label>
                 {documentPreviewUrl && (
                   <div className="relative group">
-                    <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
-                      <FileText className="w-8 h-8 text-gray-500" />
+                    <div className="relative">
+                      <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
+                        <FileText className="w-8 h-8 text-gray-500" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveDocumento}
+                        className="absolute -top-2 -right-2 bg-white rounded-full shadow-md 
+                                 hover:bg-gray-100 p-0.5 transition-colors duration-150"
+                      >
+                        <XCircle className="w-5 h-5 text-gray-500" />
+                      </button>
                     </div>
                     <div className="text-xs mt-1 text-gray-500">
                       {formData.DocumentoFactura?.name}

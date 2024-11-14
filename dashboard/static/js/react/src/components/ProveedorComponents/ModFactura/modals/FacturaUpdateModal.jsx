@@ -1,5 +1,5 @@
 import React from "react";
-import { X, FileText } from "lucide-react";
+import { X, FileText, XCircle } from "lucide-react";
 import { useFacturaUpdateModal } from "../hooks/useFacturaUpdateModal";
 
 const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
@@ -16,6 +16,8 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
     handleInputChange,
     handleFotoChange,
     handleDocumentoChange,
+    handleRemoveFoto,
+    handleRemoveDocumento,
     proveedores,
   } = useFacturaUpdateModal({
     isOpen,
@@ -115,7 +117,9 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
                   ))}
                 </select>
                 {errors.Proveedor && (
-                  <p className="text-sm text-red-500 mt-1">{errors.Proveedor}</p>
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.Proveedor}
+                  </p>
                 )}
               </div>
             </div>
@@ -140,23 +144,40 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
                 </label>
                 {previewUrl && (
                   <div className="relative group">
-                    {formData.FotoFactura?.type?.startsWith("image/") || 
-                     (!formData.FotoFactura?.type && previewUrl) ? (
-                      <img
-                        src={previewUrl}
-                        alt="Vista previa"
-                        className="h-16 w-16 object-cover rounded"
-                      />
-                    ) : (
-                      <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
-                        <span className="text-xs text-gray-500">PDF</span>
-                      </div>
-                    )}
+                    <div className="relative">
+                      {formData.FotoFactura?.type?.startsWith("image/") ||
+                      (!formData.FotoFactura?.type && previewUrl) ? (
+                        <img
+                          src={previewUrl}
+                          alt="Vista previa"
+                          className="h-16 w-16 object-cover rounded"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
+                          <span className="text-xs text-gray-500">PDF</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleRemoveFoto}
+                        className="absolute -top-2 -right-2 bg-white rounded-full shadow-md 
+                                 hover:bg-gray-100 p-0.5 transition-colors duration-150"
+                      >
+                        <XCircle className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
+                    <div className="text-xs mt-1 text-gray-500">
+                      {formData.FotoFactura instanceof File
+                        ? formData.FotoFactura.name
+                        : "Foto actual"}
+                    </div>
                   </div>
                 )}
               </div>
               {errors.FotoFactura && (
-                <p className="text-sm text-red-500 mt-1">{errors.FotoFactura}</p>
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.FotoFactura}
+                </p>
               )}
               <p className="text-xs text-gray-500 mt-1">
                 Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF.
@@ -166,7 +187,9 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
 
             {/* Documento de la Factura */}
             <div>
-              <label className="text-sm font-medium">Documento de la Factura</label>
+              <label className="text-sm font-medium">
+                Documento de la Factura
+              </label>
               <div className="mt-1 flex items-center space-x-4">
                 <input
                   type="file"
@@ -183,16 +206,24 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
                 </label>
                 {(documentPreviewUrl || formData.DocumentoFactura) && (
                   <div className="relative group">
-                    <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
-                      <FileText className="w-8 h-8 text-gray-500" />
-                    </div>
-                    {formData.DocumentoFactura && (
-                      <div className="text-xs mt-1 text-gray-500">
-                        {formData.DocumentoFactura instanceof File 
-                          ? formData.DocumentoFactura.name
-                          : 'Documento actual'}
+                    <div className="relative">
+                      <div className="h-16 w-16 flex items-center justify-center bg-gray-100 rounded">
+                        <FileText className="w-8 h-8 text-gray-500" />
                       </div>
-                    )}
+                      <button
+                        type="button"
+                        onClick={handleRemoveDocumento}
+                        className="absolute -top-2 -right-2 bg-white rounded-full shadow-md 
+                                 hover:bg-gray-100 p-0.5 transition-colors duration-150"
+                      >
+                        <XCircle className="w-5 h-5 text-gray-500" />
+                      </button>
+                    </div>
+                    <div className="text-xs mt-1 text-gray-500">
+                      {formData.DocumentoFactura instanceof File
+                        ? formData.DocumentoFactura.name
+                        : "Documento actual"}
+                    </div>
                   </div>
                 )}
               </div>
@@ -201,9 +232,7 @@ const FacturaUpdateModal = ({ isOpen, onClose, factura, onFacturaUpdated }) => {
                   {errors.DocumentoFactura}
                 </p>
               )}
-              <p className="text-xs text-gray-500 mt-1">
-                Tamaño máximo: 10MB
-              </p>
+              <p className="text-xs text-gray-500 mt-1">Tamaño máximo: 10MB</p>
             </div>
 
             {errors.general && (

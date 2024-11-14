@@ -160,6 +160,14 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
+  const handleRemoveFoto = () => {
+    setFormData((prev) => ({ ...prev, FotoFactura: null }));
+    setPreviewUrl(null);
+    // Reset the file input
+    const fileInput = document.getElementById("foto-factura");
+    if (fileInput) fileInput.value = "";
+  };
+
   const handleDocumentoChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -180,6 +188,14 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
 
       return () => URL.revokeObjectURL(objectUrl);
     }
+  };
+
+  const handleRemoveDocumento = () => {
+    setFormData((prev) => ({ ...prev, DocumentoFactura: null }));
+    setDocumentPreviewUrl(null);
+    // Reset the file input
+    const fileInput = document.getElementById("documento-factura");
+    if (fileInput) fileInput.value = "";
   };
 
   const validateForm = () => {
@@ -269,5 +285,7 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
     handleInputChange,
     handleFotoChange,
     handleDocumentoChange,
+    handleRemoveFoto,
+    handleRemoveDocumento,
   };
 };

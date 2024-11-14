@@ -764,6 +764,25 @@ def crear_factura(request):
             # Manejar el documento
             if 'DocumentoFactura' in request.FILES:
                 documento = request.FILES['DocumentoFactura']
+                
+                # Validar que sea PDF
+                if documento.content_type != 'application/pdf':
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'DocumentoFactura': 'Solo se permiten archivos PDF'
+                        }
+                    }, status=400)
+
+                # Validación adicional de extensión
+                if not documento.name.lower().endswith('.pdf'):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'DocumentoFactura': 'El archivo debe tener extensión .pdf'
+                        }
+                    }, status=400)
+
                 if documento.size > 10 * 1024 * 1024:
                     return JsonResponse({
                         'success': False,
