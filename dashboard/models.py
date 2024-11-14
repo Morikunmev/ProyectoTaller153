@@ -8,6 +8,9 @@ from cloudinary.exceptions import Error as CloudinaryError
 import logging
 import requests
 import os
+from datetime import date
+from django.utils import timezone
+
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +94,6 @@ class Envio(models.Model):
         ('herramienta', 'Herramienta'),
     ]
 
-    # Campos obligatorios
     NombreEnvio = models.CharField(max_length=100, null=False, blank=False)
     CantidadEnvio = models.PositiveIntegerField(null=False, blank=False)
     PrecioEnvio = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
@@ -103,14 +105,13 @@ class Envio(models.Model):
         choices=TIPO_CHOICES,
         help_text="Seleccione si el envío es de material o herramienta"
     )
+    
     # Campos opcionales
-    FechaCompraEnvio = models.DateField(null=True, blank=True)
+    FechaCompraEnvio = models.DateField(auto_now_add=True)  # Se establece automáticamente cuando se crea el envío
     EnvioRecibido = models.BooleanField(default=False)
-    FechaCompradaEnvio = models.DateField(null=True, blank=True)
+    DiasTranscurridos = models.IntegerField(default=0, editable=False)  # Contador de días
     DescripcionEnvio = models.TextField(null=True, blank=True)
-    # Campo multimedia
     FotoEnvio = CloudinaryField('imagen', folder='envios/', null=True, blank=True)
-    # Campo FK
     Proveedor = models.ForeignKey('Proveedor', on_delete=models.CASCADE, null=False, blank=False)
 
     class Meta:
@@ -118,14 +119,25 @@ class Envio(models.Model):
         verbose_name_plural = "Envíos"
         ordering = ['-FechaCompraEnvio']
     
-    def clean(self):
-        # Validación adicional para asegurar que el total sea correcto
-        if self.CantidadEnvio and self.PrecioEnvio:
-            total_calculado = self.CantidadEnvio * self.PrecioEnvio
-            if self.TotalEnvio and self.TotalEnvio != total_calculado:
-                raise ValidationError('El total debe ser igual a cantidad * precio')
-        
     def save(self, *args, **kwargs):
-        # Calcula el total antes de guardar
+        # Calcula el total
         self.TotalEnvio = self.CantidadEnvio * self.PrecioEnvio
+        
+        # Si es un nuevo envío, establece la fecha de compra
+        if not self.pk:  # Si es un nuevo objeto
+            self.FechaCompraEnvio = date.today()
+        
+        # Actualiza los días transcurridos si no está recibido
+        if not self.EnvioRecibido:
+            self.DiasTranscurridos = (date.today() - self.FechaCompraEnvio).days
+        
         super(Envio, self).save(*args, **kwargs)
+    
+    @property
+    def dias_transcurridos_actual(self):
+        """
+        Calcula los días transcurridos en tiempo real
+        """
+        if self.EnvioRecibido:
+            return self.DiasTranscurridos
+        return (date.today() - self.FechaCompraEnvio).days
