@@ -31,6 +31,21 @@ export const useEnvioState = () => {
 
   const itemsPerPage = 10;
 
+  // 1. Añade esta función nueva justo después de const itemsPerPage = 10;
+  const procesarEnvios = (enviosData) => {
+    return enviosData.sort((a, b) => {
+      // Si ambos están recibidos, mantener el orden original
+      if (a.EnvioRecibido && b.EnvioRecibido) {
+        return 0;
+      }
+      // Si solo uno está recibido, poner el no recibido primero
+      if (a.EnvioRecibido) return 1;
+      if (b.EnvioRecibido) return -1;
+      // Si ninguno está recibido, ordenar por días transcurridos (más días primero)
+      return b.DiasTranscurridos - a.DiasTranscurridos;
+    });
+  };
+
   // Fetch de datos
   const fetchEnvios = async () => {
     try {
@@ -44,14 +59,12 @@ export const useEnvioState = () => {
 
       const data = await response.json();
       if (data.success) {
-        // Asegurarse de que los campos de archivos tengan URLs válidas
         const enviosConFotos = data.envios.map((envio) => ({
           ...envio,
           FotoEnvio: envio.FotoEnvio || null,
         }));
-        setEnvios(enviosConFotos);
-      } else {
-        throw new Error(data.message || "Error al cargar los envíos");
+        const enviosOrdenados = procesarEnvios(enviosConFotos);
+        setEnvios(enviosOrdenados);
       }
     } catch (error) {
       console.error("Error al cargar envíos:", error);
@@ -60,8 +73,8 @@ export const useEnvioState = () => {
       setLoading(false);
     }
   };
+  // 1. Primero, necesitas el useEffect para cargar datos iniciales (después del fetchEnvios)
 
-  // Efecto para cargar datos iniciales
   useEffect(() => {
     fetchEnvios();
     return () => {
@@ -69,6 +82,29 @@ export const useEnvioState = () => {
       setLoading(true);
       setError(null);
     };
+  }, []);
+
+  // 2. Después, el useEffect para actualizar los días (como un efecto separado)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setEnvios((prevEnvios) => {
+        if (!prevEnvios.length) return prevEnvios;
+
+        const enviosActualizados = prevEnvios.map((envio) => ({
+          ...envio,
+          DiasTranscurridos: envio.EnvioRecibido
+            ? envio.DiasTranscurridos
+            : Math.floor(
+                (new Date() - new Date(envio.FechaCompraEnvio)) /
+                  (1000 * 60 * 60 * 24)
+              ),
+        }));
+
+        return procesarEnvios(enviosActualizados);
+      });
+    }, 60000); // Actualizar cada minuto
+
+    return () => clearInterval(interval);
   }, []);
 
   // Función para manejar la apertura del modal de eliminación
@@ -212,7 +248,8 @@ export const useEnvioState = () => {
     return (
       envio.NombreEnvio.toLowerCase().includes(searchString) ||
       envio.TipoEnvio.toLowerCase().includes(searchString) ||
-      envio.Proveedor.NombreProveedor.toLowerCase().includes(searchString)
+      envio.Proveedor.NombreProveedor.toLowerCase().includes(searchString) ||
+      String(envio.DiasTranscurridos).includes(searchString)
     );
   });
 
@@ -245,6 +282,7 @@ export const useEnvioState = () => {
     updateModalOpen,
     envioToUpdate,
     isUpdating,
+    procesarEnvios,
 
     // Manejadores
     handleOpenModal,

@@ -22,10 +22,24 @@ const EnvioDeleteModal = ({
 
   // Helper function to format currency
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP'
+    return new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: "CLP",
     }).format(amount);
+  };
+
+  // Helper para el estilo de días transcurridos
+  const getDiasTranscurridosStyle = (envio) => {
+    if (envio.EnvioRecibido) {
+      return "text-gray-600";
+    }
+    if (envio.DiasTranscurridos > 30) {
+      return "text-red-600";
+    }
+    if (envio.DiasTranscurridos > 15) {
+      return "text-orange-600";
+    }
+    return "text-blue-600";
   };
 
   return (
@@ -61,8 +75,8 @@ const EnvioDeleteModal = ({
         {/* Contenido detallado */}
         <div className="space-y-4">
           <p className="text-gray-600">
-            ¿Estás seguro que deseas eliminar este envío? Esta acción
-            eliminará permanentemente:
+            ¿Estás seguro que deseas eliminar este envío? Esta acción eliminará
+            permanentemente:
           </p>
 
           {envio && (
@@ -78,7 +92,7 @@ const EnvioDeleteModal = ({
 
                 <span className="text-gray-500">Tipo:</span>
                 <span className="font-medium text-gray-900">
-                  {envio.TipoEnvio === 'material' ? 'Material' : 'Herramienta'}
+                  {envio.TipoEnvio === "material" ? "Material" : "Herramienta"}
                 </span>
 
                 <span className="text-gray-500">Cantidad:</span>
@@ -97,8 +111,12 @@ const EnvioDeleteModal = ({
                 </span>
 
                 <span className="text-gray-500">Estado:</span>
-                <span className={`font-medium ${envio.EnvioRecibido ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {envio.EnvioRecibido ? 'Recibido' : 'Pendiente'}
+                <span
+                  className={`font-medium ${
+                    envio.EnvioRecibido ? "text-green-600" : "text-yellow-600"
+                  }`}
+                >
+                  {envio.EnvioRecibido ? "Recibido" : "Pendiente"}
                 </span>
 
                 <span className="text-gray-500">Proveedor:</span>
@@ -107,22 +125,28 @@ const EnvioDeleteModal = ({
                 </span>
               </div>
 
-              {/* Fechas */}
+              {/* Fechas y Días Transcurridos */}
               <div className="border-t pt-3">
-                <p className="text-sm text-gray-500 mb-2">Fechas:</p>
+                <p className="text-sm text-gray-500 mb-2">
+                  Detalles de tiempo:
+                </p>
                 <div className="space-y-2">
                   {envio.FechaCompraEnvio && (
                     <div className="flex items-center gap-2 text-sm">
                       <Clock className="h-4 w-4 text-blue-500" />
-                      <span className="text-gray-600">Compra: {formatDate(envio.FechaCompraEnvio)}</span>
+                      <span className="text-gray-600">
+                        Fecha de compra: {formatDate(envio.FechaCompraEnvio)}
+                      </span>
                     </div>
                   )}
-                  {envio.FechaCompradaEnvio && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Clock className="h-4 w-4 text-green-500" />
-                      <span className="text-gray-600">Comprada: {formatDate(envio.FechaCompradaEnvio)}</span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock
+                      className={`h-4 w-4 ${getDiasTranscurridosStyle(envio)}`}
+                    />
+                    <span className={`${getDiasTranscurridosStyle(envio)}`}>
+                      {envio.DiasTranscurridos} días transcurridos
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -147,7 +171,9 @@ const EnvioDeleteModal = ({
               {envio.DescripcionEnvio && (
                 <div className="border-t pt-3">
                   <p className="text-sm text-gray-500 mb-1">Descripción:</p>
-                  <p className="text-sm text-gray-700">{envio.DescripcionEnvio}</p>
+                  <p className="text-sm text-gray-700">
+                    {envio.DescripcionEnvio}
+                  </p>
                 </div>
               )}
             </div>

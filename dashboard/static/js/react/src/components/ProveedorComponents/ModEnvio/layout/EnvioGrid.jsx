@@ -1,5 +1,13 @@
 import React from "react";
-import { Calendar, Package, Pencil, Trash2, DollarSign, ShoppingCart } from "lucide-react";
+import {
+  Calendar,
+  Package,
+  Pencil,
+  Trash2,
+  DollarSign,
+  ShoppingCart,
+  Clock,
+} from "lucide-react";
 
 const EnvioGrid = ({ envio, onEdit, onDelete }) => {
   // Función para formatear la fecha
@@ -28,10 +36,24 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
 
   // Función para formatear el precio
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('es-CL', {
-      style: 'currency',
-      currency: 'CLP'
+    return new Intl.NumberFormat("es-CL", {
+      style: "currency",
+      currency: "CLP",
     }).format(amount);
+  };
+
+  // Función para obtener el color del badge de días según el estado
+  const getDiasTranscurridosStyle = () => {
+    if (envio.EnvioRecibido) {
+      return "bg-gray-100 text-gray-800";
+    }
+    if (envio.DiasTranscurridos > 30) {
+      return "bg-red-100 text-red-800";
+    }
+    if (envio.DiasTranscurridos > 15) {
+      return "bg-orange-100 text-orange-800";
+    }
+    return "bg-blue-100 text-blue-800";
   };
 
   return (
@@ -53,13 +75,26 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
             <Package className="w-16 h-16 text-gray-400" />
           </div>
         )}
-        
+
         {/* Badge de estado */}
-        <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-sm font-medium
-                      ${envio.EnvioRecibido 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-yellow-100 text-yellow-800'}`}>
-          {envio.EnvioRecibido ? 'Recibido' : 'Pendiente'}
+        <div className="absolute top-2 right-2 flex flex-col gap-2">
+          <span
+            className={`px-3 py-1 rounded-full text-sm font-medium
+                        ${
+                          envio.EnvioRecibido
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+          >
+            {envio.EnvioRecibido ? "Recibido" : "Pendiente"}
+          </span>
+
+          {/* Badge de días transcurridos */}
+          <span
+            className={`px-3 py-1 rounded-full text-sm font-medium ${getDiasTranscurridosStyle()}`}
+          >
+            {envio.DiasTranscurridos} días
+          </span>
         </div>
       </div>
 
@@ -73,11 +108,15 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
           >
             {envio.NombreEnvio}
           </h3>
-          <span className={`inline-block px-2 py-1 rounded-md text-xs font-medium
-                        ${envio.TipoEnvio === 'material' 
-                          ? 'bg-blue-100 text-blue-800' 
-                          : 'bg-purple-100 text-purple-800'}`}>
-            {envio.TipoEnvio === 'material' ? 'Material' : 'Herramienta'}
+          <span
+            className={`inline-block px-2 py-1 rounded-md text-xs font-medium
+                        ${
+                          envio.TipoEnvio === "material"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-purple-100 text-purple-800"
+                        }`}
+          >
+            {envio.TipoEnvio === "material" ? "Material" : "Herramienta"}
           </span>
         </div>
 
@@ -93,19 +132,23 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
             <ShoppingCart className="w-4 h-4" />
             <span>{envio.CantidadEnvio} unidades</span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <DollarSign className="w-4 h-4" />
             <span>{formatCurrency(envio.TotalEnvio)}</span>
           </div>
 
           {/* Fechas */}
-          {envio.FechaCompraEnvio && (
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              <span>Compra: {formatDate(envio.FechaCompraEnvio)}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            <span>Compra: {formatDate(envio.FechaCompraEnvio)}</span>
+          </div>
+
+          {/* Días transcurridos con icono */}
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4" />
+            <span>Tiempo: {envio.DiasTranscurridos} días</span>
+          </div>
         </div>
 
         {/* Botones de acción */}

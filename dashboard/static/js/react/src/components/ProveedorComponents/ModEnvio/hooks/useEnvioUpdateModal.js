@@ -14,8 +14,8 @@ export const useEnvioUpdateModal = ({
     PrecioEnvio: "",
     TotalEnvio: "0",
     FechaCompraEnvio: "",
-    FechaCompradaEnvio: "",
     EnvioRecibido: false,
+    DiasTranscurridos: 0,
     DescripcionEnvio: "",
     Proveedor: "",
     FotoEnvio: null,
@@ -31,7 +31,7 @@ export const useEnvioUpdateModal = ({
     foto: false,
   });
 
-  // Efecto para manejar la animación de apertura/cierre
+  // Efecto para animaciones de apertura/cierre
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
@@ -41,6 +41,21 @@ export const useEnvioUpdateModal = ({
       setTimeout(() => setIsVisible(false), 150);
     }
   }, [isOpen]);
+
+  // Efecto para calcular los días transcurridos
+  useEffect(() => {
+    if (formData.FechaCompraEnvio && !formData.EnvioRecibido) {
+      const fechaCompra = new Date(formData.FechaCompraEnvio);
+      const hoy = new Date();
+      const diferencia = Math.floor(
+        (hoy - fechaCompra) / (1000 * 60 * 60 * 24)
+      );
+      setFormData((prev) => ({
+        ...prev,
+        DiasTranscurridos: diferencia,
+      }));
+    }
+  }, [formData.FechaCompraEnvio, formData.EnvioRecibido]);
 
   // Efecto para cargar la lista de proveedores
   useEffect(() => {
@@ -75,8 +90,8 @@ export const useEnvioUpdateModal = ({
         PrecioEnvio: envio.PrecioEnvio || "",
         TotalEnvio: envio.TotalEnvio || "0",
         FechaCompraEnvio: envio.FechaCompraEnvio || "",
-        FechaCompradaEnvio: envio.FechaCompradaEnvio || "",
         EnvioRecibido: envio.EnvioRecibido || false,
+        DiasTranscurridos: envio.DiasTranscurridos || 0,
         DescripcionEnvio: envio.DescripcionEnvio || "",
         Proveedor: envio.Proveedor?.id || "",
         FotoEnvio: null,
@@ -214,6 +229,13 @@ export const useEnvioUpdateModal = ({
         if (!formData.Proveedor) {
           newErrors.Proveedor = "Debe seleccionar un proveedor";
         }
+        if (formData.FechaCompraEnvio) {
+          const fechaCompra = new Date(formData.FechaCompraEnvio);
+          if (fechaCompra > new Date()) {
+            newErrors.FechaCompraEnvio =
+              "La fecha de compra no puede ser futura";
+          }
+        }
 
         if (Object.keys(newErrors).length > 0) {
           setErrors(newErrors);
@@ -228,12 +250,10 @@ export const useEnvioUpdateModal = ({
         submitData.append("TotalEnvio", formData.TotalEnvio);
         submitData.append("Proveedor", formData.Proveedor);
         submitData.append("EnvioRecibido", formData.EnvioRecibido);
+        submitData.append("DiasTranscurridos", formData.DiasTranscurridos);
 
         if (formData.FechaCompraEnvio) {
           submitData.append("FechaCompraEnvio", formData.FechaCompraEnvio);
-        }
-        if (formData.FechaCompradaEnvio) {
-          submitData.append("FechaCompradaEnvio", formData.FechaCompradaEnvio);
         }
         if (formData.DescripcionEnvio) {
           submitData.append("DescripcionEnvio", formData.DescripcionEnvio);

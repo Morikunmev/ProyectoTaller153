@@ -104,7 +104,6 @@ const EnvioListar = () => {
       console.error("Error en la exportación:", error);
     }
   };
-
   const renderTableView = () => (
     <table className="w-full">
       <thead>
@@ -116,6 +115,7 @@ const EnvioListar = () => {
           <th className="p-4 font-medium">PRECIO</th>
           <th className="p-4 font-medium">TOTAL</th>
           <th className="p-4 font-medium">ESTADO</th>
+          <th className="p-4 font-medium">DÍAS</th>
           <th className="p-4 font-medium">PROVEEDOR</th>
           <th className="p-4 font-medium text-center">ACCIONES</th>
         </tr>
@@ -170,6 +170,21 @@ const EnvioListar = () => {
                 }`}
               >
                 {envio.EnvioRecibido ? "Recibido" : "Pendiente"}
+              </span>
+            </td>
+            <td className="p-4">
+              <span
+                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                  envio.EnvioRecibido
+                    ? "bg-gray-100 text-gray-800"
+                    : envio.DiasTranscurridos > 30
+                    ? "bg-red-100 text-red-800"
+                    : envio.DiasTranscurridos > 15
+                    ? "bg-orange-100 text-orange-800"
+                    : "bg-blue-100 text-blue-800"
+                }`}
+              >
+                {envio.DiasTranscurridos} días
               </span>
             </td>
             <td className="p-4 text-gray-600">

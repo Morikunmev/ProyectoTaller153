@@ -205,45 +205,30 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
             <div className="space-y-4">
               <h3 className="font-medium">Información Adicional</h3>
 
-              {/* Fechas */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Fecha de Compra</label>
-                  <input
-                    type="date"
-                    name="FechaCompraEnvio"
-                    value={formData.FechaCompraEnvio || ""}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border-2 rounded mt-1 
-                              focus:ring-2 focus:ring-blue-500 focus:outline-none
-                              transition-colors duration-200
-                              ${
-                                formData.FechaCompraEnvio
-                                  ? "border-green-400"
-                                  : "border-gray-300"
-                              }`}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Fecha Comprada</label>
-                  <input
-                    type="date"
-                    name="FechaCompradaEnvio"
-                    value={formData.FechaCompradaEnvio || ""}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border-2 rounded mt-1 
-                              focus:ring-2 focus:ring-blue-500 focus:outline-none
-                              transition-colors duration-200
-                              ${
-                                formData.FechaCompradaEnvio
-                                  ? "border-green-400"
-                                  : "border-gray-300"
-                              }`}
-                  />
-                </div>
+              {/* Fecha de Compra */}
+              <div>
+                <label className="text-sm font-medium">Fecha de Compra</label>
+                <input
+                  type="date"
+                  name="FechaCompraEnvio"
+                  value={formData.FechaCompraEnvio || ""}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border-2 rounded mt-1 
+                            focus:ring-2 focus:ring-blue-500 focus:outline-none
+                            transition-colors duration-200
+                            ${
+                              formData.FechaCompraEnvio
+                                ? "border-green-400"
+                                : "border-gray-300"
+                            }`}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  La fecha de compra se usará para calcular los días
+                  transcurridos
+                </p>
               </div>
 
-              {/* Estado */}
+              {/* Estado del Envío */}
               <div>
                 <label className="text-sm font-medium">Estado del Envío</label>
                 <div className="mt-2">
@@ -264,6 +249,31 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
                     />
                     <span className="ml-2">Envío Recibido</span>
                   </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Al marcar como recibido, se detendrá el contador de días
+                    transcurridos
+                  </p>
+                </div>
+              </div>
+
+              {/* Días Transcurridos (solo mostrar) */}
+              <div>
+                <label className="text-sm font-medium">
+                  Días Transcurridos
+                </label>
+                <div
+                  className={`mt-2 px-3 py-2 rounded bg-gray-50 text-sm 
+                              ${
+                                formData.EnvioRecibido
+                                  ? "text-gray-600"
+                                  : formData.DiasTranscurridos > 30
+                                  ? "text-red-600"
+                                  : formData.DiasTranscurridos > 15
+                                  ? "text-orange-600"
+                                  : "text-blue-600"
+                              }`}
+                >
+                  {formData.DiasTranscurridos} días
                 </div>
               </div>
 

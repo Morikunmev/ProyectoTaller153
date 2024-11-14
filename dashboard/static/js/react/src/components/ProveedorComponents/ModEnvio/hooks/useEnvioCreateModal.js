@@ -11,7 +11,6 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     PrecioEnvio: "",
     TotalEnvio: "0",
     FechaCompraEnvio: today,
-    FechaCompradaEnvio: "",
     EnvioRecibido: false,
     DescripcionEnvio: "",
     Proveedor: "",
@@ -37,7 +36,6 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
         PrecioEnvio: "",
         TotalEnvio: "0",
         FechaCompraEnvio: today,
-        FechaCompradaEnvio: "",
         EnvioRecibido: false,
         DescripcionEnvio: "",
         Proveedor: "",
@@ -110,7 +108,6 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
         PrecioEnvio: "",
         TotalEnvio: "0",
         FechaCompraEnvio: today,
-        FechaCompradaEnvio: "",
         EnvioRecibido: false,
         DescripcionEnvio: "",
         Proveedor: "",
@@ -215,6 +212,13 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
       newErrors.Proveedor = "Debe seleccionar un proveedor";
     }
 
+    if (formData.FechaCompraEnvio) {
+      const fechaCompra = new Date(formData.FechaCompraEnvio);
+      if (fechaCompra > new Date()) {
+        newErrors.FechaCompraEnvio = "La fecha de compra no puede ser futura";
+      }
+    }
+
     return newErrors;
   };
 
@@ -241,12 +245,6 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
 
       if (formData.FechaCompraEnvio) {
         formDataToSend.append("FechaCompraEnvio", formData.FechaCompraEnvio);
-      }
-      if (formData.FechaCompradaEnvio) {
-        formDataToSend.append(
-          "FechaCompradaEnvio",
-          formData.FechaCompradaEnvio
-        );
       }
       if (formData.DescripcionEnvio) {
         formDataToSend.append("DescripcionEnvio", formData.DescripcionEnvio);

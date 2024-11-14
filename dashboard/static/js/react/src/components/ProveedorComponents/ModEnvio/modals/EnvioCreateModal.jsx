@@ -76,7 +76,9 @@ const EnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
                             ${getInputBorderClass(formData.NombreEnvio)}`}
                 />
                 {errors.NombreEnvio && (
-                  <p className="text-sm text-red-500 mt-1">{errors.NombreEnvio}</p>
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.NombreEnvio}
+                  </p>
                 )}
               </div>
 
@@ -97,7 +99,9 @@ const EnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   <option value="herramienta">Herramienta</option>
                 </select>
                 {errors.TipoEnvio && (
-                  <p className="text-sm text-red-500 mt-1">{errors.TipoEnvio}</p>
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.TipoEnvio}
+                  </p>
                 )}
               </div>
 
@@ -116,7 +120,9 @@ const EnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
                             ${getInputBorderClass(formData.CantidadEnvio)}`}
                 />
                 {errors.CantidadEnvio && (
-                  <p className="text-sm text-red-500 mt-1">{errors.CantidadEnvio}</p>
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.CantidadEnvio}
+                  </p>
                 )}
               </div>
 
@@ -136,7 +142,9 @@ const EnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
                             ${getInputBorderClass(formData.PrecioEnvio)}`}
                 />
                 {errors.PrecioEnvio && (
-                  <p className="text-sm text-red-500 mt-1">{errors.PrecioEnvio}</p>
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.PrecioEnvio}
+                  </p>
                 )}
               </div>
 
@@ -160,7 +168,9 @@ const EnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   ))}
                 </select>
                 {errors.Proveedor && (
-                  <p className="text-sm text-red-500 mt-1">{errors.Proveedor}</p>
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.Proveedor}
+                  </p>
                 )}
               </div>
             </div>
@@ -169,37 +179,26 @@ const EnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
             <div className="space-y-4">
               <h3 className="font-medium">Información Adicional</h3>
 
-              {/* Fechas */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Fecha de Compra</label>
-                  <input
-                    type="date"
-                    name="FechaCompraEnvio"
-                    value={formData.FechaCompraEnvio || ""}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border-2 rounded mt-1 
-                              focus:ring-2 focus:ring-blue-500 focus:outline-none
-                              transition-colors duration-200
-                              ${getInputBorderClass(formData.FechaCompraEnvio)}`}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Fecha Comprada</label>
-                  <input
-                    type="date"
-                    name="FechaCompradaEnvio"
-                    value={formData.FechaCompradaEnvio || ""}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border-2 rounded mt-1 
-                              focus:ring-2 focus:ring-blue-500 focus:outline-none
-                              transition-colors duration-200
-                              ${getInputBorderClass(formData.FechaCompradaEnvio)}`}
-                  />
-                </div>
+              {/* Fecha de Compra */}
+              <div>
+                <label className="text-sm font-medium">Fecha de Compra</label>
+                <input
+                  type="date"
+                  name="FechaCompraEnvio"
+                  value={formData.FechaCompraEnvio || ""}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border-2 rounded mt-1 
+                            focus:ring-2 focus:ring-blue-500 focus:outline-none
+                            transition-colors duration-200
+                            ${getInputBorderClass(formData.FechaCompraEnvio)}`}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  La fecha de compra se usará para calcular los días
+                  transcurridos
+                </p>
               </div>
 
-              {/* Estado */}
+              {/* Estado con nota informativa */}
               <div>
                 <label className="text-sm font-medium">Estado del Envío</label>
                 <div className="mt-2">
@@ -208,13 +207,22 @@ const EnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
                       type="checkbox"
                       name="EnvioRecibido"
                       checked={formData.EnvioRecibido}
-                      onChange={(e) => handleInputChange({
-                        target: { name: 'EnvioRecibido', value: e.target.checked }
-                      })}
+                      onChange={(e) =>
+                        handleInputChange({
+                          target: {
+                            name: "EnvioRecibido",
+                            value: e.target.checked,
+                          },
+                        })
+                      }
                       className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                     />
                     <span className="ml-2">Envío Recibido</span>
                   </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Al marcar como recibido, se detendrá el contador de días
+                    transcurridos
+                  </p>
                 </div>
               </div>
 
@@ -279,8 +287,8 @@ const EnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
                 <p className="text-sm text-red-500 mt-1">{errors.FotoEnvio}</p>
               )}
               <p className="text-xs text-gray-500 mt-1">
-                Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG.
-                Tamaño máximo: 10MB
+                Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG. Tamaño
+                máximo: 10MB
               </p>
             </div>
 

@@ -1341,12 +1341,12 @@ def listar_envios(request):
                     'id': envio.id,
                     'NombreEnvio': envio.NombreEnvio,
                     'CantidadEnvio': envio.CantidadEnvio,
-                    'PrecioEnvio': str(envio.PrecioEnvio),  # Convertir Decimal a string para serialización
-                    'TotalEnvio': str(envio.TotalEnvio),    # Convertir Decimal a string para serialización
+                    'PrecioEnvio': str(envio.PrecioEnvio),
+                    'TotalEnvio': str(envio.TotalEnvio),
                     'TipoEnvio': envio.TipoEnvio,
                     'FechaCompraEnvio': envio.FechaCompraEnvio.isoformat() if envio.FechaCompraEnvio else None,
                     'EnvioRecibido': envio.EnvioRecibido,
-                    'FechaCompradaEnvio': envio.FechaCompradaEnvio.isoformat() if envio.FechaCompradaEnvio else None,
+                    'DiasTranscurridos': envio.dias_transcurridos_actual,  # Usando la propiedad que calculamos
                     'DescripcionEnvio': envio.DescripcionEnvio,
                     'Proveedor': {
                         'id': envio.Proveedor.id,
@@ -1369,6 +1369,7 @@ def listar_envios(request):
         'success': False, 
         'message': 'Método no permitido'
     }, status=405)
+
 @login_required(login_url='login')
 @ensure_csrf_cookie 
 def crear_envio(request):
@@ -1425,7 +1426,7 @@ def crear_envio(request):
                     }
                 }, status=400)
 
-            # Validación de fechas opcionales
+            # Validación de fecha de compra opcional
             fecha_compra = None
             if data.get('FechaCompraEnvio'):
                 try:
@@ -1435,18 +1436,6 @@ def crear_envio(request):
                         'success': False,
                         'errors': {
                             'FechaCompraEnvio': 'El formato de fecha debe ser YYYY-MM-DD'
-                        }
-                    }, status=400)
-
-            fecha_comprada = None
-            if data.get('FechaCompradaEnvio'):
-                try:
-                    fecha_comprada = datetime.strptime(data.get('FechaCompradaEnvio'), '%Y-%m-%d').date()
-                except ValueError:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {
-                            'FechaCompradaEnvio': 'El formato de fecha debe ser YYYY-MM-DD'
                         }
                     }, status=400)
             
@@ -1468,7 +1457,6 @@ def crear_envio(request):
                 TipoEnvio=tipo_envio,
                 FechaCompraEnvio=fecha_compra,
                 EnvioRecibido=data.get('EnvioRecibido', '').lower() == 'true',
-                FechaCompradaEnvio=fecha_comprada,
                 DescripcionEnvio=data.get('DescripcionEnvio'),
                 Proveedor=proveedor
             )
@@ -1518,7 +1506,7 @@ def crear_envio(request):
                     'TipoEnvio': nuevo_envio.TipoEnvio,
                     'FechaCompraEnvio': nuevo_envio.FechaCompraEnvio.isoformat() if nuevo_envio.FechaCompraEnvio else None,
                     'EnvioRecibido': nuevo_envio.EnvioRecibido,
-                    'FechaCompradaEnvio': nuevo_envio.FechaCompradaEnvio.isoformat() if nuevo_envio.FechaCompradaEnvio else None,
+                    'DiasTranscurridos': nuevo_envio.dias_transcurridos_actual,
                     'DescripcionEnvio': nuevo_envio.DescripcionEnvio,
                     'Proveedor': {
                         'id': nuevo_envio.Proveedor.id,
@@ -1607,6 +1595,7 @@ def eliminar_envio(request, envio_id):
         'success': False,
         'message': 'Método no permitido'
     }, status=405)
+
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def actualizar_envio(request, envio_id):
@@ -1659,7 +1648,7 @@ def actualizar_envio(request, envio_id):
                     'errors': {'PrecioEnvio': 'El precio debe ser un número positivo'}
                 }, status=400)
 
-            # Validación de fechas opcionales
+            # Validación de fecha de compra opcional
             fecha_compra = None
             if data.get('FechaCompraEnvio'):
                 try:
@@ -1668,16 +1657,6 @@ def actualizar_envio(request, envio_id):
                     return JsonResponse({
                         'success': False,
                         'errors': {'FechaCompraEnvio': 'El formato de fecha debe ser YYYY-MM-DD'}
-                    }, status=400)
-
-            fecha_comprada = None
-            if data.get('FechaCompradaEnvio'):
-                try:
-                    fecha_comprada = datetime.strptime(data.get('FechaCompradaEnvio'), '%Y-%m-%d').date()
-                except ValueError:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {'FechaCompradaEnvio': 'El formato de fecha debe ser YYYY-MM-DD'}
                     }, status=400)
             
             try:
@@ -1766,7 +1745,6 @@ def actualizar_envio(request, envio_id):
             envio.TipoEnvio = tipo_envio
             envio.FechaCompraEnvio = fecha_compra
             envio.EnvioRecibido = data.get('EnvioRecibido', '').lower() == 'true'
-            envio.FechaCompradaEnvio = fecha_comprada
             envio.DescripcionEnvio = data.get('DescripcionEnvio')
             envio.Proveedor = proveedor
             
@@ -1790,7 +1768,7 @@ def actualizar_envio(request, envio_id):
                     'TipoEnvio': envio.TipoEnvio,
                     'FechaCompraEnvio': envio.FechaCompraEnvio.isoformat() if envio.FechaCompraEnvio else None,
                     'EnvioRecibido': envio.EnvioRecibido,
-                    'FechaCompradaEnvio': envio.FechaCompradaEnvio.isoformat() if envio.FechaCompradaEnvio else None,
+                    'DiasTranscurridos': envio.dias_transcurridos_actual,
                     'DescripcionEnvio': envio.DescripcionEnvio,
                     'Proveedor': {
                         'id': envio.Proveedor.id,
@@ -1838,7 +1816,7 @@ def exportar_envios_excel(request):
         'num_format': '$#,##0.00',
     })
     
-    # Definir encabezados
+    # Definir encabezados actualizados
     headers = [
         'Nombre Envío',
         'Tipo',
@@ -1847,7 +1825,7 @@ def exportar_envios_excel(request):
         'Total',
         'Estado',
         'Fecha Compra',
-        'Fecha Comprada',
+        'Días Transcurridos',  # Nuevo campo
         'Descripción',
         'Nombre Proveedor',
         'RUT Proveedor',
@@ -1876,10 +1854,8 @@ def exportar_envios_excel(request):
         else:
             worksheet.write(row, 6, '')
             
-        if envio.FechaCompradaEnvio:
-            worksheet.write_datetime(row, 7, envio.FechaCompradaEnvio, date_format)
-        else:
-            worksheet.write(row, 7, '')
+        # Escribir días transcurridos
+        worksheet.write_number(row, 7, envio.dias_transcurridos_actual)
             
         worksheet.write(row, 8, envio.DescripcionEnvio or '')
         worksheet.write(row, 9, envio.Proveedor.NombreProveedor)
