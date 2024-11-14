@@ -5,7 +5,6 @@ import re
 import requests
 from datetime import datetime
 from io import BytesIO
-
 # Django imports
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
@@ -19,9 +18,6 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 import time
 import hashlib
 import base64
-
-
-
 # Cloudinary imports
 import cloudinary
 import cloudinary.api
@@ -1325,6 +1321,8 @@ def ver_documento_factura(request, factura_id):
 #------------------------------------------------------------------------------
 #------------------------------GESTOR PROVEEDORES------------------------------
 #------------------------------------------------------------------------------
+
+
 
 
 #--------------------------GESTOR ENVIO --------------------------------

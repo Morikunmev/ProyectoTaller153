@@ -85,21 +85,34 @@ class Factura(models.Model):
         return f"Factura {self.id} - {self.FechaEmision} - {self.Proveedor}"
 #------------------------------MODULO ENVIO------------------------------
 class Envio(models.Model):
+    # Definición de choices para TipoEnvio
+    TIPO_CHOICES = [
+        ('material', 'Material'),
+        ('herramienta', 'Herramienta'),
+    ]
+
     # Campos obligatorios
     NombreEnvio = models.CharField(max_length=100, null=False, blank=False)
     CantidadEnvio = models.PositiveIntegerField(null=False, blank=False)
     PrecioEnvio = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
-    TotalEnvio = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False,editable=False)
-    TipoEnvio = models.CharField(max_length=50, null=False, blank=False)
+    TotalEnvio = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
+    TipoEnvio = models.CharField(
+        max_length=50, 
+        null=False, 
+        blank=False,
+        choices=TIPO_CHOICES,
+        help_text="Seleccione si el envío es de material o herramienta"
+    )
     # Campos opcionales
     FechaCompraEnvio = models.DateField(null=True, blank=True)
     EnvioRecibido = models.BooleanField(default=False)
-    FechaRecibida = models.DateField(null=True, blank=True)
+    FechaCompradaEnvio = models.DateField(null=True, blank=True)
     DescripcionEnvio = models.TextField(null=True, blank=True)
     # Campo multimedia
     FotoEnvio = CloudinaryField('imagen', folder='envios/', null=True, blank=True)
     # Campo FK
     Proveedor = models.ForeignKey('Proveedor', on_delete=models.CASCADE, null=False, blank=False)
+
     class Meta:
         verbose_name = "Envío"
         verbose_name_plural = "Envíos"
