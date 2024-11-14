@@ -367,7 +367,6 @@ var ProveedorListar = function ProveedorListar() {
           case 5:
             _context.prev = 5;
             _context.t0 = _context["catch"](0);
-            // Aquí podrías mostrar una notificación de error al usuario
             console.error("Error en la exportación:", _context.t0);
           case 8:
           case "end":
@@ -457,7 +456,9 @@ var ProveedorListar = function ProveedorListar() {
   };
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "max-w-7xl mx-auto p-6"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h1", {
+    className: "text-2xl font-bold text-gray-900 mb-6"
+  }, "M\xF3dulo Proveedor"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "relative w-[300px] max-[790px]:w-full"
@@ -562,7 +563,7 @@ var ProveedorListar = function ProveedorListar() {
     isOpen: updateModalOpen,
     onClose: handleUpdateModalClose,
     proveedor: proveedorToUpdate,
-    onProveedorUpdated: handleProveedorUpdated // Cambiado de onSubmit a onProveedorUpdated
+    onProveedorUpdated: handleProveedorUpdated
   }));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ProveedorListar);

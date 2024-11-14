@@ -243,7 +243,13 @@ const FacturaListar = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      {/* Header: Búsqueda, Vista y Botón Crear */}
+      {/* Título y contador del módulo */}
+      <div className="flex items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Módulo Factura</h1>
+        <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+          {filteredFacturas.length} Facturas
+        </span>
+      </div>
       <div className="flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4">
         {/* Barra de búsqueda */}
         <div className="relative w-[300px] max-[790px]:w-full">

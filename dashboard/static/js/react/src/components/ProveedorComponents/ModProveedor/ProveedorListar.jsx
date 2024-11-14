@@ -30,15 +30,12 @@ const ProveedorListar = () => {
     startIndex,
     endIndex,
     filteredProveedores,
-    // Estados de eliminación
     deleteModalOpen,
     proveedorToDelete,
     isDeleting,
-    // Estados de actualización
     updateModalOpen,
     proveedorToUpdate,
     isUpdating,
-    // Manejadores
     handleOpenModal,
     handleCloseModal,
     handleSearch,
@@ -100,11 +97,11 @@ const ProveedorListar = () => {
       ))}
     </div>
   );
+
   const handleExportClick = async () => {
     try {
       await exportToExcel();
     } catch (error) {
-      // Aquí podrías mostrar una notificación de error al usuario
       console.error("Error en la exportación:", error);
     }
   };
@@ -196,7 +193,10 @@ const ProveedorListar = () => {
 
   return (
     <div className="max-w-7xl mx-auto p-6">
-      {/* Header: Búsqueda, Vista y Botón Crear */}
+      {/* Título del módulo */}
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">
+        Módulo Proveedor
+      </h1>
 
       {/* Header: Búsqueda, Vista y Botón Crear */}
       <div className="flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4">
@@ -214,7 +214,7 @@ const ProveedorListar = () => {
           />
         </div>
 
-        {/* Botones de vista - ahora en su propio contenedor */}
+        {/* Botones de vista */}
         <div className="max-[790px]:w-full flex justify-center">
           <div className="flex bg-white border rounded-lg overflow-hidden">
             <button
@@ -356,7 +356,7 @@ const ProveedorListar = () => {
         isOpen={updateModalOpen}
         onClose={handleUpdateModalClose}
         proveedor={proveedorToUpdate}
-        onProveedorUpdated={handleProveedorUpdated} // Cambiado de onSubmit a onProveedorUpdated
+        onProveedorUpdated={handleProveedorUpdated}
       />
     </div>
   );
