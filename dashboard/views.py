@@ -1004,6 +1004,9 @@ def actualizar_factura(request, factura_id):
             factura = get_object_or_404(Factura, id=factura_id)
             data = request.POST
             
+            # Debug: Imprimir todos los datos recibidos
+            print("Datos recibidos:", dict(data))
+            
             campos_requeridos = ['FechaEmision', 'Proveedor']
             errores = {}
             
@@ -1030,17 +1033,75 @@ def actualizar_factura(request, factura_id):
                     'errors': {'Proveedor': 'Proveedor no válido'}
                 }, status=400)
 
-            # Manejar actualización de archivos
+            # Manejar actualización y eliminación de archivos
             archivos = {
                 'FotoFactura': {'field': 'FotoFactura', 'resource_type': 'image'},
                 'DocumentoFactura': {'field': 'DocumentoFactura', 'resource_type': 'raw'}
             }
             
             for archivo_key, archivo_info in archivos.items():
-                if archivo_key in request.FILES:
+                print(f"\nProcesando {archivo_key}")
+                
+                eliminar_archivo = data.get(f'eliminar_{archivo_key}', '').lower() == 'true'
+                archivo_actual = getattr(factura, archivo_key)
+
+                print(f"Valor recibido para eliminar_{archivo_key}: {data.get(f'eliminar_{archivo_key}')}")
+                print(f"¿Eliminar archivo?: {eliminar_archivo}")
+                print(f"¿Existe archivo actual?: {bool(archivo_actual)}")
+                
+                if eliminar_archivo and archivo_actual:
+                    try:
+                        # Obtener la URL del archivo actual
+                        if archivo_key == 'DocumentoFactura':
+                            # Manejar documento de manera especial
+                            url = str(archivo_actual)
+                            print(f"URL original del documento: {url}")
+                            
+                            # Extraer el public_id del formato "facturas/documentos/xxxxx"
+                            if 'facturas/documentos' in url:
+                                start_idx = url.find('facturas/documentos')
+                                public_id = url[start_idx:]
+                                if not public_id.endswith('.pdf'):
+                                    public_id = f"{public_id}.pdf"
+                            print(f"Public ID del documento: {public_id}")
+                        else:
+                            # Mantener el manejo original para FotoFactura
+                            url = archivo_actual.url
+                            parts = url.split('/')
+                            public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                            print(f"Public ID de la foto: {public_id}")
+                        
+                        # Configurar Cloudinary
+                        cloudinary.config(
+                            cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                            api_key=os.getenv('CLOUDINARY_API_KEY'),
+                            api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                        )
+                        
+                        # Eliminar archivo de Cloudinary
+                        result = cloudinary.uploader.destroy(
+                            public_id,
+                            resource_type=archivo_info['resource_type'],
+                            type="upload",
+                            invalidate=True
+                        )
+                        print(f"Resultado de eliminación Cloudinary: {result}")
+                        
+                        # Limpiar el campo en el modelo
+                        setattr(factura, archivo_key, None)
+                        
+                    except Exception as e:
+                        print(f"Error al eliminar archivo de Cloudinary: {str(e)}")
+                        print(f"URL del archivo: {url}")
+                        return JsonResponse({
+                            'success': False,
+                            'errors': {archivo_key: f'Error al eliminar el archivo: {str(e)}'}
+                        }, status=400)
+                
+                # Si hay un nuevo archivo, procesarlo
+                elif archivo_key in request.FILES:
                     nuevo_archivo = request.FILES[archivo_key]
                     
-                    # Validación de tamaño para ambos tipos de archivo
                     if nuevo_archivo.size > 10 * 1024 * 1024:
                         return JsonResponse({
                             'success': False,
@@ -1049,7 +1110,6 @@ def actualizar_factura(request, factura_id):
                             }
                         }, status=400)
                     
-                    # Validación adicional de tipo solo para FotoFactura
                     if archivo_key == 'FotoFactura' and nuevo_archivo.content_type not in ALLOWED_FILE_TYPES:
                         return JsonResponse({
                             'success': False,
@@ -1059,18 +1119,20 @@ def actualizar_factura(request, factura_id):
                         }, status=400)
                     
                     try:
-                        # Guardar referencia del archivo actual
-                        archivo_anterior = getattr(factura, archivo_key)
-                        
-                        # Asignar nuevo archivo
-                        setattr(factura, archivo_key, nuevo_archivo)
-                        
-                        # Eliminar archivo anterior de Cloudinary si existe
-                        if archivo_anterior:
+                        # Si hay un archivo anterior, eliminarlo de Cloudinary
+                        if archivo_actual:
                             try:
-                                url = archivo_anterior.url
-                                parts = url.split('/')
-                                public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                                if archivo_key == 'DocumentoFactura':
+                                    url = str(archivo_actual)
+                                    if 'facturas/documentos' in url:
+                                        start_idx = url.find('facturas/documentos')
+                                        public_id = url[start_idx:]
+                                        if not public_id.endswith('.pdf'):
+                                            public_id = f"{public_id}.pdf"
+                                else:
+                                    url = archivo_actual.url
+                                    parts = url.split('/')
+                                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
                                 
                                 cloudinary.config(
                                     cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
@@ -1086,7 +1148,11 @@ def actualizar_factura(request, factura_id):
                                 )
                             except Exception as cloud_error:
                                 print(f"Error al eliminar archivo anterior de Cloudinary: {str(cloud_error)}")
-                    
+                                print(f"URL del archivo: {url}")
+                        
+                        # Asignar nuevo archivo
+                        setattr(factura, archivo_key, nuevo_archivo)
+                        
                     except Exception as e:
                         return JsonResponse({
                             'success': False,
@@ -1123,6 +1189,7 @@ def actualizar_factura(request, factura_id):
             })
             
         except Exception as e:
+            print(f"Error general: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'errors': {'general': f'Error al actualizar la factura: {str(e)}'}

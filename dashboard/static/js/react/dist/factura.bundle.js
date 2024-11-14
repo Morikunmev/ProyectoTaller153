@@ -1822,8 +1822,10 @@ var useFacturaUpdateModal = function useFacturaUpdateModal(_ref) {
             submitData = new FormData();
             submitData.append("FechaEmision", formData.FechaEmision);
             submitData.append("Proveedor", formData.Proveedor);
-            submitData.append("removeFoto", removedFiles.foto);
-            submitData.append("removeDocumento", removedFiles.documento);
+
+            // Convertir los valores booleanos a strings "true"/"false"
+            submitData.append("eliminar_FotoFactura", removedFiles.foto ? "true" : "false");
+            submitData.append("eliminar_DocumentoFactura", removedFiles.documento ? "true" : "false");
             if (formData.FotoFactura instanceof File) {
               submitData.append("FotoFactura", formData.FotoFactura);
             }
