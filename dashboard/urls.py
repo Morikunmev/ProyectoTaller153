@@ -31,13 +31,16 @@ urlpatterns = [
     path('api/factura/<int:factura_id>/eliminar/', views.eliminar_factura, name='eliminar_factura'),
     path('api/factura/<int:factura_id>/actualizar/', views.actualizar_factura, name='actualizar_factura'),
     path('api/facturas/exportar-excel/', views.exportar_facturas_excel, name='exportar_facturas_excel'),
-    path('api/factura/<int:factura_id>/ver-documento/', 
-         views.ver_documento_factura, 
-         name='ver_documento_factura'),
+    path('api/factura/<int:factura_id>/ver-documento/', views.ver_documento_factura,  name='ver_documento_factura'),
 
 
     
     #--------------------RUTA PARA ENVIO--------------------
     path('envio/', views.mod_envio, name='mod_envio'),          # Vista de envíos
+    path('api/envio/listar/', views.listar_envios, name='listar_envios'),
+    path('api/envio/crear/', views.crear_envio, name='crear_envio'),
+    path('api/envio/<int:envio_id>/eliminar/', views.eliminar_envio, name='eliminar_envio'),
+    path('api/envio/<int:envio_id>/actualizar/', views.actualizar_envio, name='actualizar_envio'),
+    path('api/envios/exportar-excel/', views.exportar_envios_excel, name='exportar_envios_excel'),
     
 ]

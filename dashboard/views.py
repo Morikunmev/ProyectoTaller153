@@ -5,6 +5,8 @@ import re
 import requests
 from datetime import datetime
 from io import BytesIO
+from decimal import Decimal, InvalidOperation as DecimalException
+
 # Django imports
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
@@ -31,7 +33,7 @@ from cloudinary.exceptions import Error as CloudinaryError
 import xlsxwriter
 
 # Local imports
-from .models import Proveedor, Factura
+from .models import Proveedor, Factura, Envio
 from login.models import Usuario
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -1322,10 +1324,584 @@ def ver_documento_factura(request, factura_id):
 #------------------------------GESTOR PROVEEDORES------------------------------
 #------------------------------------------------------------------------------
 
-
-
-
 #--------------------------GESTOR ENVIO --------------------------------
 @login_required(login_url='login')
 def mod_envio(request):
     return render(request, 'proveedor/envio.html')
+
+
+@login_required(login_url='login')
+def listar_envios(request):
+    if request.method == 'GET':
+        try:
+            envios = Envio.objects.all().select_related('Proveedor')
+            data = []
+            for envio in envios:
+                data.append({
+                    'id': envio.id,
+                    'NombreEnvio': envio.NombreEnvio,
+                    'CantidadEnvio': envio.CantidadEnvio,
+                    'PrecioEnvio': str(envio.PrecioEnvio),  # Convertir Decimal a string para serialización
+                    'TotalEnvio': str(envio.TotalEnvio),    # Convertir Decimal a string para serialización
+                    'TipoEnvio': envio.TipoEnvio,
+                    'FechaCompraEnvio': envio.FechaCompraEnvio.isoformat() if envio.FechaCompraEnvio else None,
+                    'EnvioRecibido': envio.EnvioRecibido,
+                    'FechaCompradaEnvio': envio.FechaCompradaEnvio.isoformat() if envio.FechaCompradaEnvio else None,
+                    'DescripcionEnvio': envio.DescripcionEnvio,
+                    'Proveedor': {
+                        'id': envio.Proveedor.id,
+                        'NombreProveedor': envio.Proveedor.NombreProveedor,
+                        'RutProveedor': envio.Proveedor.RutProveedor,
+                        'MarcaProveedor': envio.Proveedor.MarcaProveedor
+                    },
+                    'FotoEnvio': envio.FotoEnvio.url if envio.FotoEnvio else None,
+                })
+            return JsonResponse({
+                'success': True,
+                'envios': data
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+    return JsonResponse({
+        'success': False, 
+        'message': 'Método no permitido'
+    }, status=405)
+@login_required(login_url='login')
+@ensure_csrf_cookie 
+def crear_envio(request):
+    if request.method == 'POST':
+        try:
+            data = request.POST
+            
+            # Validaciones de campos requeridos
+            campos_requeridos = ['NombreEnvio', 'CantidadEnvio', 'PrecioEnvio', 'TipoEnvio', 'Proveedor']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores
+                }, status=400)
+            
+            # Validación de tipo de envío
+            tipo_envio = data.get('TipoEnvio')
+            if tipo_envio not in ['material', 'herramienta']:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'TipoEnvio': 'El tipo de envío debe ser material o herramienta'
+                    }
+                }, status=400)
+            
+            # Validación y conversión de campos numéricos
+            try:
+                cantidad_envio = int(data.get('CantidadEnvio'))
+                if cantidad_envio <= 0:
+                    raise ValueError('La cantidad debe ser mayor a 0')
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'CantidadEnvio': 'La cantidad debe ser un número entero positivo'
+                    }
+                }, status=400)
+
+            try:
+                precio_envio = Decimal(data.get('PrecioEnvio'))
+                if precio_envio <= 0:
+                    raise ValueError('El precio debe ser mayor a 0')
+            except (ValueError, DecimalException):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'PrecioEnvio': 'El precio debe ser un número positivo'
+                    }
+                }, status=400)
+
+            # Validación de fechas opcionales
+            fecha_compra = None
+            if data.get('FechaCompraEnvio'):
+                try:
+                    fecha_compra = datetime.strptime(data.get('FechaCompraEnvio'), '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FechaCompraEnvio': 'El formato de fecha debe ser YYYY-MM-DD'
+                        }
+                    }, status=400)
+
+            fecha_comprada = None
+            if data.get('FechaCompradaEnvio'):
+                try:
+                    fecha_comprada = datetime.strptime(data.get('FechaCompradaEnvio'), '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FechaCompradaEnvio': 'El formato de fecha debe ser YYYY-MM-DD'
+                        }
+                    }, status=400)
+            
+            try:
+                proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
+            except (Proveedor.DoesNotExist, ValueError):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'Proveedor': 'Proveedor no válido'
+                    }
+                }, status=400)
+            
+            nuevo_envio = Envio(
+                NombreEnvio=data.get('NombreEnvio'),
+                CantidadEnvio=cantidad_envio,
+                PrecioEnvio=precio_envio,
+                TotalEnvio=cantidad_envio * precio_envio,
+                TipoEnvio=tipo_envio,
+                FechaCompraEnvio=fecha_compra,
+                EnvioRecibido=data.get('EnvioRecibido', '').lower() == 'true',
+                FechaCompradaEnvio=fecha_comprada,
+                DescripcionEnvio=data.get('DescripcionEnvio'),
+                Proveedor=proveedor
+            )
+            
+            # Manejar la foto
+            if 'FotoEnvio' in request.FILES:
+                foto = request.FILES['FotoEnvio']
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoEnvio': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF'
+                        }
+                    }, status=400)
+
+                if foto.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoEnvio': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'
+                        }
+                    }, status=400)
+
+                nuevo_envio.FotoEnvio = foto
+
+            try:
+                nuevo_envio.full_clean()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores_formateados
+                }, status=400)
+            
+            nuevo_envio.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Envío creado exitosamente',
+                'envio': {
+                    'id': nuevo_envio.id,
+                    'NombreEnvio': nuevo_envio.NombreEnvio,
+                    'CantidadEnvio': nuevo_envio.CantidadEnvio,
+                    'PrecioEnvio': str(nuevo_envio.PrecioEnvio),
+                    'TotalEnvio': str(nuevo_envio.TotalEnvio),
+                    'TipoEnvio': nuevo_envio.TipoEnvio,
+                    'FechaCompraEnvio': nuevo_envio.FechaCompraEnvio.isoformat() if nuevo_envio.FechaCompraEnvio else None,
+                    'EnvioRecibido': nuevo_envio.EnvioRecibido,
+                    'FechaCompradaEnvio': nuevo_envio.FechaCompradaEnvio.isoformat() if nuevo_envio.FechaCompradaEnvio else None,
+                    'DescripcionEnvio': nuevo_envio.DescripcionEnvio,
+                    'Proveedor': {
+                        'id': nuevo_envio.Proveedor.id,
+                        'NombreProveedor': nuevo_envio.Proveedor.NombreProveedor,
+                        'RutProveedor': nuevo_envio.Proveedor.RutProveedor
+                    },
+                    'FotoEnvio': nuevo_envio.FotoEnvio.url if nuevo_envio.FotoEnvio else None
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error al crear envío: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'general': f'Error al crear el envío: {str(e)}'
+                }
+            }, status=400)
+    
+    return JsonResponse({
+        'success': False,
+        'errors': {
+            'general': 'Método no permitido'
+        }
+    }, status=405)
+    
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_envio(request, envio_id):
+    if request.method == 'DELETE':
+        try:
+            # Obtener el envío
+            envio = get_object_or_404(Envio, id=envio_id)
+            
+            # Guardar información para la respuesta
+            nombre_envio = envio.NombreEnvio
+            tipo_envio = envio.TipoEnvio
+            nombre_proveedor = envio.Proveedor.NombreProveedor
+            
+            # Si existe una foto, eliminarla de Cloudinary
+            if envio.FotoEnvio:
+                try:
+                    # Obtener la URL de la imagen
+                    url = envio.FotoEnvio.url
+                    
+                    # Extraer el public_id
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    print(f"Intentando eliminar foto con public_id: {public_id}")
+                    
+                    # Configurar Cloudinary
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    # Eliminar la foto
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload"
+                    )
+                    print(f"Resultado de eliminación foto Cloudinary: {result}")
+                    
+                except Exception as cloud_error:
+                    print(f"Error al eliminar foto de Cloudinary: {str(cloud_error)}")
+                    print(f"URL de la foto: {envio.FotoEnvio.url}")
+            
+            # Eliminar el envío
+            envio.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'El envío "{nombre_envio}" ({tipo_envio}) del proveedor {nombre_proveedor} y sus archivos asociados fueron eliminados exitosamente'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al eliminar el envío: {str(e)}'
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, status=405)
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_envio(request, envio_id):
+    if request.method in ['PUT', 'POST']:
+        try:
+            envio = get_object_or_404(Envio, id=envio_id)
+            data = request.POST
+            
+            # Debug: Imprimir todos los datos recibidos
+            print("Datos recibidos:", dict(data))
+            
+            campos_requeridos = ['NombreEnvio', 'CantidadEnvio', 'PrecioEnvio', 'TipoEnvio', 'Proveedor']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({'success': False, 'errors': errores}, status=400)
+
+            # Validación de tipo de envío
+            tipo_envio = data.get('TipoEnvio')
+            if tipo_envio not in ['material', 'herramienta']:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'TipoEnvio': 'El tipo de envío debe ser material o herramienta'
+                    }
+                }, status=400)
+
+            # Validación de campos numéricos
+            try:
+                cantidad_envio = int(data.get('CantidadEnvio'))
+                if cantidad_envio <= 0:
+                    raise ValueError('La cantidad debe ser mayor a 0')
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'CantidadEnvio': 'La cantidad debe ser un número entero positivo'}
+                }, status=400)
+
+            try:
+                precio_envio = Decimal(data.get('PrecioEnvio'))
+                if precio_envio <= 0:
+                    raise ValueError('El precio debe ser mayor a 0')
+            except (ValueError, DecimalException):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'PrecioEnvio': 'El precio debe ser un número positivo'}
+                }, status=400)
+
+            # Validación de fechas opcionales
+            fecha_compra = None
+            if data.get('FechaCompraEnvio'):
+                try:
+                    fecha_compra = datetime.strptime(data.get('FechaCompraEnvio'), '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FechaCompraEnvio': 'El formato de fecha debe ser YYYY-MM-DD'}
+                    }, status=400)
+
+            fecha_comprada = None
+            if data.get('FechaCompradaEnvio'):
+                try:
+                    fecha_comprada = datetime.strptime(data.get('FechaCompradaEnvio'), '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FechaCompradaEnvio': 'El formato de fecha debe ser YYYY-MM-DD'}
+                    }, status=400)
+            
+            try:
+                proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
+            except (Proveedor.DoesNotExist, ValueError):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'Proveedor': 'Proveedor no válido'}
+                }, status=400)
+
+            # Manejar la foto
+            if data.get('eliminar_FotoEnvio', '').lower() == 'true' and envio.FotoEnvio:
+                try:
+                    url = envio.FotoEnvio.url
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    print(f"Intentando eliminar foto con public_id: {public_id}")
+                    
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload",
+                        invalidate=True
+                    )
+                    print(f"Resultado de eliminación foto: {result}")
+                    
+                    envio.FotoEnvio = None
+                    
+                except Exception as e:
+                    print(f"Error al eliminar foto: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoEnvio': f'Error al eliminar la foto: {str(e)}'}
+                    }, status=400)
+            
+            elif 'FotoEnvio' in request.FILES:
+                foto = request.FILES['FotoEnvio']
+                
+                if foto.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoEnvio': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'}
+                    }, status=400)
+                
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoEnvio': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG'}
+                    }, status=400)
+                
+                if envio.FotoEnvio:
+                    try:
+                        url = envio.FotoEnvio.url
+                        parts = url.split('/')
+                        public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                        
+                        cloudinary.config(
+                            cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                            api_key=os.getenv('CLOUDINARY_API_KEY'),
+                            api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                        )
+                        
+                        cloudinary.uploader.destroy(
+                            public_id,
+                            resource_type="image",
+                            type="upload",
+                            invalidate=True
+                        )
+                    except Exception as e:
+                        print(f"Error al eliminar foto anterior: {str(e)}")
+                
+                envio.FotoEnvio = foto
+
+            # Actualizar campos del envío
+            envio.NombreEnvio = data.get('NombreEnvio')
+            envio.CantidadEnvio = cantidad_envio
+            envio.PrecioEnvio = precio_envio
+            envio.TotalEnvio = cantidad_envio * precio_envio
+            envio.TipoEnvio = tipo_envio
+            envio.FechaCompraEnvio = fecha_compra
+            envio.EnvioRecibido = data.get('EnvioRecibido', '').lower() == 'true'
+            envio.FechaCompradaEnvio = fecha_comprada
+            envio.DescripcionEnvio = data.get('DescripcionEnvio')
+            envio.Proveedor = proveedor
+            
+            try:
+                envio.full_clean()
+                envio.save()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Envío actualizado exitosamente',
+                'envio': {
+                    'id': envio.id,
+                    'NombreEnvio': envio.NombreEnvio,
+                    'CantidadEnvio': envio.CantidadEnvio,
+                    'PrecioEnvio': str(envio.PrecioEnvio),
+                    'TotalEnvio': str(envio.TotalEnvio),
+                    'TipoEnvio': envio.TipoEnvio,
+                    'FechaCompraEnvio': envio.FechaCompraEnvio.isoformat() if envio.FechaCompraEnvio else None,
+                    'EnvioRecibido': envio.EnvioRecibido,
+                    'FechaCompradaEnvio': envio.FechaCompradaEnvio.isoformat() if envio.FechaCompradaEnvio else None,
+                    'DescripcionEnvio': envio.DescripcionEnvio,
+                    'Proveedor': {
+                        'id': envio.Proveedor.id,
+                        'NombreProveedor': envio.Proveedor.NombreProveedor,
+                        'RutProveedor': envio.Proveedor.RutProveedor,
+                        'MarcaProveedor': envio.Proveedor.MarcaProveedor
+                    },
+                    'FotoEnvio': envio.FotoEnvio.url if envio.FotoEnvio else None
+                }
+            })
+            
+        except Exception as e:
+            print(f"Error general: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': {'general': f'Error al actualizar el envío: {str(e)}'}
+            }, status=400)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {'general': 'Método no permitido'}
+    }, status=405)
+
+def exportar_envios_excel(request):
+    # Crear un buffer en memoria
+    output = BytesIO()
+    
+    # Crear un nuevo archivo Excel con la opción remove_timezone
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    worksheet = workbook.add_worksheet('Envíos')
+    
+    # Agregar formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy',
+    })
+
+    currency_format = workbook.add_format({
+        'num_format': '$#,##0.00',
+    })
+    
+    # Definir encabezados
+    headers = [
+        'Nombre Envío',
+        'Tipo',
+        'Cantidad',
+        'Precio',
+        'Total',
+        'Estado',
+        'Fecha Compra',
+        'Fecha Comprada',
+        'Descripción',
+        'Nombre Proveedor',
+        'RUT Proveedor',
+        'Marca Proveedor'
+    ]
+    
+    # Escribir encabezados
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header, header_format)
+        worksheet.set_column(col, col, 15)  # Establecer ancho de columna
+    
+    # Obtener datos de envíos con sus proveedores relacionados
+    envios = Envio.objects.all().select_related('Proveedor').order_by('-FechaCompraEnvio')
+    
+    # Escribir datos
+    for row, envio in enumerate(envios, start=1):
+        worksheet.write(row, 0, envio.NombreEnvio)
+        worksheet.write(row, 1, 'Material' if envio.TipoEnvio == 'material' else 'Herramienta')
+        worksheet.write(row, 2, envio.CantidadEnvio)
+        worksheet.write_number(row, 3, float(envio.PrecioEnvio), currency_format)
+        worksheet.write_number(row, 4, float(envio.TotalEnvio), currency_format)
+        worksheet.write(row, 5, 'Recibido' if envio.EnvioRecibido else 'Pendiente')
+        
+        if envio.FechaCompraEnvio:
+            worksheet.write_datetime(row, 6, envio.FechaCompraEnvio, date_format)
+        else:
+            worksheet.write(row, 6, '')
+            
+        if envio.FechaCompradaEnvio:
+            worksheet.write_datetime(row, 7, envio.FechaCompradaEnvio, date_format)
+        else:
+            worksheet.write(row, 7, '')
+            
+        worksheet.write(row, 8, envio.DescripcionEnvio or '')
+        worksheet.write(row, 9, envio.Proveedor.NombreProveedor)
+        worksheet.write(row, 10, envio.Proveedor.RutProveedor)
+        worksheet.write(row, 11, envio.Proveedor.MarcaProveedor)
+
+    # Ajustar anchos de columna automáticamente basado en el contenido
+    for col, header in enumerate(headers):
+        worksheet.set_column(col, col, len(header) + 2)
+    
+    workbook.close()
+    
+    # Preparar la respuesta
+    output.seek(0)
+    
+    # Generar nombre del archivo con la fecha actual
+    filename = f'Envios_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response

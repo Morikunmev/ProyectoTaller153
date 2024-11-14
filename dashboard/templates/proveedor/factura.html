@@ -3,7 +3,6 @@
 {% tailwind_css %}
 {% block content %}
 {% csrf_token %} <!--nuevo-->
-
     <div id="react-factura"></div>
     <script src="{% static 'js/react/dist/factura.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
 {% endblock %}
