@@ -7,6 +7,7 @@ import cloudinary.api
 from cloudinary.exceptions import Error as CloudinaryError
 import logging
 import requests
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -66,17 +67,26 @@ class Factura(models.Model):
 
     # Campos multimedia opcionales
     FotoFactura = CloudinaryField(
-        "Foto de Factura",  # Este es el verbose_name
+        "Foto de Factura",
         folder='facturas/',
         null=True, 
         blank=True
     )
     DocumentoFactura = CloudinaryField(
-        "Documento de Factura",  # Este es el verbose_name
+        "Documento de Factura",
         folder='facturas/documentos/',
         resource_type='raw',
         null=True, 
         blank=True
+    )
+    
+    # Este campo es NECESARIO mantenerlo
+    documento_asset_id = models.CharField(
+        "Asset ID del Documento",
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="ID único del documento en Cloudinary"
     )
 
     # Campo de relación
@@ -91,13 +101,10 @@ class Factura(models.Model):
     class Meta:
         verbose_name = "Factura"
         verbose_name_plural = "Facturas"
-        ordering = ['-FechaEmision']  # Ordena por fecha de emisión descendente
+        ordering = ['-FechaEmision']
 
     def __str__(self):
         return f"Factura {self.id} - {self.FechaEmision} - {self.Proveedor}"
-    
-    
-
 #------------------------------MODULO ENVIO------------------------------
 class Envio(models.Model):
     # Campos obligatorios

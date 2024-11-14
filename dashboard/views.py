@@ -1120,7 +1120,6 @@ def ver_documento_factura(request, factura_id):
     try:
         # Obtener la factura
         factura = get_object_or_404(Factura, id=factura_id)
-        
         if not factura.DocumentoFactura:
             return JsonResponse({
                 'success': False,
@@ -1129,53 +1128,93 @@ def ver_documento_factura(request, factura_id):
         
         try:
             # Configurar Cloudinary
-            cloud_name = os.getenv('CLOUDINARY_CLOUD_NAME')
-            api_key = os.getenv('CLOUDINARY_API_KEY')
-            api_secret = os.getenv('CLOUDINARY_API_SECRET')
-            
             cloudinary.config(
-                cloud_name=cloud_name,
-                api_key=api_key,
-                api_secret=api_secret
+                cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                api_key=os.getenv('CLOUDINARY_API_KEY'),
+                api_secret=os.getenv('CLOUDINARY_API_SECRET')
             )
             
-            # Obtener el documento_url
+            # Obtener la URL del documento y extraer el public_id
             documento_url = str(factura.DocumentoFactura)
-            print(f"URL original: {documento_url}")
+            print(f"URL completa: {documento_url}")
             
-            # Asegurarse que la URL use HTTPS
-            if documento_url.startswith('http:'):
-                documento_url = 'https:' + documento_url[5:]
+            # Extraer el public_id de la URL
+            if '/upload/' in documento_url:
+                public_id = documento_url.split('/upload/')[1]
+                if 'v' in public_id and '/' in public_id:
+                    public_id = public_id.split('/', 1)[1]
+            else:
+                public_id = documento_url
+                
+            # Añadir .pdf si no está presente
+            if not public_id.endswith('.pdf'):
+                public_id = f"{public_id}.pdf"
             
-            # Generar una URL firmada para visualización
-            timestamp = str(int(time.time()))
+            print(f"Public ID con extensión: {public_id}")
             
-            params = {
-                'timestamp': timestamp,
-                'resource_type': 'raw'
-            }
+            try:
+                # Intentar obtener los detalles del recurso
+                resource = cloudinary.api.resource(
+                    public_id,
+                    resource_type="raw",
+                    type="upload"
+                )
+                
+                asset_id = resource.get('asset_id')
+                if asset_id:
+                    # Guardar el asset_id para futuras consultas
+                    factura.documento_asset_id = asset_id
+                    factura.save(update_fields=['documento_asset_id'])
+                    print(f"Asset ID encontrado y guardado: {asset_id}")
+                    
+                    # Construir la URL de la consola
+                    console_url = (
+                        "https://console.cloudinary.com/pm/c-00d414a3fe21470ca107ecd78a0ee5/"
+                        f"media-explorer/facturas/documentos?assetId={asset_id}"
+                    )
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'url': console_url
+                    })
+                
+            except cloudinary.exceptions.NotFound:
+                print(f"No se pudo encontrar el recurso directamente, intentando listar recursos")
+                
+                # Si no se encuentra directamente, intentar listando los recursos
+                response = cloudinary.api.resources(
+                    type="upload",
+                    resource_type="raw",
+                    prefix="facturas/documentos",
+                    max_results=500
+                )
+                
+                print("Recursos encontrados:")
+                for resource in response.get('resources', []):
+                    print(f"- {resource['public_id']}")
+                    if resource['public_id'] == public_id:
+                        asset_id = resource['asset_id']
+                        print(f"Asset ID encontrado en lista: {asset_id}")
+                        
+                        # Guardar el asset_id para futuras consultas
+                        factura.documento_asset_id = asset_id
+                        factura.save(update_fields=['documento_asset_id'])
+                        
+                        # Construir la URL de la consola
+                        console_url = (
+                            "https://console.cloudinary.com/pm/c-00d414a3fe21470ca107ecd78a0ee5/"
+                            f"media-explorer/facturas/documentos?assetId={asset_id}"
+                        )
+                        
+                        return JsonResponse({
+                            'success': True,
+                            'url': console_url
+                        })
             
-            # Generar firma
-            signature = cloudinary.utils.api_sign_request(
-                params,
-                api_secret
-            )
-            
-            # Construir URL final
-            url_visualizacion = (
-                f"{documento_url}?"
-                f"timestamp={timestamp}&"
-                f"api_key={api_key}&"
-                f"signature={signature}"
-            )
-            
-            print(f"URL de visualización generada: {url_visualizacion}")
-            
-            # Devolver la URL para que el frontend la use
             return JsonResponse({
-                'success': True,
-                'url': url_visualizacion
-            })
+                'success': False,
+                'error': 'No se pudo encontrar el asset_id del documento'
+            }, status=404)
             
         except Exception as e:
             error_msg = f"Error al generar URL del documento: {str(e)}"
@@ -1196,7 +1235,6 @@ def ver_documento_factura(request, factura_id):
             'success': False,
             'error': error_msg
         }, status=500)
-
 
 #------------------------------------------------------------------------------
 #------------------------------GESTOR PROVEEDORES------------------------------
