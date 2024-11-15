@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 #------------------------------MODULO PROVEEDOR------------------------------
 class Proveedor(models.Model):
     # Campos obligatorios y unicos
+    # Campos obligatorios con restricciones de unicidad (1FN)
     NombreProveedor = models.CharField(max_length=100, unique=True,null=False, blank=False)
     RutProveedor = models.CharField(max_length=12, unique=True,null=False, blank=False,
         validators=[
@@ -141,3 +142,9 @@ class Envio(models.Model):
         if self.EnvioRecibido:
             return self.DiasTranscurridos
         return (date.today() - self.FechaCompraEnvio).days
+    
+    
+    
+    
+    
+    
