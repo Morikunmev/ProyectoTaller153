@@ -1892,7 +1892,6 @@ def obtener_tiempo_detallado(request, envio_id):
         print(f"⭐ Procesando solicitud para envío ID: {envio_id}")
         
         with connection.cursor() as cursor:
-            # Primero verificamos si el envío existe
             cursor.execute("""
                 SELECT id FROM dashboard_envio WHERE id = %s
             """, [envio_id])
@@ -1901,7 +1900,6 @@ def obtener_tiempo_detallado(request, envio_id):
                 print("❌ Envío no encontrado")
                 return JsonResponse({'error': 'Envío no encontrado'}, status=404)
             
-            # Si existe, obtenemos el tiempo detallado
             cursor.execute("""
                 SELECT * FROM obtener_tiempo_detallado(%s);
             """, [envio_id])
@@ -1914,7 +1912,8 @@ def obtener_tiempo_detallado(request, envio_id):
                     'dias': row[0],
                     'horas': row[1],
                     'minutos': row[2],
-                    'segundos': row[3]
+                    'segundos': row[3],
+                    'texto_estado': row[4] if len(row) > 4 else None
                 }
                 print(f"✅ Enviando datos: {json.dumps(data)}")
                 return JsonResponse(data)

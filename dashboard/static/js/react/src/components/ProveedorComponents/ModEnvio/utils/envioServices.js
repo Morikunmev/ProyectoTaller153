@@ -18,7 +18,8 @@ export const obtenerTiempoDetallado = async (envioId) => {
         dias: parseInt(data.dias) || 0,
         horas: parseInt(data.horas) || 0,
         minutos: parseInt(data.minutos) || 0,
-        segundos: parseInt(data.segundos) || 0
+        segundos: parseInt(data.segundos) || 0,
+        texto_pausa: data.texto_pausa || null
       };
     } catch (error) {
       console.error('❌ Error en obtenerTiempoDetallado:', error);
