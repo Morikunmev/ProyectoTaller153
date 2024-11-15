@@ -42,6 +42,11 @@ urlpatterns = [
     path('api/envio/<int:envio_id>/eliminar/', views.eliminar_envio, name='eliminar_envio'),
     path('api/envio/<int:envio_id>/actualizar/', views.actualizar_envio, name='actualizar_envio'),
     path('api/envios/exportar-excel/', views.exportar_envios_excel, name='exportar_envios_excel'),
+    path('api/envio/tiempo-detallado/<int:envio_id>/', 
+         views.obtener_tiempo_detallado, 
+         name='obtener_tiempo_detallado'),
+
+
     
 ]
 

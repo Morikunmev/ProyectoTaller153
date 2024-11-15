@@ -114,6 +114,8 @@ class Envio(models.Model):
     DescripcionEnvio = models.TextField(null=True, blank=True)
     FotoEnvio = CloudinaryField('imagen', folder='envios/', null=True, blank=True)
     Proveedor = models.ForeignKey('Proveedor', on_delete=models.CASCADE, null=False, blank=False)
+    HoraCreacion = models.DateTimeField(default=timezone.now)  # Cambiado de auto_now_add a default
+
 
     class Meta:
         verbose_name = "Envío"

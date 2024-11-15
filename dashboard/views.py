@@ -41,6 +41,9 @@ import requests
 from urllib.parse import urlparse
 import os
 import mimetypes
+from django.db import connection
+from django.views.decorators.http import require_http_methods
+
 
 # Configurar logging
 logger = logging.getLogger(__name__)
@@ -1881,3 +1884,44 @@ def exportar_envios_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def obtener_tiempo_detallado(request, envio_id):
+    try:
+        print(f"⭐ Procesando solicitud para envío ID: {envio_id}")
+        
+        with connection.cursor() as cursor:
+            # Primero verificamos si el envío existe
+            cursor.execute("""
+                SELECT id FROM dashboard_envio WHERE id = %s
+            """, [envio_id])
+            
+            if not cursor.fetchone():
+                print("❌ Envío no encontrado")
+                return JsonResponse({'error': 'Envío no encontrado'}, status=404)
+            
+            # Si existe, obtenemos el tiempo detallado
+            cursor.execute("""
+                SELECT * FROM obtener_tiempo_detallado(%s);
+            """, [envio_id])
+            
+            row = cursor.fetchone()
+            print(f"📊 Datos obtenidos de DB: {row}")
+            
+            if row:
+                data = {
+                    'dias': row[0],
+                    'horas': row[1],
+                    'minutos': row[2],
+                    'segundos': row[3]
+                }
+                print(f"✅ Enviando datos: {json.dumps(data)}")
+                return JsonResponse(data)
+            else:
+                print("❌ No se obtuvieron datos del procedimiento")
+                return JsonResponse({'error': 'Error al calcular el tiempo'}, status=500)
+                
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)

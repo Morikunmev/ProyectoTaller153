@@ -15,6 +15,7 @@ import EnvioDeleteModal from "./modals/EnvioDeleteModal";
 import EnvioUpdateModal from "./modals/EnvioUpdateModal";
 import EnvioGrid from "./layout/EnvioGrid";
 import { exportToExcel } from "./utils/envioExport";
+import { TiempoTooltip } from "./utils/tooltipUtils";
 
 const EnvioListar = () => {
   const {
@@ -173,19 +174,30 @@ const EnvioListar = () => {
               </span>
             </td>
             <td className="p-4">
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  envio.EnvioRecibido
-                    ? "bg-gray-100 text-gray-800"
-                    : envio.DiasTranscurridos > 30
-                    ? "bg-red-100 text-red-800"
-                    : envio.DiasTranscurridos > 15
-                    ? "bg-orange-100 text-orange-800"
-                    : "bg-blue-100 text-blue-800"
-                }`}
-              >
-                {envio.DiasTranscurridos} días
-              </span>
+              {/*
+              group: Es una clase especial de Tailwind que permite que los elementos hijos respondan cuando se hace hover sobre el elemento padre. 
+              relative: Establece un contexto de posicionamiento para los elementos hijos que usen absolute.*/}
+              <div className="relative group">
+                <div className="cursor-pointer inline-block">
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium inline-flex items-center ${
+                      envio.EnvioRecibido
+                        ? "bg-gray-100 text-gray-800"
+                        : envio.DiasTranscurridos > 30
+                        ? "bg-red-100 text-red-800"
+                        : envio.DiasTranscurridos > 15
+                        ? "bg-orange-100 text-orange-800"
+                        : "bg-blue-100 text-blue-800"
+                    }`}
+                  >
+                    {envio.DiasTranscurridos} días
+                  </span>
+                  <TiempoTooltip
+                    envioId={envio.id}
+                    envioRecibido={envio.EnvioRecibido}
+                  />
+                </div>
+              </div>
             </td>
             <td className="p-4 text-gray-600">
               {envio.Proveedor.NombreProveedor}
