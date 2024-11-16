@@ -10,6 +10,9 @@ import requests
 import os
 from datetime import date
 from django.utils import timezone
+from django.dispatch import receiver
+from django.db.models.signals import post_save
+
 
 
 logger = logging.getLogger(__name__)
@@ -89,12 +92,12 @@ class Factura(models.Model):
         return f"Factura {self.id} - {self.FechaEmision} - {self.Proveedor}"
 #------------------------------MODULO ENVIO------------------------------
 class Envio(models.Model):
-    # Definición de choices para TipoEnvio
     TIPO_CHOICES = [
         ('material', 'Material'),
         ('herramienta', 'Herramienta'),
     ]
 
+    id = models.AutoField(primary_key=True)
     NombreEnvio = models.CharField(max_length=100, null=False, blank=False)
     CantidadEnvio = models.PositiveIntegerField(null=False, blank=False)
     PrecioEnvio = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
@@ -106,47 +109,119 @@ class Envio(models.Model):
         choices=TIPO_CHOICES,
         help_text="Seleccione si el envío es de material o herramienta"
     )
-    
-    # Campos opcionales
-    FechaCompraEnvio = models.DateField(auto_now_add=True)  # Se establece automáticamente cuando se crea el envío
+    FechaCompraEnvio = models.DateField(auto_now_add=True)
     EnvioRecibido = models.BooleanField(default=False)
-    DiasTranscurridos = models.IntegerField(default=0, editable=False)  # Contador de días
+    DiasTranscurridos = models.IntegerField(default=0, editable=False)
     DescripcionEnvio = models.TextField(null=True, blank=True)
     FotoEnvio = CloudinaryField('imagen', folder='envios/', null=True, blank=True)
     Proveedor = models.ForeignKey('Proveedor', on_delete=models.CASCADE, null=False, blank=False)
-    HoraCreacion = models.DateTimeField(default=timezone.now)  # Cambiado de auto_now_add a default
-
+    HoraCreacion = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = "Envío"
         verbose_name_plural = "Envíos"
         ordering = ['-FechaCompraEnvio']
-    
+
     def save(self, *args, **kwargs):
-        # Calcula el total
+        # Validar que el ID 1 y 2 estén reservados para el tipo correcto
+        if self.pk in [1, 2]:
+            if self.pk == 1 and self.TipoEnvio != 'material':
+                raise ValueError("El ID 1 está reservado para envíos de tipo material")
+            if self.pk == 2 and self.TipoEnvio != 'herramienta':
+                raise ValueError("El ID 2 está reservado para envíos de tipo herramienta")
+
         self.TotalEnvio = self.CantidadEnvio * self.PrecioEnvio
         
-        # Si es un nuevo envío, establece la fecha de compra
-        if not self.pk:  # Si es un nuevo objeto
+        if not self.pk:
             self.FechaCompraEnvio = date.today()
         
-        # Actualiza los días transcurridos si no está recibido
         if not self.EnvioRecibido:
             self.DiasTranscurridos = (date.today() - self.FechaCompraEnvio).days
         
         super(Envio, self).save(*args, **kwargs)
-    
+
     @property
     def dias_transcurridos_actual(self):
-        """
-        Calcula los días transcurridos en tiempo real
-        """
         if self.EnvioRecibido:
             return self.DiasTranscurridos
         return (date.today() - self.FechaCompraEnvio).days
-    
-    
-    
-    
-    
-    
+
+class Material(models.Model):
+    NombreMaterial = models.CharField(max_length=100)
+    StockMaterial = models.PositiveIntegerField()
+    PrecioMaterial = models.DecimalField(max_digits=10, decimal_places=2)
+    TotalMaterial = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    FechaCompraMaterial = models.DateField(auto_now_add=True)
+    DescripcionMaterial = models.TextField(null=True, blank=True)
+    ColorMaterial = models.CharField(max_length=50, null=True, blank=True)
+    PesoMaterial = models.CharField(max_length=50, null=True, blank=True)
+    DimensionesMaterial = models.CharField(max_length=100, null=True, blank=True)
+    DetalleMaterial = models.TextField(null=True, blank=True)
+    EstadoMaterial = models.CharField(max_length=50)
+    UbicacionMaterial = models.CharField(max_length=100)
+    FotoMaterial = CloudinaryField('imagen', folder='materiales/', null=True, blank=True)
+    Envio = models.ForeignKey(Envio, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        self.TotalMaterial = self.StockMaterial * self.PrecioMaterial
+        super(Material, self).save(*args, **kwargs)
+
+class Herramienta(models.Model):
+    NombreHerramienta = models.CharField(max_length=100)
+    StockHerramienta = models.PositiveIntegerField()
+    PrecioHerramienta = models.DecimalField(max_digits=10, decimal_places=2)
+    TotalHerramienta = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    FechaCompraHerramienta = models.DateField(auto_now_add=True)
+    MarcaHerramienta = models.CharField(max_length=100)
+    ModeloHerramienta = models.CharField(max_length=100)
+    UbicacionHerramienta = models.CharField(max_length=100)
+    FotoHerramienta = CloudinaryField('imagen', folder='herramientas/', null=True, blank=True)
+    Envio = models.ForeignKey(Envio, on_delete=models.CASCADE)
+
+    def save(self, *args, **kwargs):
+        self.TotalHerramienta = self.StockHerramienta * self.PrecioHerramienta
+        super(Herramienta, self).save(*args, **kwargs)
+
+@receiver(post_save, sender=Envio)
+def crear_material_o_herramienta(sender, instance, created, **kwargs):
+    # Solo proceder si el envío está marcado como recibido
+    if instance.EnvioRecibido:
+        # Si es material, eliminamos herramienta si existe y creamos material
+        if instance.TipoEnvio == 'material':
+            # Eliminar herramienta si existe
+            Herramienta.objects.filter(Envio=instance).delete()
+            
+            # Crear material si no existe
+            if not Material.objects.filter(Envio=instance).exists():
+                Material.objects.create(
+                    NombreMaterial=instance.NombreEnvio,
+                    StockMaterial=instance.CantidadEnvio,
+                    PrecioMaterial=instance.PrecioEnvio,
+                    DescripcionMaterial=instance.DescripcionEnvio,
+                    FotoMaterial=instance.FotoEnvio,
+                    Envio=instance,
+                    EstadoMaterial='Nuevo',
+                    UbicacionMaterial='Por asignar'
+                )
+        
+        # Si es herramienta, eliminamos material si existe y creamos herramienta
+        elif instance.TipoEnvio == 'herramienta':
+            # Eliminar material si existe
+            Material.objects.filter(Envio=instance).delete()
+            
+            # Crear herramienta si no existe
+            if not Herramienta.objects.filter(Envio=instance).exists():
+                Herramienta.objects.create(
+                    NombreHerramienta=instance.NombreEnvio,
+                    StockHerramienta=instance.CantidadEnvio,
+                    PrecioHerramienta=instance.PrecioEnvio,
+                    FotoHerramienta=instance.FotoEnvio,
+                    Envio=instance,
+                    MarcaHerramienta='Por especificar',
+                    ModeloHerramienta='Por especificar',
+                    UbicacionHerramienta='Por asignar'
+                )
+    else:
+        # Si el envío no está marcado como recibido, eliminamos ambos registros si existen
+        Material.objects.filter(Envio=instance).delete()
+        Herramienta.objects.filter(Envio=instance).delete()
