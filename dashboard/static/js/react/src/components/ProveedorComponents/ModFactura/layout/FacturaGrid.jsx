@@ -26,7 +26,7 @@ const FacturaGrid = ({ factura, onEdit, onDelete }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200 w-64">
+    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
       {/* Imagen/Preview */}
       <div className="w-full h-36 bg-gray-100 relative">
         {factura.FotoFactura ? (

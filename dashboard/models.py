@@ -109,9 +109,9 @@ class Envio(models.Model):
         choices=TIPO_CHOICES,
         help_text="Seleccione si el envío es de material o herramienta"
     )
-    FechaCompraEnvio = models.DateField(auto_now_add=True)
+    FechaCompraEnvio = models.DateField(auto_now_add=True) 
     EnvioRecibido = models.BooleanField(default=False)
-    DiasTranscurridos = models.IntegerField(default=0, editable=False)
+    DiasTranscurridos = models.IntegerField(default=0, editable=False) #campo propio de la tabla Envio
     DescripcionEnvio = models.TextField(null=True, blank=True)
     FotoEnvio = CloudinaryField('imagen', folder='envios/', null=True, blank=True)
     Proveedor = models.ForeignKey('Proveedor', on_delete=models.CASCADE, null=False, blank=False)
@@ -146,13 +146,15 @@ class Envio(models.Model):
             return self.DiasTranscurridos
         return (date.today() - self.FechaCompraEnvio).days
 
+#-------------------------------------GESTOR MATERIAL-------------------------------------
 class Material(models.Model):
-    NombreMaterial = models.CharField(max_length=100)
-    StockMaterial = models.PositiveIntegerField()
-    PrecioMaterial = models.DecimalField(max_digits=10, decimal_places=2)
-    TotalMaterial = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    NombreMaterial = models.CharField(max_length=100, null=False, blank=False)
+    StockMaterial = models.PositiveIntegerField(null=False, blank=False)
+    PrecioMaterial = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
+    TotalMaterial = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
     FechaCompraMaterial = models.DateField(auto_now_add=True)
     DescripcionMaterial = models.TextField(null=True, blank=True)
+    #-----Campos 
     ColorMaterial = models.CharField(max_length=50, null=True, blank=True)
     PesoMaterial = models.CharField(max_length=50, null=True, blank=True)
     DimensionesMaterial = models.CharField(max_length=100, null=True, blank=True)
@@ -160,26 +162,44 @@ class Material(models.Model):
     EstadoMaterial = models.CharField(max_length=50)
     UbicacionMaterial = models.CharField(max_length=100)
     FotoMaterial = CloudinaryField('imagen', folder='materiales/', null=True, blank=True)
-    Envio = models.ForeignKey(Envio, on_delete=models.CASCADE)
+    Envio = models.ForeignKey(Envio, on_delete=models.CASCADE, null=True, blank=True)
+    Proveedor = models.ForeignKey('Proveedor', on_delete=models.SET_NULL, null=True, blank=True)  # Modificado
+    RegistroFacturaMaterial = models.CharField(max_length=2, choices=[('Si', 'Si'), ('No', 'No')], default='No')
 
     def save(self, *args, **kwargs):
         self.TotalMaterial = self.StockMaterial * self.PrecioMaterial
+        
+        # Si hay un envío asociado y está marcado como recibido
+        if self.Envio and self.Envio.EnvioRecibido:
+            self.RegistroFacturaMaterial = 'Si'
+        else:
+            self.RegistroFacturaMaterial = 'No'
+            
         super(Material, self).save(*args, **kwargs)
 
 class Herramienta(models.Model):
-    NombreHerramienta = models.CharField(max_length=100)
-    StockHerramienta = models.PositiveIntegerField()
-    PrecioHerramienta = models.DecimalField(max_digits=10, decimal_places=2)
-    TotalHerramienta = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    NombreHerramienta = models.CharField(max_length=100, null=False, blank=False)
+    StockHerramienta = models.PositiveIntegerField(null=False, blank=False)
+    PrecioHerramienta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
+    TotalHerramienta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
     FechaCompraHerramienta = models.DateField(auto_now_add=True)
+    DescripcionHerramienta = models.TextField(null=True, blank=True)
     MarcaHerramienta = models.CharField(max_length=100)
     ModeloHerramienta = models.CharField(max_length=100)
     UbicacionHerramienta = models.CharField(max_length=100)
     FotoHerramienta = CloudinaryField('imagen', folder='herramientas/', null=True, blank=True)
-    Envio = models.ForeignKey(Envio, on_delete=models.CASCADE)
+    Envio = models.ForeignKey(Envio, on_delete=models.CASCADE, null=True, blank=True)
+    Proveedor = models.ForeignKey('Proveedor', on_delete=models.SET_NULL, null=True, blank=True)  # Modificado
+    RegistroFacturaHerramienta = models.CharField(max_length=2, choices=[('Si', 'Si'), ('No', 'No')], default='No')
 
     def save(self, *args, **kwargs):
         self.TotalHerramienta = self.StockHerramienta * self.PrecioHerramienta
+        
+        if self.Envio and self.Envio.EnvioRecibido:
+            self.RegistroFacturaHerramienta = 'Si'
+        else:
+            self.RegistroFacturaHerramienta = 'No'
+            
         super(Herramienta, self).save(*args, **kwargs)
 
 @receiver(post_save, sender=Envio)
@@ -200,6 +220,7 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
                     DescripcionMaterial=instance.DescripcionEnvio,
                     FotoMaterial=instance.FotoEnvio,
                     Envio=instance,
+                    Proveedor=instance.Proveedor,  # Asignamos el proveedor del envío
                     EstadoMaterial='Nuevo',
                     UbicacionMaterial='Por asignar'
                 )
@@ -215,8 +236,10 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
                     NombreHerramienta=instance.NombreEnvio,
                     StockHerramienta=instance.CantidadEnvio,
                     PrecioHerramienta=instance.PrecioEnvio,
+                    DescripcionHerramienta=instance.DescripcionEnvio,
                     FotoHerramienta=instance.FotoEnvio,
                     Envio=instance,
+                    Proveedor=instance.Proveedor,  # Asignamos el proveedor del envío
                     MarcaHerramienta='Por especificar',
                     ModeloHerramienta='Por especificar',
                     UbicacionHerramienta='Por asignar'
