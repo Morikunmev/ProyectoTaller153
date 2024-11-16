@@ -868,11 +868,13 @@ def crear_factura(request):
 def listar_facturas(request):
     if request.method == 'GET':
         try:
-            facturas = Factura.objects.all().select_related('Proveedor')
+            # Incluir ordenamiento por fecha de emisión descendente
+            facturas = Factura.objects.all().select_related('Proveedor').order_by('-FechaEmision')
             data = []
             for factura in facturas:
                 data.append({
                     'id': factura.id,
+                    'NumeroFactura': factura.NumeroFactura,  # Añadido el número de factura
                     'FechaEmision': factura.FechaEmision.isoformat() if factura.FechaEmision else None,
                     'Proveedor': {
                         'id': factura.Proveedor.id,

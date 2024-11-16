@@ -65,6 +65,15 @@ class Proveedor(models.Model):
             
 #------------------------------MODULO FACTURA------------------------------
 class Factura(models.Model):
+    # Nuevo campo para número de factura
+    NumeroFactura = models.CharField(
+        max_length=50, 
+        verbose_name="Número de Factura",
+        null=False,
+        blank=False,
+        help_text="Número o identificador único de la factura"
+    )
+    
     # Campos obligatorios
     FechaEmision = models.DateField(null=False, blank=False,verbose_name="Fecha de Emisión")
     # Campos multimedia opcionales
@@ -89,7 +98,8 @@ class Factura(models.Model):
         ordering = ['-FechaEmision']
 
     def __str__(self):
-        return f"Factura {self.id} - {self.FechaEmision} - {self.Proveedor}"
+        # Actualizado para incluir el número de factura
+        return f"Factura {self.NumeroFactura} - {self.FechaEmision} - {self.Proveedor}"
 #------------------------------MODULO ENVIO------------------------------
 class Envio(models.Model):
     TIPO_CHOICES = [
@@ -116,6 +126,15 @@ class Envio(models.Model):
     FotoEnvio = CloudinaryField('imagen', folder='envios/', null=True, blank=True)
     Proveedor = models.ForeignKey('Proveedor', on_delete=models.CASCADE, null=False, blank=False)
     HoraCreacion = models.DateTimeField(default=timezone.now)
+    
+    Factura = models.ForeignKey(
+        'Factura',
+        on_delete=models.SET_NULL,  # Si se elimina la factura, el campo quedará como NULL
+        null=True,  # Permite valores nulos en la base de datos
+        blank=True, # Permite dejarlo vacío en formularios
+        verbose_name="Factura",
+        related_name='envios'
+    )
 
     class Meta:
         verbose_name = "Envío"
@@ -139,6 +158,11 @@ class Envio(models.Model):
             self.DiasTranscurridos = (date.today() - self.FechaCompraEnvio).days
         
         super(Envio, self).save(*args, **kwargs)
+    def __str__(self):
+        # Si tiene factura, muestra la información de la factura
+        # Si no tiene factura, indica "Sin factura"
+        factura_info = f"Factura: {self.Factura}" if self.Factura else "Sin factura"
+        return f"Envío {self.id} - {factura_info}"
 
     @property
     def dias_transcurridos_actual(self):

@@ -310,6 +310,10 @@ var FacturaListar = function FacturaListar() {
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("thead", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("tr", {
       className: "text-left text-gray-500 text-sm border-b bg-gray-50"
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
+      className: "p-4 font-medium"
+    }, "ID"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
+      className: "p-4 font-medium"
+    }, "N\xBA FACTURA"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
       className: "p-4 font-medium w-16"
     }, "FOTO"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
       className: "p-4 font-medium w-16"
@@ -324,6 +328,10 @@ var FacturaListar = function FacturaListar() {
         key: factura.id,
         className: "border-b last:border-b-0 hover:bg-gray-50"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
+        className: "p-4 font-medium"
+      }, factura.id), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
+        className: "p-4 font-medium"
+      }, factura.NumeroFactura), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
         className: "p-4"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center"
@@ -1430,8 +1438,9 @@ var useFacturaState = function useFacturaState() {
   };
 
   // Filtrado de facturas
+  // Filtrado de facturas
   var filteredFacturas = facturas.filter(function (factura) {
-    return factura.Proveedor.NombreProveedor.toLowerCase().includes(searchTerm.toLowerCase());
+    return factura.Proveedor.NombreProveedor.toLowerCase().includes(searchTerm.toLowerCase()) || factura.NumeroFactura && factura.NumeroFactura.toString().toLowerCase().includes(searchTerm.toLowerCase()) || factura.id.toString().includes(searchTerm);
   });
 
   // Cálculos de paginación

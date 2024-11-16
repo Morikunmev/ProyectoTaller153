@@ -107,6 +107,8 @@ const FacturaListar = () => {
     <table className="w-full">
       <thead>
         <tr className="text-left text-gray-500 text-sm border-b bg-gray-50">
+          <th className="p-4 font-medium">ID</th>
+          <th className="p-4 font-medium">Nº FACTURA</th>
           <th className="p-4 font-medium w-16">FOTO</th>
           <th className="p-4 font-medium w-16">DOC</th>
           <th className="p-4 font-medium">FECHA EMISIÓN</th>
@@ -120,6 +122,8 @@ const FacturaListar = () => {
             key={factura.id}
             className="border-b last:border-b-0 hover:bg-gray-50"
           >
+            <td className="p-4 font-medium">{factura.id}</td>
+            <td className="p-4 font-medium">{factura.NumeroFactura}</td>
             <td className="p-4">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
                 {factura.FotoFactura ? (

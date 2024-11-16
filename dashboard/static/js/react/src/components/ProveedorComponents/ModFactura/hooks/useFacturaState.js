@@ -45,7 +45,7 @@ export const useFacturaState = () => {
       const data = await response.json();
       if (data.success) {
         // Asegurarse de que los campos de archivos tengan URLs válidas
-        const facturasConArchivos = data.facturas.map(factura => ({
+        const facturasConArchivos = data.facturas.map((factura) => ({
           ...factura,
           FotoFactura: factura.FotoFactura || null,
           DocumentoFactura: factura.DocumentoFactura || null,
@@ -215,10 +215,17 @@ export const useFacturaState = () => {
   };
 
   // Filtrado de facturas
-  const filteredFacturas = facturas.filter((factura) =>
-    factura.Proveedor.NombreProveedor.toLowerCase().includes(
-      searchTerm.toLowerCase()
-    )
+  // Filtrado de facturas
+  const filteredFacturas = facturas.filter(
+    (factura) =>
+      factura.Proveedor.NombreProveedor.toLowerCase().includes(
+        searchTerm.toLowerCase()
+      ) ||
+      (factura.NumeroFactura &&
+        factura.NumeroFactura.toString()
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())) ||
+      factura.id.toString().includes(searchTerm)
   );
 
   // Cálculos de paginación
