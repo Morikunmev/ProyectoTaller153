@@ -6,6 +6,7 @@ import {
   Trash2,
   Building2,
   FileUp,
+  Hash,
 } from "lucide-react";
 
 const FacturaGrid = ({ factura, onEdit, onDelete }) => {
@@ -28,6 +29,7 @@ const FacturaGrid = ({ factura, onEdit, onDelete }) => {
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
       {/* Imagen/Preview */}
+      {/* Imagen/Preview */}
       <div className="w-full h-36 bg-gray-100 relative">
         {factura.FotoFactura ? (
           <img
@@ -45,10 +47,18 @@ const FacturaGrid = ({ factura, onEdit, onDelete }) => {
           </div>
         )}
 
-        {/* Badge con número de factura */}
+        {/* Badge con ID en la esquina superior izquierda */}
+        <div className="absolute top-2 left-2">
+          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 flex items-center gap-1">
+            <Hash className="w-3 h-3" />
+            {factura.id}
+          </span>
+        </div>
+
+        {/* Badge con número de factura en la derecha */}
         <div className="absolute top-2 right-2">
           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            #{factura.id}
+            Nº {factura.NumeroFactura}
           </span>
         </div>
 

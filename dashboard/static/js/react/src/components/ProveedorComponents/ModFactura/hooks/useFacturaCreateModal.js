@@ -6,6 +6,7 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
   // Form Data State
   const [formData, setFormData] = useState({
     FechaEmision: today,
+    NumeroFactura: "", // Añadido
     Proveedor: "",
     FotoFactura: null,
     DocumentoFactura: null,
@@ -205,6 +206,10 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
       newErrors.FechaEmision = "La fecha de emisión es requerida";
     }
 
+    if (!formData.NumeroFactura) {
+      newErrors.NumeroFactura = "El número de factura es requerido";
+    }
+
     if (!formData.Proveedor) {
       newErrors.Proveedor = "Debe seleccionar un proveedor";
     }
@@ -225,6 +230,11 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
 
     try {
       const formDataToSend = new FormData();
+
+      // Asegurarnos de que se está enviando el NumeroFactura
+      console.log("Valor de NumeroFactura:", formData.NumeroFactura); // Debug
+
+      formDataToSend.append("NumeroFactura", formData.NumeroFactura);
       formDataToSend.append("FechaEmision", formData.FechaEmision);
       formDataToSend.append("Proveedor", formData.Proveedor);
 
@@ -234,6 +244,11 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
 
       if (formData.DocumentoFactura) {
         formDataToSend.append("DocumentoFactura", formData.DocumentoFactura);
+      }
+
+      // Debug para ver todo lo que se está enviando
+      for (let pair of formDataToSend.entries()) {
+        console.log(pair[0] + ": " + pair[1]);
       }
 
       const response = await fetch("/api/factura/crear/", {

@@ -131,8 +131,10 @@ def exportar_facturas_excel(request):
     
     # Crear un nuevo archivo Excel con la opción remove_timezone
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    worksheet = workbook.add_worksheet('Facturas')
-    
+    # Hoja para los datos
+    worksheet_data = workbook.add_worksheet('Facturas')
+    # Hojas para los gráficos
+    worksheet_charts = workbook.add_worksheet('Gráficos')
     # Agregar formatos
     header_format = workbook.add_format({
         'bold': True,
@@ -140,45 +142,121 @@ def exportar_facturas_excel(request):
         'font_color': 'white',
         'border': 1
     })
-    
     date_format = workbook.add_format({
-        'num_format': 'dd/mm/yyyy',  # Solo fecha sin hora para FechaEmision
+        'num_format': 'dd/mm/yyyy',
     })
-    
+
     # Definir encabezados
     headers = [
-        'Fecha Emisión', 
-        'Nombre Proveedor', 
-        'RUT Proveedor', 
+        'ID',
+        'N° Factura',
+        'Fecha Emisión',
+        'Nombre Proveedor',
+        'RUT Proveedor',
         'Marca Proveedor'
     ]
-    
-    # Escribir encabezados
+    # Escribir encabezados en hoja de datos
     for col, header in enumerate(headers):
-        worksheet.write(0, col, header, header_format)
-        worksheet.set_column(col, col, 15)  # Establecer ancho de columna
-    
-    # Obtener datos de facturas con sus proveedores relacionados
+        worksheet_data.write(0, col, header, header_format)
+        worksheet_data.set_column(col, col, 15)
+
+    # Obtener datos de facturas
     facturas = Factura.objects.all().select_related('Proveedor').order_by('-FechaEmision')
-    
+
     # Escribir datos
     for row, factura in enumerate(facturas, start=1):
-        worksheet.write_datetime(row, 0, factura.FechaEmision, date_format)
-        worksheet.write(row, 1, factura.Proveedor.NombreProveedor)
-        worksheet.write(row, 2, factura.Proveedor.RutProveedor)
-        worksheet.write(row, 3, factura.Proveedor.MarcaProveedor)
+        worksheet_data.write(row, 0, factura.id)
+        worksheet_data.write(row, 1, factura.NumeroFactura)
+        worksheet_data.write_datetime(row, 2, factura.FechaEmision, date_format)
+        worksheet_data.write(row, 3, factura.Proveedor.NombreProveedor)
+        worksheet_data.write(row, 4, factura.Proveedor.RutProveedor)
+        worksheet_data.write(row, 5, factura.Proveedor.MarcaProveedor)
 
-    # Ajustar anchos de columna automáticamente basado en el contenido
-    for col, header in enumerate(headers):
-        worksheet.set_column(col, col, len(header) + 2)
+    # Ajustar anchos de columna
+    worksheet_data.set_column('A:A', 8)  # ID
+    worksheet_data.set_column('B:B', 15)  # N° Factura
+    worksheet_data.set_column('C:F', 20)  # Resto de columnas
+
+    # Preparar datos para los gráficos
+    proveedores_dict = {}
+    for factura in facturas:
+        proveedor = factura.Proveedor.NombreProveedor
+        proveedores_dict[proveedor] = proveedores_dict.get(proveedor, 0) + 1
+
+    # Escribir datos para gráficos en hoja de gráficos
+    worksheet_charts.write_row('A1', ['Proveedor'], header_format)
+    worksheet_charts.write_row('B1', ['Cantidad de Facturas'], header_format)
     
+    for i, (proveedor, cantidad) in enumerate(proveedores_dict.items(), start=2):
+        worksheet_charts.write(f'A{i}', proveedor)
+        worksheet_charts.write(f'B{i}', cantidad)
+
+    # Crear y añadir gráficos
+    # 1. Gráfico de Columnas
+    column_chart = workbook.add_chart({'type': 'column'})
+    column_chart.add_series({
+        'name': 'Facturas por Proveedor',
+        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
+        'data_labels': {'value': True},
+    })
+    column_chart.set_title({'name': 'Facturas por Proveedor (Columnas)'})
+    column_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('D2', column_chart)
+
+    # 2. Gráfico de Pie
+    pie_chart = workbook.add_chart({'type': 'pie'})
+    pie_chart.add_series({
+        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
+        'data_labels': {'percentage': True},
+    })
+    pie_chart.set_title({'name': 'Distribución de Facturas (%)'})
+    pie_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('D18', pie_chart)
+
+    # 3. Gráfico de Barras
+    bar_chart = workbook.add_chart({'type': 'bar'})
+    bar_chart.add_series({
+        'name': 'Facturas por Proveedor',
+        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
+        'data_labels': {'value': True},
+    })
+    bar_chart.set_title({'name': 'Facturas por Proveedor (Barras)'})
+    bar_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('D34', bar_chart)
+
+    # 4. Gráfico de Línea
+    line_chart = workbook.add_chart({'type': 'line'})
+    line_chart.add_series({
+        'name': 'Facturas por Proveedor',
+        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
+        'data_labels': {'value': True},
+        'marker': {'type': 'circle', 'size': 8},
+    })
+    line_chart.set_title({'name': 'Tendencia de Facturas por Proveedor'})
+    line_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('K2', line_chart)
+
+    # 5. Gráfico de Área
+    area_chart = workbook.add_chart({'type': 'area'})
+    area_chart.add_series({
+        'name': 'Facturas por Proveedor',
+        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
+        'data_labels': {'value': True},
+    })
+    area_chart.set_title({'name': 'Acumulación de Facturas por Proveedor'})
+    area_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('K18', area_chart)
+
     workbook.close()
-    
+
     # Preparar la respuesta
     output.seek(0)
-    
-    # Generar nombre del archivo con la fecha actual
-    filename = f'Facturas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    filename = f'Facturas_con_graficos_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
     response = HttpResponse(
         output.read(),
@@ -701,9 +779,11 @@ def crear_factura(request):
     if request.method == 'POST':
         try:
             data = request.POST
+            print("Datos recibidos:", data)  # Añadir este print
+            print("Archivos recibidos:", request.FILES)  # Añadir este print
             
             # Validaciones de campos requeridos
-            campos_requeridos = ['FechaEmision', 'Proveedor']
+            campos_requeridos = ['FechaEmision', 'Proveedor', 'NumeroFactura']
             errores = {}
             
             for campo in campos_requeridos:
@@ -735,8 +815,18 @@ def crear_factura(request):
                         'Proveedor': 'Proveedor no válido'
                     }
                 }, status=400)
+
+            # Validar número de factura único
+            if Factura.objects.filter(NumeroFactura=data.get('NumeroFactura')).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'NumeroFactura': 'Este número de factura ya existe'
+                    }
+                }, status=400)
             
             nueva_factura = Factura(
+                NumeroFactura=data.get('NumeroFactura'),
                 FechaEmision=fecha_emision,
                 Proveedor=proveedor
             )
@@ -837,6 +927,7 @@ def crear_factura(request):
                 'message': 'Factura creada exitosamente',
                 'factura': {
                     'id': nueva_factura.id,
+                    'NumeroFactura': nueva_factura.NumeroFactura,
                     'FechaEmision': nueva_factura.FechaEmision.isoformat(),
                     'Proveedor': {
                         'id': nueva_factura.Proveedor.id,
@@ -910,6 +1001,7 @@ def eliminar_factura(request, factura_id):
             # Guardar información para la respuesta
             fecha_emision = factura.FechaEmision
             nombre_proveedor = factura.Proveedor.NombreProveedor
+            numero_factura = factura.NumeroFactura  # Añadido
             
             # Si existe un documento, eliminarlo de Cloudinary
             if factura.DocumentoFactura:
@@ -984,7 +1076,7 @@ def eliminar_factura(request, factura_id):
             
             return JsonResponse({
                 'success': True,
-                'message': f'Factura del {fecha_emision} del proveedor {nombre_proveedor} y sus archivos asociados fueron eliminados exitosamente'
+                'message': f'Factura N° {numero_factura} del {fecha_emision} del proveedor {nombre_proveedor} y sus archivos asociados fueron eliminados exitosamente'
             })
             
         except Exception as e:
@@ -1010,7 +1102,7 @@ def actualizar_factura(request, factura_id):
             # Debug: Imprimir todos los datos recibidos
             print("Datos recibidos:", dict(data))
             
-            campos_requeridos = ['FechaEmision', 'Proveedor']
+            campos_requeridos = ['FechaEmision', 'Proveedor', 'NumeroFactura']
             errores = {}
             
             for campo in campos_requeridos:
@@ -1019,6 +1111,14 @@ def actualizar_factura(request, factura_id):
             
             if errores:
                 return JsonResponse({'success': False, 'errors': errores}, status=400)
+            
+            # Validar número de factura único
+            numero_factura = data.get('NumeroFactura')
+            if Factura.objects.exclude(id=factura_id).filter(NumeroFactura=numero_factura).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'NumeroFactura': 'Este número de factura ya existe'}
+                }, status=400)
             
             try:
                 fecha_emision = datetime.strptime(data.get('FechaEmision'), '%Y-%m-%d').date()
@@ -1163,6 +1263,7 @@ def actualizar_factura(request, factura_id):
                         }, status=400)
 
             # Actualizar campos básicos
+            factura.NumeroFactura = numero_factura
             factura.FechaEmision = fecha_emision
             factura.Proveedor = proveedor
             
@@ -1179,6 +1280,7 @@ def actualizar_factura(request, factura_id):
                 'message': 'Factura actualizada exitosamente',
                 'factura': {
                     'id': factura.id,
+                    'NumeroFactura': factura.NumeroFactura,
                     'FechaEmision': factura.FechaEmision.isoformat(),
                     'Proveedor': {
                         'id': factura.Proveedor.id,

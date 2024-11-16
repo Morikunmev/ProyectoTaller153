@@ -8,6 +8,7 @@ export const useFacturaUpdateModal = ({
 }) => {
   // Estados del formulario y modal
   const [formData, setFormData] = useState({
+    NumeroFactura: "", // Añadido
     FechaEmision: "",
     Proveedor: "",
     FotoFactura: null,
@@ -64,6 +65,7 @@ export const useFacturaUpdateModal = ({
   useEffect(() => {
     if (factura && isOpen) {
       setFormData({
+        NumeroFactura: factura.NumeroFactura || "", // Añadido
         FechaEmision: factura.FechaEmision || "",
         Proveedor: factura.Proveedor?.id || "",
         FotoFactura: null,
@@ -217,6 +219,9 @@ export const useFacturaUpdateModal = ({
       setIsSubmitting(true);
       try {
         const newErrors = {};
+        if (!formData.NumeroFactura) {
+          newErrors.NumeroFactura = "El número de factura es requerido";
+        }
         if (!formData.FechaEmision) {
           newErrors.FechaEmision = "La fecha de emisión es requerida";
         }
@@ -230,6 +235,7 @@ export const useFacturaUpdateModal = ({
         }
 
         const submitData = new FormData();
+        submitData.append("NumeroFactura", formData.NumeroFactura);
         submitData.append("FechaEmision", formData.FechaEmision);
         submitData.append("Proveedor", formData.Proveedor);
 

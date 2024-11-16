@@ -65,6 +65,29 @@ const FacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
             <div className="space-y-4">
               <h3 className="font-medium">Información Principal</h3>
 
+              {/* Número de Factura */}
+              <div>
+                <label className="text-sm font-medium">
+                  Número de Factura*
+                </label>
+                <input
+                  type="text"
+                  name="NumeroFactura"
+                  value={formData.NumeroFactura}
+                  onChange={handleInputChange}
+                  placeholder="Ingrese el número de factura"
+                  className={`w-full px-3 py-2 border-2 rounded mt-1 
+                            focus:ring-2 focus:ring-blue-500 focus:outline-none
+                            transition-colors duration-200
+                            ${getInputBorderClass(formData.NumeroFactura)}`}
+                />
+                {errors.NumeroFactura && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.NumeroFactura}
+                  </p>
+                )}
+              </div>
+
               {/* Fecha de Emisión */}
               <div>
                 <label className="text-sm font-medium">Fecha de Emisión*</label>

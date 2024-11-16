@@ -17,6 +17,19 @@ function getCookie(name) {
 
 export const exportToExcel = async () => {
   try {
+    // Primera petición para obtener los datos necesarios
+    const getDataResponse = await fetch("/api/factura/listar/", {
+      method: "GET",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+    });
+
+    if (!getDataResponse.ok) {
+      throw new Error("Error al obtener los datos");
+    }
+
+    // Petición para generar el Excel
     const response = await fetch("/api/facturas/exportar-excel/", {
       method: "GET",
       headers: {
@@ -28,6 +41,7 @@ export const exportToExcel = async () => {
       throw new Error("Error al generar el Excel");
     }
 
+    // Obtener el nombre del archivo de las cabeceras
     const contentDisposition = response.headers.get("Content-Disposition");
     let filename = "Facturas.xlsx";
     if (contentDisposition && contentDisposition.indexOf("attachment") !== -1) {
@@ -38,6 +52,7 @@ export const exportToExcel = async () => {
       }
     }
 
+    // Crear y descargar el archivo
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -45,10 +60,14 @@ export const exportToExcel = async () => {
     a.download = filename;
     document.body.appendChild(a);
     a.click();
+
+    // Limpieza
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+
+    return true;
   } catch (error) {
-    console.error("Error:", error);
-    throw new Error("Error al exportar a Excel");
+    console.error("Error en la exportación:", error);
+    throw new Error("Error al exportar a Excel: " + error.message);
   }
 };
