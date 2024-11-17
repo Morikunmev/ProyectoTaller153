@@ -1794,6 +1794,7 @@ def actualizar_envio(request, envio_id):
                         'errors': {'FechaCompraEnvio': 'El formato de fecha debe ser YYYY-MM-DD'}
                     }, status=400)
             
+            # Validación del proveedor
             try:
                 proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
             except (Proveedor.DoesNotExist, ValueError):
@@ -1801,6 +1802,17 @@ def actualizar_envio(request, envio_id):
                     'success': False,
                     'errors': {'Proveedor': 'Proveedor no válido'}
                 }, status=400)
+
+            # Validación de la factura (opcional)
+            factura = None
+            if data.get('Factura'):
+                try:
+                    factura = Factura.objects.get(id=data.get('Factura'))
+                except (Factura.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'Factura': 'Factura no válida'}
+                    }, status=400)
 
             # Manejar la foto
             if data.get('eliminar_FotoEnvio', '').lower() == 'true' and envio.FotoEnvio:
@@ -1882,6 +1894,7 @@ def actualizar_envio(request, envio_id):
             envio.EnvioRecibido = data.get('EnvioRecibido', '').lower() == 'true'
             envio.DescripcionEnvio = data.get('DescripcionEnvio')
             envio.Proveedor = proveedor
+            envio.Factura = factura  # Asignar la factura (puede ser None)
             
             try:
                 envio.full_clean()
@@ -1911,6 +1924,10 @@ def actualizar_envio(request, envio_id):
                         'RutProveedor': envio.Proveedor.RutProveedor,
                         'MarcaProveedor': envio.Proveedor.MarcaProveedor
                     },
+                    'Factura': {  # Agregar información de la factura
+                        'id': envio.Factura.id,
+                        'NumeroFactura': envio.Factura.NumeroFactura,
+                    } if envio.Factura else None,
                     'FotoEnvio': envio.FotoEnvio.url if envio.FotoEnvio else None
                 }
             })

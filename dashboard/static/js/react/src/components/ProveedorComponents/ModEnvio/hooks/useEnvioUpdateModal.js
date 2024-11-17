@@ -19,8 +19,9 @@ export const useEnvioUpdateModal = ({
     DescripcionEnvio: "",
     Proveedor: "",
     FotoEnvio: null,
+    Factura: "", // Campo de Factura agregado
   });
-
+  const [facturas, setFacturas] = useState([]); // Estado para facturas
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -30,6 +31,7 @@ export const useEnvioUpdateModal = ({
   const [removedFiles, setRemovedFiles] = useState({
     foto: false,
   });
+  const [searchFactura, setSearchFactura] = useState("");
 
   // Efecto para animaciones de apertura/cierre
   useEffect(() => {
@@ -57,26 +59,34 @@ export const useEnvioUpdateModal = ({
     }
   }, [formData.FechaCompraEnvio, formData.EnvioRecibido]);
 
-  // Efecto para cargar la lista de proveedores
+  // Efecto para cargar proveedores y facturas
   useEffect(() => {
-    const fetchProveedores = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/proveedor/listar/");
-        const data = await response.json();
-        if (data.success) {
-          setProveedores(data.proveedores);
+        // Cargar proveedores
+        const provResponse = await fetch("/api/proveedor/listar/");
+        const provData = await provResponse.json();
+        if (provData.success) {
+          setProveedores(provData.proveedores);
+        }
+
+        // Cargar facturas
+        const factResponse = await fetch("/api/factura/listar/");
+        const factData = await factResponse.json();
+        if (factData.success) {
+          setFacturas(factData.facturas);
         }
       } catch (error) {
-        console.error("Error al cargar los proveedores:", error);
+        console.error("Error al cargar datos:", error);
         setErrors((prev) => ({
           ...prev,
-          general: "Error al cargar la lista de proveedores",
+          general: "Error al cargar los datos necesarios",
         }));
       }
     };
 
     if (isOpen) {
-      fetchProveedores();
+      fetchData();
     }
   }, [isOpen]);
 
@@ -94,6 +104,7 @@ export const useEnvioUpdateModal = ({
         DiasTranscurridos: envio.DiasTranscurridos || 0,
         DescripcionEnvio: envio.DescripcionEnvio || "",
         Proveedor: envio.Proveedor?.id || "",
+        Factura: envio.Factura?.id || "", // Cargar ID de factura
         FotoEnvio: null,
       });
       setPreviewUrl(envio.FotoEnvio || "");
@@ -251,6 +262,7 @@ export const useEnvioUpdateModal = ({
         submitData.append("Proveedor", formData.Proveedor);
         submitData.append("EnvioRecibido", formData.EnvioRecibido);
         submitData.append("DiasTranscurridos", formData.DiasTranscurridos);
+        submitData.append("Factura", formData.Factura || ""); // Agregar Factura al FormData
 
         if (formData.FechaCompraEnvio) {
           submitData.append("FechaCompraEnvio", formData.FechaCompraEnvio);
@@ -314,6 +326,9 @@ export const useEnvioUpdateModal = ({
     isVisible,
     previewUrl,
     proveedores,
+    facturas,
+    searchFactura, // Agregar searchFactura
+    setSearchFactura, // Agregar setSearchFactura
     handleClose,
     handleSubmit,
     handleInputChange,

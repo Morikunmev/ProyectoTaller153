@@ -1,5 +1,5 @@
 import React from "react";
-import { X, XCircle } from "lucide-react";
+import { X, XCircle, Search } from "lucide-react";
 import { useEnvioUpdateModal } from "../hooks/useEnvioUpdateModal";
 
 const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
@@ -16,6 +16,9 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
     handleFotoChange,
     handleRemoveFoto,
     proveedores,
+    searchFactura, // Agregar esto
+    setSearchFactura, // Agregar esto
+    facturas,
   } = useEnvioUpdateModal({
     isOpen,
     onClose,
@@ -67,6 +70,7 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
               <h3 className="font-medium">Información Principal</h3>
 
               {/* Nombre del Envío */}
+              {/* Nombre del Envío */}
               <div>
                 <label className="text-sm font-medium">Nombre del Envío*</label>
                 <input
@@ -75,18 +79,67 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
                   value={formData.NombreEnvio}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-2 border-2 rounded mt-1 
-                            focus:ring-2 focus:ring-blue-500 focus:outline-none
-                            transition-colors duration-200
-                            ${
-                              formData.NombreEnvio
-                                ? "border-green-400"
-                                : "border-gray-300"
-                            }`}
+              focus:ring-2 focus:ring-blue-500 focus:outline-none
+              transition-colors duration-200
+              ${formData.NombreEnvio ? "border-green-400" : "border-gray-300"}`}
                 />
                 {errors.NombreEnvio && (
                   <p className="text-sm text-red-500 mt-1">
                     {errors.NombreEnvio}
                   </p>
+                )}
+              </div>
+
+              {/* Factura - Nuevo campo a agregar */}
+              {/* Factura con búsqueda */}
+              <div>
+                <label className="text-sm font-medium">Factura</label>
+                <div className="relative mt-1">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Buscar factura o proveedor..."
+                      value={searchFactura}
+                      onChange={(e) => setSearchFactura(e.target.value)}
+                      className="w-full px-3 py-2 pr-8 border-2 rounded
+                  focus:ring-2 focus:ring-blue-500 focus:outline-none
+                  transition-colors duration-200"
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                      <Search className="h-4 w-4 text-gray-400" />
+                    </div>
+                  </div>
+                  <select
+                    name="Factura"
+                    value={formData.Factura || ""}
+                    onChange={handleInputChange}
+                    className={`w-full px-3 py-2 border-2 rounded mt-2
+                focus:ring-2 focus:ring-blue-500 focus:outline-none
+                transition-colors duration-200
+                ${formData.Factura ? "border-green-400" : "border-gray-300"}`}
+                    size={4}
+                  >
+                    <option value="">Sin factura</option>
+                    {facturas
+                      .filter(
+                        (factura) =>
+                          factura.NumeroFactura.toLowerCase().includes(
+                            searchFactura.toLowerCase()
+                          ) ||
+                          factura.Proveedor.NombreProveedor.toLowerCase().includes(
+                            searchFactura.toLowerCase()
+                          )
+                      )
+                      .map((factura) => (
+                        <option key={factura.id} value={factura.id}>
+                          Nro Factura: {factura.NumeroFactura} | Proveedor:{" "}
+                          {factura.Proveedor.NombreProveedor}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                {errors.Factura && (
+                  <p className="text-sm text-red-500 mt-1">{errors.Factura}</p>
                 )}
               </div>
 
