@@ -107,13 +107,13 @@ const FacturaListar = () => {
     <table className="w-full">
       <thead>
         <tr className="text-left text-gray-500 text-sm border-b bg-gray-50">
-          <th className="p-4 font-medium">ID</th>
-          <th className="p-4 font-medium">Nº FACTURA</th>
-          <th className="p-4 font-medium w-16">FOTO</th>
-          <th className="p-4 font-medium w-16">DOC</th>
-          <th className="p-4 font-medium">FECHA EMISIÓN</th>
-          <th className="p-4 font-medium">PROVEEDOR</th>
-          <th className="p-4 font-medium text-center">ACCIONES</th>
+          <th className="p-2 font-medium">ID</th>
+          <th className="p-2 font-medium">Nº FACTURA</th>
+          <th className="p-2 font-medium w-12">FOTO</th>
+          <th className="p-2 font-medium w-12">DOC</th>
+          <th className="p-2 font-medium">FECHA EMISIÓN</th>
+          <th className="p-2 font-medium">PROVEEDOR</th>
+          <th className="p-2 font-medium text-center">ACCIONES</th>
         </tr>
       </thead>
       <tbody>
@@ -122,10 +122,10 @@ const FacturaListar = () => {
             key={factura.id}
             className="border-b last:border-b-0 hover:bg-gray-50"
           >
-            <td className="p-4 font-medium">{factura.id}</td>
-            <td className="p-4 font-medium">{factura.NumeroFactura}</td>
-            <td className="p-4">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+            <td className="p-2 font-medium">#{factura.id}</td>
+            <td className="p-2 font-medium">{factura.NumeroFactura}</td>
+            <td className="p-2">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
                 {factura.FotoFactura ? (
                   <img
                     src={factura.FotoFactura}
@@ -139,18 +139,17 @@ const FacturaListar = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <span className="text-gray-400 text-xs">Sin foto</span>
+                    <span className="text-gray-400 text-[10px]">Sin foto</span>
                   </div>
                 )}
               </div>
             </td>
-            <td className="p-4">
-              <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+            <td className="p-2">
+              <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                 {factura.DocumentoFactura ? (
                   <button
                     onClick={async () => {
                       try {
-                        // Obtener el token CSRF
                         const csrfToken = document.querySelector(
                           "[name=csrfmiddlewaretoken]"
                         )?.value;
@@ -158,7 +157,6 @@ const FacturaListar = () => {
                           throw new Error("Token CSRF no encontrado");
                         }
 
-                        // Realizar la petición
                         const response = await fetch(
                           `/api/factura/${factura.id}/ver-documento/`,
                           {
@@ -188,15 +186,10 @@ const FacturaListar = () => {
                           }
                         }
 
-                        // Obtener la URL del documento
                         const data = await response.json();
-
-                        // Abrir el documento en una nueva pestaña
                         window.open(data.url, "_blank");
                       } catch (error) {
                         console.error("Error al acceder al documento:", error);
-
-                        // Mostrar error al usuario
                         if (typeof showAlert === "function") {
                           showAlert({
                             type: "error",
@@ -216,27 +209,46 @@ const FacturaListar = () => {
                     className="flex items-center justify-center w-full h-full hover:bg-gray-200 transition-colors group relative"
                     title="Ver documento"
                   >
-                    <FileText className="w-5 h-5 text-gray-600 group-hover:text-gray-800 transition-colors" />
-
-                    {/* Tooltip */}
-                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                    <FileText className="w-4 h-4 text-gray-600 group-hover:text-gray-800 transition-colors" />
+                    <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 mb-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                       Ver documento
                     </span>
                   </button>
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <span className="text-gray-400 text-xs">Sin doc</span>
+                    <span className="text-gray-400 text-[10px]">Sin doc</span>
                   </div>
                 )}
               </div>
             </td>
-            <td className="p-4 font-medium">{factura.FechaEmision}</td>
-            <td className="p-4 text-gray-600">
+            <td className="p-2 font-medium">{factura.FechaEmision}</td>
+            <td className="p-2 text-gray-600">
               {factura.Proveedor.NombreProveedor}
             </td>
-            <td className="p-4">
-              <div className="flex justify-center">
-                {renderActionButtons(factura)}
+            <td className="p-2">
+              <div className="flex justify-center gap-1">
+                <button
+                  onClick={() => handleUpdateModalOpen(factura)}
+                  className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
+                           transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
+                  title="Editar factura"
+                >
+                  <Pencil className="w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110" />
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(factura)}
+                  className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
+                           relative overflow-hidden group transition-all duration-200 ease-in-out 
+                           hover:scale-105 active:scale-95"
+                  title="Eliminar factura"
+                >
+                  <Trash2
+                    className="w-3.5 h-3.5 relative z-10 transition-transform duration-200 
+                              group-hover:scale-110 group-hover:rotate-12"
+                  />
+                  <span className="relative z-10">Eliminar</span>
+                </button>
               </div>
             </td>
           </tr>

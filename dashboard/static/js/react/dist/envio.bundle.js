@@ -312,33 +312,45 @@ var EnvioListar = function EnvioListar() {
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("thead", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("tr", {
       className: "text-left text-gray-500 text-sm border-b bg-gray-50"
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium w-16"
+      className: "p-2 font-medium"
+    }, "ID"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
+      className: "p-2 font-medium"
+    }, "ID FACTURA"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
+      className: "p-2 font-medium w-12"
     }, "FOTO"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium"
+      className: "p-2 font-medium"
     }, "NOMBRE"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium"
+      className: "p-2 font-medium"
     }, "TIPO"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium"
+      className: "p-2 font-medium"
     }, "CANTIDAD"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium"
+      className: "p-2 font-medium"
     }, "PRECIO"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium"
+      className: "p-2 font-medium"
     }, "TOTAL"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium"
+      className: "p-2 font-medium"
     }, "ESTADO"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium"
+      className: "p-2 font-medium"
     }, "D\xCDAS"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium"
+      className: "p-2 font-medium"
     }, "PROVEEDOR"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("th", {
-      className: "p-4 font-medium text-center"
+      className: "p-2 font-medium text-center"
     }, "ACCIONES"))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("tbody", null, currentEnvios.map(function (envio) {
       return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("tr", {
         key: envio.id,
         className: "border-b last:border-b-0 hover:bg-gray-50"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4"
+        className: "p-2 font-medium text-gray-900"
+      }, "#", envio.id), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
+        className: "p-2"
+      }, envio.Factura ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+        className: "px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700"
+      }, "#", envio.Factura.id) : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+        className: "px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"
+      }, "Sin factura")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
+        className: "p-2"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-        className: "w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center"
+        className: "w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center"
       }, envio.FotoEnvio ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", {
         src: envio.FotoEnvio,
         alt: "Env\xEDo: ".concat(envio.NombreEnvio),
@@ -351,41 +363,61 @@ var EnvioListar = function EnvioListar() {
       }) : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "w-full h-full flex items-center justify-center bg-gray-200"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], {
-        className: "w-6 h-6 text-gray-400"
+        className: "w-4 h-4 text-gray-400"
       })))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4 font-medium"
+        className: "p-2 font-medium"
       }, envio.NombreEnvio), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4"
+        className: "p-2"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
-        className: "px-2 py-1 rounded-full text-xs font-medium ".concat(envio.TipoEnvio === "material" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800")
+        className: "px-1.5 py-0.5 rounded-full text-xs font-medium ".concat(envio.TipoEnvio === "material" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800")
       }, envio.TipoEnvio === "material" ? "Material" : "Herramienta")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4"
+        className: "p-2"
       }, envio.CantidadEnvio), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4"
+        className: "p-2"
       }, "$", envio.PrecioEnvio.toLocaleString()), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4"
+        className: "p-2"
       }, "$", envio.TotalEnvio.toLocaleString()), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4"
+        className: "p-2"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
-        className: "px-2 py-1 rounded-full text-xs font-medium ".concat(envio.EnvioRecibido ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")
+        className: "px-1.5 py-0.5 rounded-full text-xs font-medium ".concat(envio.EnvioRecibido ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800")
       }, envio.EnvioRecibido ? "Recibido" : "Pendiente")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4"
+        className: "p-2"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-        className: "relative group"
+        className: "relative"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
         className: "cursor-pointer inline-block"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
-        className: "px-2 py-1 rounded-full text-xs font-medium inline-flex items-center ".concat(envio.EnvioRecibido ? "bg-gray-100 text-gray-800" : envio.DiasTranscurridos > 30 ? "bg-red-100 text-red-800" : envio.DiasTranscurridos > 15 ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800")
-      }, envio.DiasTranscurridos, " d\xEDas"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_utils_tooltipUtils__WEBPACK_IMPORTED_MODULE_8__.TiempoTooltip, {
+        className: "px-1.5 py-0.5 rounded-full text-xs font-medium inline-flex items-center ".concat(envio.EnvioRecibido ? "bg-gray-100 text-gray-800" : envio.DiasTranscurridos > 30 ? "bg-red-100 text-red-800" : envio.DiasTranscurridos > 15 ? "bg-orange-100 text-orange-800" : "bg-blue-100 text-blue-800")
+      }, envio.DiasTranscurridos, " d\xEDas")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+        className: "static"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(_utils_tooltipUtils__WEBPACK_IMPORTED_MODULE_8__.TiempoTooltip, {
         envioId: envio.id,
         envioRecibido: envio.EnvioRecibido
       })))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4 text-gray-600"
+        className: "p-2 text-gray-600"
       }, envio.Proveedor.NombreProveedor), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("td", {
-        className: "p-4"
+        className: "p-2"
       }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-        className: "flex justify-center"
-      }, renderActionButtons(envio))));
+        className: "flex justify-center gap-1"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
+        onClick: function onClick() {
+          return handleUpdateModalOpen(envio);
+        },
+        className: "p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs\r transition-all duration-200 ease-in-out hover:scale-105 active:scale-95",
+        title: "Editar env\xEDo"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], {
+        className: "w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110"
+      }), "Editar"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
+        onClick: function onClick() {
+          return handleDelete(envio);
+        },
+        className: "p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs\r relative overflow-hidden group transition-all duration-200 ease-in-out \r hover:scale-105 active:scale-95",
+        title: "Eliminar env\xEDo"
+      }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], {
+        className: "w-3.5 h-3.5 relative z-10 transition-transform duration-200 \r group-hover:scale-110 group-hover:rotate-12"
+      }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
+        className: "relative z-10"
+      }, "Eliminar")))));
     })));
   };
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -404,7 +436,7 @@ var EnvioListar = function EnvioListar() {
     className: "absolute left-3 top-2.5 h-4 w-4 text-gray-400"
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "text",
-    placeholder: "Buscar por nombre, tipo o proveedor...",
+    placeholder: "Buscar por ID, factura, nombre, tipo o proveedor...",
     className: "w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 \r focus:outline-none focus:ring-1 focus:ring-blue-500\r transition-colors duration-200",
     value: searchTerm,
     onChange: function onChange(e) {
@@ -457,7 +489,7 @@ var EnvioListar = function EnvioListar() {
   }, "+"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
     className: "ml-1"
   }, "Crear Env\xEDo"))))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "bg-white rounded-lg shadow overflow-hidden"
+    className: "bg-white rounded-lg shadow"
   }, error ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "text-center p-8 text-red-500"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
@@ -471,7 +503,7 @@ var EnvioListar = function EnvioListar() {
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
     className: "text-lg"
   }, "No se encontraron env\xEDos")) : /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement((react__WEBPACK_IMPORTED_MODULE_0___default().Fragment), null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "overflow-x-auto"
+    className: "relative"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "transition-opacity duration-300 ease-in-out\n                          ".concat(isChangingView || isSearching ? "opacity-0" : "opacity-100")
   }, isGridView ? renderGridView() : renderTableView())), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -502,6 +534,9 @@ var EnvioListar = function EnvioListar() {
     onClose: handleUpdateModalClose,
     envio: envioToUpdate,
     onEnvioUpdated: handleEnvioUpdated
+  }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    id: "tooltip-root",
+    className: "relative z-[9999]"
   }));
 };
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (EnvioListar);
@@ -623,7 +658,10 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
       EnvioRecibido: false,
       DescripcionEnvio: "",
       Proveedor: "",
-      FotoEnvio: null
+      FotoEnvio: null,
+      Factura: "",
+      // Agregado campo Factura
+      HoraCreacion: new Date().toISOString() // Agregado campo HoraCreacion
     }),
     _useState2 = _slicedToArray(_useState, 2),
     formData = _useState2[0],
@@ -654,11 +692,16 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
     _useState14 = _slicedToArray(_useState13, 2),
     proveedores = _useState14[0],
     setProveedores = _useState14[1];
+  var _useState15 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]),
+    _useState16 = _slicedToArray(_useState15, 2),
+    facturas = _useState16[0],
+    setFacturas = _useState16[1]; // Nuevo estado para facturas
 
   // Efecto para cargar la lista de proveedores y resetear el formulario
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
     if (isOpen) {
       fetchProveedores();
+      fetchFacturas(); // Nueva llamada
       setFormData({
         NombreEnvio: "",
         TipoEnvio: "",
@@ -669,13 +712,15 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
         EnvioRecibido: false,
         DescripcionEnvio: "",
         Proveedor: "",
-        FotoEnvio: null
+        FotoEnvio: null,
+        Factura: "",
+        HoraCreacion: new Date().toISOString()
       });
       setPreviewUrl(null);
       setErrors({});
     }
   }, [isOpen, today]);
-  var fetchProveedores = /*#__PURE__*/function () {
+  var fetchFacturas = /*#__PURE__*/function () {
     var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
       var response, data;
       return _regeneratorRuntime().wrap(function _callee$(_context) {
@@ -683,7 +728,7 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
           case 0:
             _context.prev = 0;
             _context.next = 3;
-            return fetch("/api/proveedor/listar/", {
+            return fetch("/api/factura/listar/", {
               method: "GET",
               headers: {
                 "Content-Type": "application/json"
@@ -696,7 +741,7 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
               _context.next = 6;
               break;
             }
-            throw new Error("Error al cargar los proveedores");
+            throw new Error("Error al cargar las facturas");
           case 6:
             _context.next = 8;
             return response.json();
@@ -706,21 +751,21 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
               _context.next = 13;
               break;
             }
-            setProveedores(data.proveedores || []);
+            setFacturas(data.facturas || []);
             _context.next = 14;
             break;
           case 13:
-            throw new Error(data.message || "Error al cargar los proveedores");
+            throw new Error(data.message || "Error al cargar las facturas");
           case 14:
             _context.next = 20;
             break;
           case 16:
             _context.prev = 16;
             _context.t0 = _context["catch"](0);
-            console.error("Error al cargar proveedores:", _context.t0);
+            console.error("Error al cargar facturas:", _context.t0);
             setErrors(function (prev) {
               return _objectSpread(_objectSpread({}, prev), {}, {
-                general: "Error al cargar la lista de proveedores"
+                general: "Error al cargar la lista de facturas"
               });
             });
           case 20:
@@ -729,8 +774,66 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
         }
       }, _callee, null, [[0, 16]]);
     }));
-    return function fetchProveedores() {
+    return function fetchFacturas() {
       return _ref2.apply(this, arguments);
+    };
+  }();
+  var fetchProveedores = /*#__PURE__*/function () {
+    var _ref3 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2() {
+      var response, data;
+      return _regeneratorRuntime().wrap(function _callee2$(_context2) {
+        while (1) switch (_context2.prev = _context2.next) {
+          case 0:
+            _context2.prev = 0;
+            _context2.next = 3;
+            return fetch("/api/proveedor/listar/", {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              credentials: "include"
+            });
+          case 3:
+            response = _context2.sent;
+            if (response.ok) {
+              _context2.next = 6;
+              break;
+            }
+            throw new Error("Error al cargar los proveedores");
+          case 6:
+            _context2.next = 8;
+            return response.json();
+          case 8:
+            data = _context2.sent;
+            if (!data.success) {
+              _context2.next = 13;
+              break;
+            }
+            setProveedores(data.proveedores || []);
+            _context2.next = 14;
+            break;
+          case 13:
+            throw new Error(data.message || "Error al cargar los proveedores");
+          case 14:
+            _context2.next = 20;
+            break;
+          case 16:
+            _context2.prev = 16;
+            _context2.t0 = _context2["catch"](0);
+            console.error("Error al cargar proveedores:", _context2.t0);
+            setErrors(function (prev) {
+              return _objectSpread(_objectSpread({}, prev), {}, {
+                general: "Error al cargar la lista de proveedores"
+              });
+            });
+          case 20:
+          case "end":
+            return _context2.stop();
+        }
+      }, _callee2, null, [[0, 16]]);
+    }));
+    return function fetchProveedores() {
+      return _ref3.apply(this, arguments);
     };
   }();
   (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
@@ -878,22 +981,22 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
     return newErrors;
   };
   var handleSubmit = /*#__PURE__*/function () {
-    var _ref3 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee2(e) {
-      var validationErrors, formDataToSend, response, data;
-      return _regeneratorRuntime().wrap(function _callee2$(_context2) {
-        while (1) switch (_context2.prev = _context2.next) {
+    var _ref4 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee3(e) {
+      var validationErrors, _document$querySelect, formDataToSend, csrfToken, response, data;
+      return _regeneratorRuntime().wrap(function _callee3$(_context3) {
+        while (1) switch (_context3.prev = _context3.next) {
           case 0:
             e === null || e === void 0 || e.preventDefault();
             validationErrors = validateForm();
             if (!(Object.keys(validationErrors).length > 0)) {
-              _context2.next = 5;
+              _context3.next = 5;
               break;
             }
             setErrors(validationErrors);
-            return _context2.abrupt("return");
+            return _context3.abrupt("return");
           case 5:
             setIsSubmitting(true);
-            _context2.prev = 6;
+            _context3.prev = 6;
             formDataToSend = new FormData();
             formDataToSend.append("NombreEnvio", formData.NombreEnvio);
             formDataToSend.append("TipoEnvio", formData.TipoEnvio);
@@ -902,6 +1005,10 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
             formDataToSend.append("TotalEnvio", formData.TotalEnvio);
             formDataToSend.append("Proveedor", formData.Proveedor);
             formDataToSend.append("EnvioRecibido", formData.EnvioRecibido);
+            formDataToSend.append("HoraCreacion", formData.HoraCreacion);
+            if (formData.Factura) {
+              formDataToSend.append("Factura", formData.Factura);
+            }
             if (formData.FechaCompraEnvio) {
               formDataToSend.append("FechaCompraEnvio", formData.FechaCompraEnvio);
             }
@@ -911,61 +1018,64 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
             if (formData.FotoEnvio) {
               formDataToSend.append("FotoEnvio", formData.FotoEnvio);
             }
-            _context2.next = 20;
+
+            // Obtener el token CSRF
+            csrfToken = (_document$querySelect = document.querySelector("[name=csrfmiddlewaretoken]")) === null || _document$querySelect === void 0 ? void 0 : _document$querySelect.value;
+            _context3.next = 23;
             return fetch("/api/envio/crear/", {
               method: "POST",
-              headers: {
-                "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
-              },
               body: formDataToSend,
+              headers: {
+                "X-CSRFToken": csrfToken // Añadir el token CSRF en los headers
+              },
               credentials: "include"
             });
-          case 20:
-            response = _context2.sent;
-            _context2.next = 23;
-            return response.json();
           case 23:
-            data = _context2.sent;
+            response = _context3.sent;
+            _context3.next = 26;
+            return response.json();
+          case 26:
+            data = _context3.sent;
             if (response.ok) {
-              _context2.next = 29;
+              _context3.next = 32;
               break;
             }
             if (!data.errors) {
-              _context2.next = 28;
+              _context3.next = 31;
               break;
             }
             setErrors(data.errors);
             throw new Error(Object.values(data.errors)[0]);
-          case 28:
+          case 31:
             throw new Error(data.message || "Error al crear el envío");
-          case 29:
+          case 32:
             if (data.success) {
               onSubmit(data.envio);
               handleClose();
             }
-            _context2.next = 36;
+            _context3.next = 39;
             break;
-          case 32:
-            _context2.prev = 32;
-            _context2.t0 = _context2["catch"](6);
-            console.error("Error al crear envío:", _context2.t0);
+          case 35:
+            _context3.prev = 35;
+            _context3.t0 = _context3["catch"](6);
+            console.error("Error al crear envío:", _context3.t0);
             setErrors(function (prev) {
               return _objectSpread(_objectSpread({}, prev), {}, {
-                general: _context2.t0.message || "Error al crear el envío"
+                general: _context3.t0.message || "Error al crear el envío"
               });
             });
-          case 36:
-            _context2.prev = 36;
-            setIsSubmitting(false);
-            return _context2.finish(36);
           case 39:
+            _context3.prev = 39;
+            setIsSubmitting(false);
+            return _context3.finish(39);
+          case 42:
           case "end":
-            return _context2.stop();
+            return _context3.stop();
         }
-      }, _callee2, null, [[6, 32, 36, 39]]);
+      }, _callee3, null, [[6, 35, 39, 42]]);
     }));
     return function handleSubmit(_x) {
-      return _ref3.apply(this, arguments);
+      return _ref4.apply(this, arguments);
     };
   }();
   return {
@@ -976,6 +1086,8 @@ var useEnvioCreateModal = function useEnvioCreateModal(_ref) {
     isVisible: isVisible,
     previewUrl: previewUrl,
     proveedores: proveedores,
+    facturas: facturas,
+    // Agregado a los valores retornados
     handleClose: handleClose,
     handleSubmit: handleSubmit,
     handleInputChange: handleInputChange,
@@ -1095,15 +1207,24 @@ var useEnvioState = function useEnvioState() {
   // 1. Añade esta función nueva justo después de const itemsPerPage = 10;
   var procesarEnvios = function procesarEnvios(enviosData) {
     return enviosData.sort(function (a, b) {
-      // Si ambos están recibidos, mantener el orden original
-      if (a.EnvioRecibido && b.EnvioRecibido) {
+      // Si uno está pendiente y el otro no, el pendiente va primero
+      if (!a.EnvioRecibido && b.EnvioRecibido) return -1;
+      if (a.EnvioRecibido && !b.EnvioRecibido) return 1;
+
+      // Si ambos están en el mismo estado (pendiente o recibido)
+      if (a.EnvioRecibido === b.EnvioRecibido) {
+        // Para los pendientes, ordenar por fecha más reciente primero
+        if (!a.EnvioRecibido) {
+          // Convertir fechas a timestamps para comparación
+          var fechaA = new Date(a.FechaCompraEnvio).getTime();
+          var fechaB = new Date(b.FechaCompraEnvio).getTime();
+          return fechaB - fechaA; // Orden descendente (más reciente primero)
+        }
+
+        // Para los recibidos, mantener el orden original o también por fecha si prefieres
         return 0;
       }
-      // Si solo uno está recibido, poner el no recibido primero
-      if (a.EnvioRecibido) return 1;
-      if (b.EnvioRecibido) return -1;
-      // Si ninguno está recibido, ordenar por días transcurridos (más días primero)
-      return b.DiasTranscurridos - a.DiasTranscurridos;
+      return 0;
     });
   };
 
@@ -1404,7 +1525,12 @@ var useEnvioState = function useEnvioState() {
   // Filtrado de envíos
   var filteredEnvios = envios.filter(function (envio) {
     var searchString = searchTerm.toLowerCase();
-    return envio.NombreEnvio.toLowerCase().includes(searchString) || envio.TipoEnvio.toLowerCase().includes(searchString) || envio.Proveedor.NombreProveedor.toLowerCase().includes(searchString) || String(envio.DiasTranscurridos).includes(searchString);
+    var sinFactura = "sin factura";
+    return envio.NombreEnvio.toLowerCase().includes(searchString) || envio.TipoEnvio.toLowerCase().includes(searchString) || envio.Proveedor.NombreProveedor.toLowerCase().includes(searchString) || String(envio.DiasTranscurridos).includes(searchString) || String(envio.id).includes(searchString) ||
+    // Búsqueda para envíos con factura
+    envio.Factura && String(envio.Factura.id).includes(searchString) ||
+    // Búsqueda para envíos sin factura
+    !envio.Factura && sinFactura.includes(searchString);
   });
 
   // Cálculos de paginación
@@ -2023,9 +2149,16 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */ });
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 /* harmony import */ var react__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(react__WEBPACK_IMPORTED_MODULE_0__);
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/x.js");
-/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/circle-x.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/search.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/x.js");
+/* harmony import */ var lucide_react__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! lucide-react */ "./node_modules/lucide-react/dist/esm/icons/circle-x.js");
 /* harmony import */ var _hooks_useEnvioCreateModal__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../hooks/useEnvioCreateModal */ "./src/components/ProveedorComponents/ModEnvio/hooks/useEnvioCreateModal.js");
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t["return"] && (u = t["return"](), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 
 
 
@@ -2034,6 +2167,10 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
   var isOpen = _ref.isOpen,
     onClose = _ref.onClose,
     onSubmit = _ref.onSubmit;
+  var _useState = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(""),
+    _useState2 = _slicedToArray(_useState, 2),
+    searchTerm = _useState2[0],
+    setSearchTerm = _useState2[1];
   var _useEnvioCreateModal = (0,_hooks_useEnvioCreateModal__WEBPACK_IMPORTED_MODULE_1__.useEnvioCreateModal)({
       isOpen: isOpen,
       onClose: onClose,
@@ -2050,12 +2187,56 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
     handleSubmit = _useEnvioCreateModal.handleSubmit,
     handleInputChange = _useEnvioCreateModal.handleInputChange,
     handleFotoChange = _useEnvioCreateModal.handleFotoChange,
-    handleRemoveFoto = _useEnvioCreateModal.handleRemoveFoto;
+    handleRemoveFoto = _useEnvioCreateModal.handleRemoveFoto,
+    facturas = _useEnvioCreateModal.facturas;
+
+  // Filter facturas based on search term
+  var filteredFacturas = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(function () {
+    if (!searchTerm.trim()) return facturas;
+    return facturas === null || facturas === void 0 ? void 0 : facturas.filter(function (factura) {
+      var searchString = "".concat(factura.NumeroFactura, " ").concat(factura.Proveedor.NombreProveedor).toLowerCase();
+      return searchString.includes(searchTerm.toLowerCase());
+    });
+  }, [facturas, searchTerm]);
   var getInputBorderClass = function getInputBorderClass(value) {
     if (value && value.toString().trim() !== "") {
       return "border-green-400";
     }
     return "border-gray-300";
+  };
+
+  // Custom select component with search
+  var InvoiceSelect = function InvoiceSelect() {
+    return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+      className: "relative"
+    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+      className: "relative"
+    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+      className: "absolute inset-y-0 left-2 flex items-center pointer-events-none"
+    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_2__["default"], {
+      className: "h-4 w-4 text-gray-400"
+    })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
+      type: "text",
+      placeholder: "Buscar factura o proveedor...",
+      value: searchTerm,
+      onChange: function onChange(e) {
+        return setSearchTerm(e.target.value);
+      },
+      className: "w-full pl-8 pr-3 py-1.5 border-2 rounded-t\r focus:ring-2 focus:ring-blue-500 focus:outline-none\r transition-colors duration-200 border-gray-300"
+    })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", {
+      name: "Factura",
+      value: formData.Factura || "",
+      onChange: handleInputChange,
+      className: "w-full px-3 py-1.5 border-2 border-t-0 rounded-b\n          focus:ring-2 focus:ring-blue-500 focus:outline-none\n          transition-colors duration-200\n          ".concat(getInputBorderClass(formData.Factura)),
+      size: 5
+    }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
+      value: ""
+    }, "Sin factura"), filteredFacturas === null || filteredFacturas === void 0 ? void 0 : filteredFacturas.map(function (factura) {
+      return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
+        key: factura.id,
+        value: factura.id.toString()
+      }, "Nro Factura: ", factura.NumeroFactura, " | Proveedor:", " ", factura.Proveedor.NombreProveedor);
+    })));
   };
   if (!isVisible) return null;
   return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -2075,34 +2256,67 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
   }, "Nuevo Env\xEDo"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     onClick: handleClose,
     className: "p-1.5 hover:bg-gray-100 rounded-full transition-colors duration-150 absolute right-4"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_2__["default"], {
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], {
     className: "h-5 w-5"
   })))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "p-6 overflow-y-auto flex-1"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("form", {
     onSubmit: handleSubmit,
-    className: "space-y-4"
+    className: "space-y-3"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "space-y-4"
+    className: "space-y-3"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", {
     className: "font-medium"
   }, "Informaci\xF3n Principal"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
   }, "Nombre del Env\xEDo*"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "text",
     name: "NombreEnvio",
     value: formData.NombreEnvio,
     onChange: handleInputChange,
-    className: "w-full px-3 py-2 border-2 rounded mt-1 \n                            focus:ring-2 focus:ring-blue-500 focus:outline-none\n                            transition-colors duration-200\n                            ".concat(getInputBorderClass(formData.NombreEnvio))
+    className: "w-full px-3 py-1.5 border-2 rounded\n      focus:ring-2 focus:ring-blue-500 focus:outline-none\n      transition-colors duration-200\n      ".concat(getInputBorderClass(formData.NombreEnvio))
   }), errors.NombreEnvio && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-sm text-red-500 mt-1"
+    className: "text-xs text-red-500 mt-0.5"
   }, errors.NombreEnvio)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
+  }, "Factura"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "relative"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "relative"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
+    className: "absolute inset-y-0 left-2 flex items-center pointer-events-none"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_2__["default"], {
+    className: "h-4 w-4 text-gray-400"
+  })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
+    type: "text",
+    placeholder: "Buscar factura o proveedor...",
+    value: searchTerm,
+    onChange: function onChange(e) {
+      return setSearchTerm(e.target.value);
+    },
+    className: "w-full pl-8 pr-3 py-1.5 border-2 rounded-t\r focus:ring-2 focus:ring-blue-500 focus:outline-none\r transition-colors duration-200 border-gray-300"
+  })), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", {
+    name: "Factura",
+    value: formData.Factura || "",
+    onChange: handleInputChange,
+    className: "w-full px-3 py-1.5 border-2 border-t-0 rounded-b\n        focus:ring-2 focus:ring-blue-500 focus:outline-none\n        transition-colors duration-200\n        ".concat(getInputBorderClass(formData.Factura)),
+    size: 5
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
+    value: ""
+  }, "Sin factura"), filteredFacturas === null || filteredFacturas === void 0 ? void 0 : filteredFacturas.map(function (factura) {
+    return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
+      key: factura.id,
+      value: factura.id.toString()
+    }, "Nro Factura: ", factura.NumeroFactura, " | Proveedor:", " ", factura.Proveedor.NombreProveedor);
+  }))), errors.Factura && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
+    className: "text-xs text-red-500 mt-0.5"
+  }, errors.Factura)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
+    className: "text-sm font-medium block mb-0.5"
   }, "Tipo de Env\xEDo*"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", {
     name: "TipoEnvio",
     value: formData.TipoEnvio || "",
     onChange: handleInputChange,
-    className: "w-full px-3 py-2 border-2 rounded mt-1 \n                            focus:ring-2 focus:ring-blue-500 focus:outline-none\n                            transition-colors duration-200\n                            ".concat(getInputBorderClass(formData.TipoEnvio))
+    className: "w-full px-3 py-1.5 border-2 rounded\n                    focus:ring-2 focus:ring-blue-500 focus:outline-none\n                    transition-colors duration-200\n                    ".concat(getInputBorderClass(formData.TipoEnvio))
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
     value: ""
   }, "Seleccione un tipo"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
@@ -2110,20 +2324,20 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
   }, "Material"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
     value: "herramienta"
   }, "Herramienta")), errors.TipoEnvio && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-sm text-red-500 mt-1"
+    className: "text-xs text-red-500 mt-0.5"
   }, errors.TipoEnvio)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
   }, "Cantidad*"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "number",
     name: "CantidadEnvio",
     value: formData.CantidadEnvio,
     onChange: handleInputChange,
     min: "1",
-    className: "w-full px-3 py-2 border-2 rounded mt-1 \n                            focus:ring-2 focus:ring-blue-500 focus:outline-none\n                            transition-colors duration-200\n                            ".concat(getInputBorderClass(formData.CantidadEnvio))
+    className: "w-full px-3 py-1.5 border-2 rounded\n                    focus:ring-2 focus:ring-blue-500 focus:outline-none\n                    transition-colors duration-200\n                    ".concat(getInputBorderClass(formData.CantidadEnvio))
   }), errors.CantidadEnvio && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-sm text-red-500 mt-1"
+    className: "text-xs text-red-500 mt-0.5"
   }, errors.CantidadEnvio)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
   }, "Precio Unitario*"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "number",
     name: "PrecioEnvio",
@@ -2131,16 +2345,16 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
     onChange: handleInputChange,
     min: "0",
     step: "0.01",
-    className: "w-full px-3 py-2 border-2 rounded mt-1 \n                            focus:ring-2 focus:ring-blue-500 focus:outline-none\n                            transition-colors duration-200\n                            ".concat(getInputBorderClass(formData.PrecioEnvio))
+    className: "w-full px-3 py-1.5 border-2 rounded\n                    focus:ring-2 focus:ring-blue-500 focus:outline-none\n                    transition-colors duration-200\n                    ".concat(getInputBorderClass(formData.PrecioEnvio))
   }), errors.PrecioEnvio && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-sm text-red-500 mt-1"
+    className: "text-xs text-red-500 mt-0.5"
   }, errors.PrecioEnvio)), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
   }, "Proveedor*"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("select", {
     name: "Proveedor",
     value: formData.Proveedor || "",
     onChange: handleInputChange,
-    className: "w-full px-3 py-2 border-2 rounded mt-1 \n                            focus:ring-2 focus:ring-blue-500 focus:outline-none\n                            transition-colors duration-200\n                            ".concat(getInputBorderClass(formData.Proveedor))
+    className: "w-full px-3 py-1.5 border-2 rounded\n                    focus:ring-2 focus:ring-blue-500 focus:outline-none\n                    transition-colors duration-200\n                    ".concat(getInputBorderClass(formData.Proveedor))
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("option", {
     value: ""
   }, "Seleccione un proveedor"), proveedores.map(function (proveedor) {
@@ -2149,25 +2363,25 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
       value: proveedor.id.toString()
     }, proveedor.NombreProveedor);
   })), errors.Proveedor && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-sm text-red-500 mt-1"
+    className: "text-xs text-red-500 mt-0.5"
   }, errors.Proveedor))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "space-y-4"
+    className: "space-y-3"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("h3", {
     className: "font-medium"
   }, "Informaci\xF3n Adicional"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
   }, "Fecha de Compra"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "date",
     name: "FechaCompraEnvio",
     value: formData.FechaCompraEnvio || "",
     onChange: handleInputChange,
-    className: "w-full px-3 py-2 border-2 rounded mt-1 \n                            focus:ring-2 focus:ring-blue-500 focus:outline-none\n                            transition-colors duration-200\n                            ".concat(getInputBorderClass(formData.FechaCompraEnvio))
+    className: "w-full px-3 py-1.5 border-2 rounded\n                    focus:ring-2 focus:ring-blue-500 focus:outline-none\n                    transition-colors duration-200\n                    ".concat(getInputBorderClass(formData.FechaCompraEnvio))
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-xs text-gray-500 mt-1"
+    className: "text-xs text-gray-500 mt-0.5"
   }, "La fecha de compra se usar\xE1 para calcular los d\xEDas transcurridos")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
   }, "Estado del Env\xEDo"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "mt-2"
+    className: "mt-0.5"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
     className: "inline-flex items-center"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
@@ -2182,23 +2396,23 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
         }
       });
     },
-    className: "rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+    className: "rounded border-gray-300 text-blue-600 shadow-sm focus:ring-1"
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("span", {
-    className: "ml-2"
+    className: "ml-1.5"
   }, "Env\xEDo Recibido")), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-xs text-gray-500 mt-1"
+    className: "text-xs text-gray-500 mt-0.5"
   }, "Al marcar como recibido, se detendr\xE1 el contador de d\xEDas transcurridos"))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
   }, "Descripci\xF3n"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("textarea", {
     name: "DescripcionEnvio",
     value: formData.DescripcionEnvio || "",
     onChange: handleInputChange,
     rows: "3",
-    className: "w-full px-3 py-2 border-2 rounded mt-1 \n                            focus:ring-2 focus:ring-blue-500 focus:outline-none\n                            transition-colors duration-200\n                            ".concat(getInputBorderClass(formData.DescripcionEnvio))
+    className: "w-full px-3 py-1.5 border-2 rounded\n                    focus:ring-2 focus:ring-blue-500 focus:outline-none\n                    transition-colors duration-200\n                    ".concat(getInputBorderClass(formData.DescripcionEnvio))
   }))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", null, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
-    className: "text-sm font-medium"
+    className: "text-sm font-medium block mb-0.5"
   }, "Foto del Env\xEDo"), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "mt-1 flex items-center space-x-4"
+    className: "mt-0.5 flex items-center space-x-4"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("input", {
     type: "file",
     accept: "image/*",
@@ -2207,7 +2421,7 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
     id: "foto-envio"
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("label", {
     htmlFor: "foto-envio",
-    className: "px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 \r transition-colors duration-150"
+    className: "px-3 py-1.5 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 \r transition-colors duration-150"
   }, "Seleccionar imagen"), previewUrl && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "relative group"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -2215,21 +2429,21 @@ var EnvioCreateModal = function EnvioCreateModal(_ref) {
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", {
     src: previewUrl,
     alt: "Vista previa",
-    className: "h-16 w-16 object-cover rounded"
+    className: "h-12 w-12 object-cover rounded"
   }), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("button", {
     type: "button",
     onClick: handleRemoveFoto,
-    className: "absolute -top-2 -right-2 bg-white rounded-full shadow-md \r hover:bg-gray-100 p-0.5 transition-colors duration-150"
-  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_3__["default"], {
-    className: "w-5 h-5 text-gray-500"
+    className: "absolute -top-1 -right-1 bg-white rounded-full shadow-md \r hover:bg-gray-100 p-0.5 transition-colors duration-150"
+  }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement(lucide_react__WEBPACK_IMPORTED_MODULE_4__["default"], {
+    className: "w-4 h-4 text-gray-500"
   }))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "text-xs mt-1 text-gray-500"
+    className: "text-xs mt-0.5 text-gray-500"
   }, (_formData$FotoEnvio = formData.FotoEnvio) === null || _formData$FotoEnvio === void 0 ? void 0 : _formData$FotoEnvio.name))), errors.FotoEnvio && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-sm text-red-500 mt-1"
+    className: "text-xs text-red-500 mt-0.5"
   }, errors.FotoEnvio), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
-    className: "text-xs text-gray-500 mt-1"
+    className: "text-xs text-gray-500 mt-0.5"
   }, "Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG. Tama\xF1o m\xE1ximo: 10MB")), errors.general && /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
-    className: "p-4 bg-red-50 text-red-600 rounded"
+    className: "p-3 bg-red-50 text-red-600 rounded text-sm"
   }, errors.general))), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "p-6 border-t"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
@@ -3471,6 +3685,9 @@ video {
 .visible {
   visibility: visible;
 }
+.static {
+  position: static;
+}
 .fixed {
   position: fixed;
 }
@@ -3483,11 +3700,21 @@ video {
 .inset-0 {
   inset: 0px;
 }
+.inset-y-0 {
+  top: 0px;
+  bottom: 0px;
+}
 .-bottom-1 {
   bottom: -0.25rem;
 }
+.-right-1 {
+  right: -0.25rem;
+}
 .-right-2 {
   right: -0.5rem;
+}
+.-top-1 {
+  top: -0.25rem;
 }
 .-top-2 {
   top: -0.5rem;
@@ -3503,6 +3730,9 @@ video {
 }
 .left-1\\/2 {
   left: 50%;
+}
+.left-2 {
+  left: 0.5rem;
 }
 .left-3 {
   left: 0.75rem;
@@ -3525,9 +3755,6 @@ video {
 .top-2\\.5 {
   top: 0.625rem;
 }
-.left-2 {
-  left: 0.5rem;
-}
 .z-0 {
   z-index: 0;
 }
@@ -3540,6 +3767,9 @@ video {
 .z-\\[99999\\] {
   z-index: 99999;
 }
+.z-\\[9999\\] {
+  z-index: 9999;
+}
 .m-4 {
   margin: 1rem;
 }
@@ -3550,6 +3780,9 @@ video {
 .my-8 {
   margin-top: 2rem;
   margin-bottom: 2rem;
+}
+.mb-0\\.5 {
+  margin-bottom: 0.125rem;
 }
 .mb-1 {
   margin-bottom: 0.25rem;
@@ -3566,6 +3799,9 @@ video {
 .ml-1 {
   margin-left: 0.25rem;
 }
+.ml-1\\.5 {
+  margin-left: 0.375rem;
+}
 .ml-2 {
   margin-left: 0.5rem;
 }
@@ -3574,6 +3810,9 @@ video {
 }
 .mr-2 {
   margin-right: 0.5rem;
+}
+.mt-0\\.5 {
+  margin-top: 0.125rem;
 }
 .mt-1 {
   margin-top: 0.25rem;
@@ -3586,6 +3825,9 @@ video {
 }
 .mt-6 {
   margin-top: 1.5rem;
+}
+.block {
+  display: block;
 }
 .inline-block {
   display: inline-block;
@@ -3619,6 +3861,9 @@ video {
 }
 .h-3 {
   height: 0.75rem;
+}
+.h-3\\.5 {
+  height: 0.875rem;
 }
 .h-36 {
   height: 9rem;
@@ -3662,6 +3907,9 @@ video {
 .w-3 {
   width: 0.75rem;
 }
+.w-3\\.5 {
+  width: 0.875rem;
+}
 .w-32 {
   width: 8rem;
 }
@@ -3676,9 +3924,6 @@ video {
 }
 .w-6 {
   width: 1.5rem;
-}
-.w-64 {
-  width: 16rem;
 }
 .w-8 {
   width: 2rem;
@@ -3770,6 +4015,9 @@ video {
 }
 .justify-between {
   justify-content: space-between;
+}
+.gap-0\\.5 {
+  gap: 0.125rem;
 }
 .gap-1 {
   gap: 0.25rem;
@@ -3863,6 +4111,14 @@ video {
   border-top-right-radius: 0.375rem;
   border-bottom-right-radius: 0.375rem;
 }
+.rounded-b {
+  border-bottom-right-radius: 0.25rem;
+  border-bottom-left-radius: 0.25rem;
+}
+.rounded-t {
+  border-top-left-radius: 0.25rem;
+  border-top-right-radius: 0.25rem;
+}
 .border {
   border-width: 1px;
 }
@@ -3874,6 +4130,9 @@ video {
 }
 .border-t {
   border-top-width: 1px;
+}
+.border-t-0 {
+  border-top-width: 0px;
 }
 .border-blue-600 {
   --tw-border-opacity: 1;
@@ -3912,6 +4171,10 @@ video {
 .bg-blue-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(219 234 254 / var(--tw-bg-opacity));
+}
+.bg-blue-50 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(239 246 255 / var(--tw-bg-opacity));
 }
 .bg-gray-100 {
   --tw-bg-opacity: 1;
@@ -3988,6 +4251,9 @@ video {
 .p-2\\.5 {
   padding: 0.625rem;
 }
+.p-3 {
+  padding: 0.75rem;
+}
 .p-4 {
   padding: 1rem;
 }
@@ -3996,6 +4262,10 @@ video {
 }
 .p-8 {
   padding: 2rem;
+}
+.px-1\\.5 {
+  padding-left: 0.375rem;
+  padding-right: 0.375rem;
 }
 .px-2 {
   padding-left: 0.5rem;
@@ -4025,6 +4295,10 @@ video {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
 }
+.py-1\\.5 {
+  padding-top: 0.375rem;
+  padding-bottom: 0.375rem;
+}
 .py-2 {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
@@ -4051,6 +4325,12 @@ video {
 }
 .pt-4 {
   padding-top: 1rem;
+}
+.pl-8 {
+  padding-left: 2rem;
+}
+.pr-3 {
+  padding-right: 0.75rem;
 }
 .text-left {
   text-align: left;
@@ -4110,6 +4390,10 @@ video {
 .text-blue-600 {
   --tw-text-opacity: 1;
   color: rgb(37 99 235 / var(--tw-text-opacity));
+}
+.text-blue-700 {
+  --tw-text-opacity: 1;
+  color: rgb(29 78 216 / var(--tw-text-opacity));
 }
 .text-blue-800 {
   --tw-text-opacity: 1;
@@ -4508,7 +4792,7 @@ video {
   .xl\\:grid-cols-4 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-}`, "",{"version":3,"sources":["webpack://./src/styles/index.css"],"names":[],"mappings":"AAAA;EAAA,wBAAc;EAAd,wBAAc;EAAd,mBAAc;EAAd,mBAAc;EAAd,cAAc;EAAd,cAAc;EAAd,cAAc;EAAd,eAAc;EAAd,eAAc;EAAd,aAAc;EAAd,aAAc;EAAd,kBAAc;EAAd,sCAAc;EAAd,8BAAc;EAAd,6BAAc;EAAd,4BAAc;EAAd,eAAc;EAAd,oBAAc;EAAd,sBAAc;EAAd,uBAAc;EAAd,wBAAc;EAAd,kBAAc;EAAd,2BAAc;EAAd,4BAAc;EAAd,sCAAc;EAAd,kCAAc;EAAd,2BAAc;EAAd,sBAAc;EAAd,8BAAc;EAAd,YAAc;EAAd,kBAAc;EAAd,gBAAc;EAAd,iBAAc;EAAd,kBAAc;EAAd,cAAc;EAAd,gBAAc;EAAd,aAAc;EAAd,mBAAc;EAAd,qBAAc;EAAd,2BAAc;EAAd,yBAAc;EAAd,0BAAc;EAAd,2BAAc;EAAd,uBAAc;EAAd,wBAAc;EAAd,yBAAc;EAAd,sBAAc;EAAd,oBAAc;EAAd,sBAAc;EAAd,qBAAc;EAAd;AAAc;;AAAd;EAAA,wBAAc;EAAd,wBAAc;EAAd,mBAAc;EAAd,mBAAc;EAAd,cAAc;EAAd,cAAc;EAAd,cAAc;EAAd,eAAc;EAAd,eAAc;EAAd,aAAc;EAAd,aAAc;EAAd,kBAAc;EAAd,sCAAc;EAAd,8BAAc;EAAd,6BAAc;EAAd,4BAAc;EAAd,eAAc;EAAd,oBAAc;EAAd,sBAAc;EAAd,uBAAc;EAAd,wBAAc;EAAd,kBAAc;EAAd,2BAAc;EAAd,4BAAc;EAAd,sCAAc;EAAd,kCAAc;EAAd,2BAAc;EAAd,sBAAc;EAAd,8BAAc;EAAd,YAAc;EAAd,kBAAc;EAAd,gBAAc;EAAd,iBAAc;EAAd,kBAAc;EAAd,cAAc;EAAd,gBAAc;EAAd,aAAc;EAAd,mBAAc;EAAd,qBAAc;EAAd,2BAAc;EAAd,yBAAc;EAAd,0BAAc;EAAd,2BAAc;EAAd,uBAAc;EAAd,wBAAc;EAAd,yBAAc;EAAd,sBAAc;EAAd,oBAAc;EAAd,sBAAc;EAAd,qBAAc;EAAd;AAAc,CAAd;;CAAc,CAAd;;;CAAc;;AAAd;;;EAAA,sBAAc,EAAd,MAAc;EAAd,eAAc,EAAd,MAAc;EAAd,mBAAc,EAAd,MAAc;EAAd,qBAAc,EAAd,MAAc;AAAA;;AAAd;;EAAA,gBAAc;AAAA;;AAAd;;;;;;;;CAAc;;AAAd;;EAAA,gBAAc,EAAd,MAAc;EAAd,8BAAc,EAAd,MAAc;EAAd,gBAAc,EAAd,MAAc;EAAd,cAAc;KAAd,WAAc,EAAd,MAAc;EAAd,+HAAc,EAAd,MAAc;EAAd,6BAAc,EAAd,MAAc;EAAd,+BAAc,EAAd,MAAc;EAAd,wCAAc,EAAd,MAAc;AAAA;;AAAd;;;CAAc;;AAAd;EAAA,SAAc,EAAd,MAAc;EAAd,oBAAc,EAAd,MAAc;AAAA;;AAAd;;;;CAAc;;AAAd;EAAA,SAAc,EAAd,MAAc;EAAd,cAAc,EAAd,MAAc;EAAd,qBAAc,EAAd,MAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,yCAAc;UAAd,iCAAc;AAAA;;AAAd;;CAAc;;AAAd;;;;;;EAAA,kBAAc;EAAd,oBAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,cAAc;EAAd,wBAAc;AAAA;;AAAd;;CAAc;;AAAd;;EAAA,mBAAc;AAAA;;AAAd;;;;;CAAc;;AAAd;;;;EAAA,+GAAc,EAAd,MAAc;EAAd,6BAAc,EAAd,MAAc;EAAd,+BAAc,EAAd,MAAc;EAAd,cAAc,EAAd,MAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,cAAc;AAAA;;AAAd;;CAAc;;AAAd;;EAAA,cAAc;EAAd,cAAc;EAAd,kBAAc;EAAd,wBAAc;AAAA;;AAAd;EAAA,eAAc;AAAA;;AAAd;EAAA,WAAc;AAAA;;AAAd;;;;CAAc;;AAAd;EAAA,cAAc,EAAd,MAAc;EAAd,qBAAc,EAAd,MAAc;EAAd,yBAAc,EAAd,MAAc;AAAA;;AAAd;;;;CAAc;;AAAd;;;;;EAAA,oBAAc,EAAd,MAAc;EAAd,8BAAc,EAAd,MAAc;EAAd,gCAAc,EAAd,MAAc;EAAd,eAAc,EAAd,MAAc;EAAd,oBAAc,EAAd,MAAc;EAAd,oBAAc,EAAd,MAAc;EAAd,uBAAc,EAAd,MAAc;EAAd,cAAc,EAAd,MAAc;EAAd,SAAc,EAAd,MAAc;EAAd,UAAc,EAAd,MAAc;AAAA;;AAAd;;CAAc;;AAAd;;EAAA,oBAAc;AAAA;;AAAd;;;CAAc;;AAAd;;;;EAAA,0BAAc,EAAd,MAAc;EAAd,6BAAc,EAAd,MAAc;EAAd,sBAAc,EAAd,MAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,aAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,gBAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,wBAAc;AAAA;;AAAd;;CAAc;;AAAd;;EAAA,YAAc;AAAA;;AAAd;;;CAAc;;AAAd;EAAA,6BAAc,EAAd,MAAc;EAAd,oBAAc,EAAd,MAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,wBAAc;AAAA;;AAAd;;;CAAc;;AAAd;EAAA,0BAAc,EAAd,MAAc;EAAd,aAAc,EAAd,MAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,kBAAc;AAAA;;AAAd;;CAAc;;AAAd;;;;;;;;;;;;;EAAA,SAAc;AAAA;;AAAd;EAAA,SAAc;EAAd,UAAc;AAAA;;AAAd;EAAA,UAAc;AAAA;;AAAd;;;EAAA,gBAAc;EAAd,SAAc;EAAd,UAAc;AAAA;;AAAd;;CAAc;AAAd;EAAA,UAAc;AAAA;;AAAd;;CAAc;;AAAd;EAAA,gBAAc;AAAA;;AAAd;;;CAAc;;AAAd;EAAA,UAAc,EAAd,MAAc;EAAd,cAAc,EAAd,MAAc;AAAA;;AAAd;;EAAA,UAAc,EAAd,MAAc;EAAd,cAAc,EAAd,MAAc;AAAA;;AAAd;;CAAc;;AAAd;;EAAA,eAAc;AAAA;;AAAd;;CAAc;AAAd;EAAA,eAAc;AAAA;;AAAd;;;;CAAc;;AAAd;;;;;;;;EAAA,cAAc,EAAd,MAAc;EAAd,sBAAc,EAAd,MAAc;AAAA;;AAAd;;CAAc;;AAAd;;EAAA,eAAc;EAAd,YAAc;AAAA;;AAAd,wEAAc;AAAd;EAAA,aAAc;AAAA;AACd;EAAA;AAAoB;AAApB;;EAAA;IAAA;EAAoB;AAAA;AAApB;;EAAA;IAAA;EAAoB;AAAA;AAApB;;EAAA;IAAA;EAAoB;AAAA;AAApB;;EAAA;IAAA;EAAoB;AAAA;AAApB;;EAAA;IAAA;EAAoB;AAAA;AACpB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,iBAAmB;EAAnB;AAAmB;AAAnB;EAAA,gBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB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","sourcesContent":["@tailwind base;\r\n@tailwind components;\r\n@tailwind utilities;"],"sourceRoot":""}]);
+}`, "",{"version":3,"sources":["webpack://./src/styles/index.css"],"names":[],"mappings":"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B;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,QAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA,iBAAmB;EAAnB;AAAmB;AAAnB;EAAA,gBAAmB;EAAnB;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA;AAAmB;AAAnB;EAAA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","sourcesContent":["@tailwind base;\r\n@tailwind components;\r\n@tailwind utilities;"],"sourceRoot":""}]);
 // Exports
 /* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (___CSS_LOADER_EXPORT___);
 

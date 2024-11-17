@@ -15,6 +15,8 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     DescripcionEnvio: "",
     Proveedor: "",
     FotoEnvio: null,
+    Factura: "", // Agregado campo Factura
+    HoraCreacion: new Date().toISOString(), // Agregado campo HoraCreacion
   });
 
   // UI States
@@ -24,11 +26,13 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [proveedores, setProveedores] = useState([]);
+  const [facturas, setFacturas] = useState([]); // Nuevo estado para facturas
 
   // Efecto para cargar la lista de proveedores y resetear el formulario
   useEffect(() => {
     if (isOpen) {
       fetchProveedores();
+      fetchFacturas(); // Nueva llamada
       setFormData({
         NombreEnvio: "",
         TipoEnvio: "",
@@ -40,11 +44,41 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
         DescripcionEnvio: "",
         Proveedor: "",
         FotoEnvio: null,
+        Factura: "",
+        HoraCreacion: new Date().toISOString(),
       });
       setPreviewUrl(null);
       setErrors({});
     }
   }, [isOpen, today]);
+  const fetchFacturas = async () => {
+    try {
+      const response = await fetch("/api/factura/listar/", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al cargar las facturas");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setFacturas(data.facturas || []);
+      } else {
+        throw new Error(data.message || "Error al cargar las facturas");
+      }
+    } catch (error) {
+      console.error("Error al cargar facturas:", error);
+      setErrors((prev) => ({
+        ...prev,
+        general: "Error al cargar la lista de facturas",
+      }));
+    }
+  };
 
   const fetchProveedores = async () => {
     try {
@@ -221,7 +255,6 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
 
     return newErrors;
   };
-
   const handleSubmit = async (e) => {
     e?.preventDefault();
 
@@ -242,7 +275,11 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
       formDataToSend.append("TotalEnvio", formData.TotalEnvio);
       formDataToSend.append("Proveedor", formData.Proveedor);
       formDataToSend.append("EnvioRecibido", formData.EnvioRecibido);
+      formDataToSend.append("HoraCreacion", formData.HoraCreacion);
 
+      if (formData.Factura) {
+        formDataToSend.append("Factura", formData.Factura);
+      }
       if (formData.FechaCompraEnvio) {
         formDataToSend.append("FechaCompraEnvio", formData.FechaCompraEnvio);
       }
@@ -253,13 +290,17 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
         formDataToSend.append("FotoEnvio", formData.FotoEnvio);
       }
 
+      // Obtener el token CSRF
+      const csrfToken = document.querySelector(
+        "[name=csrfmiddlewaretoken]"
+      )?.value;
+
       const response = await fetch("/api/envio/crear/", {
         method: "POST",
-        headers: {
-          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
-            .value,
-        },
         body: formDataToSend,
+        headers: {
+          "X-CSRFToken": csrfToken, // Añadir el token CSRF en los headers
+        },
         credentials: "include",
       });
 
@@ -296,6 +337,7 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     isVisible,
     previewUrl,
     proveedores,
+    facturas, // Agregado a los valores retornados
     handleClose,
     handleSubmit,
     handleInputChange,

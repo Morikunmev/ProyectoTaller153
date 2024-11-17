@@ -1441,9 +1441,18 @@ def mod_envio(request):
 def listar_envios(request):
     if request.method == 'GET':
         try:
-            envios = Envio.objects.all().select_related('Proveedor')
+            # Agregamos 'Factura' al select_related para optimizar las consultas
+            envios = Envio.objects.all().select_related('Proveedor', 'Factura')
             data = []
             for envio in envios:
+                # Preparar datos de factura
+                factura_data = None
+                if envio.Factura:
+                    factura_data = {
+                        'id': envio.Factura.id,
+                        # Puedes agregar más campos de la factura si los necesitas
+                    }
+
                 data.append({
                     'id': envio.id,
                     'NombreEnvio': envio.NombreEnvio,
@@ -1453,7 +1462,7 @@ def listar_envios(request):
                     'TipoEnvio': envio.TipoEnvio,
                     'FechaCompraEnvio': envio.FechaCompraEnvio.isoformat() if envio.FechaCompraEnvio else None,
                     'EnvioRecibido': envio.EnvioRecibido,
-                    'DiasTranscurridos': envio.dias_transcurridos_actual,  # Usando la propiedad que calculamos
+                    'DiasTranscurridos': envio.dias_transcurridos_actual,
                     'DescripcionEnvio': envio.DescripcionEnvio,
                     'Proveedor': {
                         'id': envio.Proveedor.id,
@@ -1462,6 +1471,7 @@ def listar_envios(request):
                         'MarcaProveedor': envio.Proveedor.MarcaProveedor
                     },
                     'FotoEnvio': envio.FotoEnvio.url if envio.FotoEnvio else None,
+                    'Factura': factura_data  # Agregamos la información de la factura
                 })
             return JsonResponse({
                 'success': True,
@@ -1555,6 +1565,19 @@ def crear_envio(request):
                         'Proveedor': 'Proveedor no válido'
                     }
                 }, status=400)
+
+            # Validación de Factura opcional
+            factura = None
+            if data.get('Factura'):
+                try:
+                    factura = Factura.objects.get(id=data.get('Factura'))
+                except (Factura.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'Factura': 'Factura no válida'
+                        }
+                    }, status=400)
             
             nuevo_envio = Envio(
                 NombreEnvio=data.get('NombreEnvio'),
@@ -1565,7 +1588,8 @@ def crear_envio(request):
                 FechaCompraEnvio=fecha_compra,
                 EnvioRecibido=data.get('EnvioRecibido', '').lower() == 'true',
                 DescripcionEnvio=data.get('DescripcionEnvio'),
-                Proveedor=proveedor
+                Proveedor=proveedor,
+                Factura=factura  # Agregado campo Factura
             )
             
             # Manejar la foto
@@ -1620,7 +1644,11 @@ def crear_envio(request):
                         'NombreProveedor': nuevo_envio.Proveedor.NombreProveedor,
                         'RutProveedor': nuevo_envio.Proveedor.RutProveedor
                     },
-                    'FotoEnvio': nuevo_envio.FotoEnvio.url if nuevo_envio.FotoEnvio else None
+                    'FotoEnvio': nuevo_envio.FotoEnvio.url if nuevo_envio.FotoEnvio else None,
+                    'Factura': {  # Agregada información de factura
+                        'id': nuevo_envio.Factura.id,
+                        'NumeroFactura': nuevo_envio.Factura.NumeroFactura,
+                    } if nuevo_envio.Factura else None
                 }
             })
             

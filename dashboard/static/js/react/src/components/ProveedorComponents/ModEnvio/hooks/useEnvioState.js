@@ -34,15 +34,25 @@ export const useEnvioState = () => {
   // 1. Añade esta función nueva justo después de const itemsPerPage = 10;
   const procesarEnvios = (enviosData) => {
     return enviosData.sort((a, b) => {
-      // Si ambos están recibidos, mantener el orden original
-      if (a.EnvioRecibido && b.EnvioRecibido) {
+      // Si uno está pendiente y el otro no, el pendiente va primero
+      if (!a.EnvioRecibido && b.EnvioRecibido) return -1;
+      if (a.EnvioRecibido && !b.EnvioRecibido) return 1;
+
+      // Si ambos están en el mismo estado (pendiente o recibido)
+      if (a.EnvioRecibido === b.EnvioRecibido) {
+        // Para los pendientes, ordenar por fecha más reciente primero
+        if (!a.EnvioRecibido) {
+          // Convertir fechas a timestamps para comparación
+          const fechaA = new Date(a.FechaCompraEnvio).getTime();
+          const fechaB = new Date(b.FechaCompraEnvio).getTime();
+          return fechaB - fechaA; // Orden descendente (más reciente primero)
+        }
+
+        // Para los recibidos, mantener el orden original o también por fecha si prefieres
         return 0;
       }
-      // Si solo uno está recibido, poner el no recibido primero
-      if (a.EnvioRecibido) return 1;
-      if (b.EnvioRecibido) return -1;
-      // Si ninguno está recibido, ordenar por días transcurridos (más días primero)
-      return b.DiasTranscurridos - a.DiasTranscurridos;
+
+      return 0;
     });
   };
 
@@ -245,11 +255,18 @@ export const useEnvioState = () => {
   // Filtrado de envíos
   const filteredEnvios = envios.filter((envio) => {
     const searchString = searchTerm.toLowerCase();
+    const sinFactura = "sin factura";
+
     return (
       envio.NombreEnvio.toLowerCase().includes(searchString) ||
       envio.TipoEnvio.toLowerCase().includes(searchString) ||
       envio.Proveedor.NombreProveedor.toLowerCase().includes(searchString) ||
-      String(envio.DiasTranscurridos).includes(searchString)
+      String(envio.DiasTranscurridos).includes(searchString) ||
+      String(envio.id).includes(searchString) ||
+      // Búsqueda para envíos con factura
+      (envio.Factura && String(envio.Factura.id).includes(searchString)) ||
+      // Búsqueda para envíos sin factura
+      (!envio.Factura && sinFactura.includes(searchString))
     );
   });
 

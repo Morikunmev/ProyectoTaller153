@@ -109,16 +109,18 @@ const EnvioListar = () => {
     <table className="w-full">
       <thead>
         <tr className="text-left text-gray-500 text-sm border-b bg-gray-50">
-          <th className="p-4 font-medium w-16">FOTO</th>
-          <th className="p-4 font-medium">NOMBRE</th>
-          <th className="p-4 font-medium">TIPO</th>
-          <th className="p-4 font-medium">CANTIDAD</th>
-          <th className="p-4 font-medium">PRECIO</th>
-          <th className="p-4 font-medium">TOTAL</th>
-          <th className="p-4 font-medium">ESTADO</th>
-          <th className="p-4 font-medium">DÍAS</th>
-          <th className="p-4 font-medium">PROVEEDOR</th>
-          <th className="p-4 font-medium text-center">ACCIONES</th>
+          <th className="p-2 font-medium">ID</th>
+          <th className="p-2 font-medium">ID FACTURA</th>
+          <th className="p-2 font-medium w-12">FOTO</th>
+          <th className="p-2 font-medium">NOMBRE</th>
+          <th className="p-2 font-medium">TIPO</th>
+          <th className="p-2 font-medium">CANTIDAD</th>
+          <th className="p-2 font-medium">PRECIO</th>
+          <th className="p-2 font-medium">TOTAL</th>
+          <th className="p-2 font-medium">ESTADO</th>
+          <th className="p-2 font-medium">DÍAS</th>
+          <th className="p-2 font-medium">PROVEEDOR</th>
+          <th className="p-2 font-medium text-center">ACCIONES</th>
         </tr>
       </thead>
       <tbody>
@@ -127,8 +129,20 @@ const EnvioListar = () => {
             key={envio.id}
             className="border-b last:border-b-0 hover:bg-gray-50"
           >
-            <td className="p-4">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+            <td className="p-2 font-medium text-gray-900">#{envio.id}</td>
+            <td className="p-2">
+              {envio.Factura ? (
+                <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                  #{envio.Factura.id}
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                  Sin factura
+                </span>
+              )}
+            </td>
+            <td className="p-2">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
                 {envio.FotoEnvio ? (
                   <img
                     src={envio.FotoEnvio}
@@ -142,15 +156,15 @@ const EnvioListar = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Package className="w-6 h-6 text-gray-400" />
+                    <Package className="w-4 h-4 text-gray-400" />
                   </div>
                 )}
               </div>
             </td>
-            <td className="p-4 font-medium">{envio.NombreEnvio}</td>
-            <td className="p-4">
+            <td className="p-2 font-medium">{envio.NombreEnvio}</td>
+            <td className="p-2">
               <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
                   envio.TipoEnvio === "material"
                     ? "bg-blue-100 text-blue-800"
                     : "bg-purple-100 text-purple-800"
@@ -159,12 +173,12 @@ const EnvioListar = () => {
                 {envio.TipoEnvio === "material" ? "Material" : "Herramienta"}
               </span>
             </td>
-            <td className="p-4">{envio.CantidadEnvio}</td>
-            <td className="p-4">${envio.PrecioEnvio.toLocaleString()}</td>
-            <td className="p-4">${envio.TotalEnvio.toLocaleString()}</td>
-            <td className="p-4">
+            <td className="p-2">{envio.CantidadEnvio}</td>
+            <td className="p-2">${envio.PrecioEnvio.toLocaleString()}</td>
+            <td className="p-2">${envio.TotalEnvio.toLocaleString()}</td>
+            <td className="p-2">
               <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
                   envio.EnvioRecibido
                     ? "bg-green-100 text-green-800"
                     : "bg-yellow-100 text-yellow-800"
@@ -173,14 +187,11 @@ const EnvioListar = () => {
                 {envio.EnvioRecibido ? "Recibido" : "Pendiente"}
               </span>
             </td>
-            <td className="p-4">
-              {/*
-              group: Es una clase especial de Tailwind que permite que los elementos hijos respondan cuando se hace hover sobre el elemento padre. 
-              relative: Establece un contexto de posicionamiento para los elementos hijos que usen absolute.*/}
-              <div className="relative group">
+            <td className="p-2">
+              <div className="relative">
                 <div className="cursor-pointer inline-block">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium inline-flex items-center ${
+                    className={`px-1.5 py-0.5 rounded-full text-xs font-medium inline-flex items-center ${
                       envio.EnvioRecibido
                         ? "bg-gray-100 text-gray-800"
                         : envio.DiasTranscurridos > 30
@@ -192,6 +203,9 @@ const EnvioListar = () => {
                   >
                     {envio.DiasTranscurridos} días
                   </span>
+                </div>
+                {/* Contenedor del tooltip con z-index alto y posición estática */}
+                <div className="static">
                   <TiempoTooltip
                     envioId={envio.id}
                     envioRecibido={envio.EnvioRecibido}
@@ -199,12 +213,33 @@ const EnvioListar = () => {
                 </div>
               </div>
             </td>
-            <td className="p-4 text-gray-600">
+            <td className="p-2 text-gray-600">
               {envio.Proveedor.NombreProveedor}
             </td>
-            <td className="p-4">
-              <div className="flex justify-center">
-                {renderActionButtons(envio)}
+            <td className="p-2">
+              <div className="flex justify-center gap-1">
+                <button
+                  onClick={() => handleUpdateModalOpen(envio)}
+                  className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
+                           transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
+                  title="Editar envío"
+                >
+                  <Pencil className="w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110" />
+                  Editar
+                </button>
+                <button
+                  onClick={() => handleDelete(envio)}
+                  className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
+                           relative overflow-hidden group transition-all duration-200 ease-in-out 
+                           hover:scale-105 active:scale-95"
+                  title="Eliminar envío"
+                >
+                  <Trash2
+                    className="w-3.5 h-3.5 relative z-10 transition-transform duration-200 
+                              group-hover:scale-110 group-hover:rotate-12"
+                  />
+                  <span className="relative z-10">Eliminar</span>
+                </button>
               </div>
             </td>
           </tr>
@@ -229,7 +264,7 @@ const EnvioListar = () => {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por nombre, tipo o proveedor..."
+            placeholder="Buscar por ID, factura, nombre, tipo o proveedor..."
             className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
                      focus:outline-none focus:ring-1 focus:ring-blue-500
                      transition-colors duration-200"
@@ -315,7 +350,7 @@ const EnvioListar = () => {
       </div>
 
       {/* Contenido Principal */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-white rounded-lg shadow">
         {error ? (
           <div className="text-center p-8 text-red-500">
             <p className="text-lg">{error}</p>
@@ -330,7 +365,7 @@ const EnvioListar = () => {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="relative">
               <div
                 className={`transition-opacity duration-300 ease-in-out
                           ${
@@ -383,6 +418,9 @@ const EnvioListar = () => {
         envio={envioToUpdate}
         onEnvioUpdated={handleEnvioUpdated}
       />
+
+      {/* Portal para los tooltips */}
+      <div id="tooltip-root" className="relative z-[9999]" />
     </div>
   );
 };
