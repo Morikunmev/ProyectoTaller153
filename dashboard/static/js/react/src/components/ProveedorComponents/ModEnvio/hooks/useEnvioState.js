@@ -222,6 +222,44 @@ export const useEnvioState = () => {
 
     return () => clearTimeout(timer);
   };
+  const handleToggleEstado = useCallback(
+    async (envioId) => {
+      try {
+        const response = await fetch(`/api/envios/${envioId}/toggle-status/`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+              .value,
+          },
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          throw new Error("Error al actualizar el estado");
+        }
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+          // Actualizamos el estado localmente sin recargar todos los envíos
+          setEnvios((prevEnvios) => {
+            const updatedEnvios = prevEnvios.map((envio) =>
+              envio.id === envioId
+                ? { ...envio, EnvioRecibido: !envio.EnvioRecibido }
+                : envio
+            );
+            return procesarEnvios(updatedEnvios);
+          });
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        setError("Error al actualizar el estado del envío");
+      }
+      // Quitamos el setLoading(false) de aquí
+    },
+    [procesarEnvios]
+  );
 
   // Manejador para crear nuevo envío
   const handleEnvioCreated = async (nuevoEnvio) => {
@@ -315,6 +353,7 @@ export const useEnvioState = () => {
     handleUpdateModalOpen,
     handleUpdateModalClose,
     handleEnvioUpdated,
+    handleToggleEstado,
 
     // Setters
     setDeleteModalOpen,

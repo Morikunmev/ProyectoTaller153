@@ -35,6 +35,8 @@ const EnvioListar = () => {
     deleteModalOpen,
     envioToDelete,
     isDeleting,
+    handleToggleEstado,
+
     updateModalOpen,
     envioToUpdate,
     isUpdating,
@@ -177,15 +179,25 @@ const EnvioListar = () => {
             <td className="p-2">${envio.PrecioEnvio.toLocaleString()}</td>
             <td className="p-2">${envio.TotalEnvio.toLocaleString()}</td>
             <td className="p-2">
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
-                  envio.EnvioRecibido
-                    ? "bg-green-100 text-green-800"
-                    : "bg-yellow-100 text-yellow-800"
-                }`}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleToggleEstado(envio.id);
+                }}
+                className={`w-full px-1.5 py-0.5 rounded-full text-xs font-medium 
+                           inline-flex items-center justify-center gap-1
+                           transition-all duration-200 hover:scale-105 cursor-pointer
+                           ${
+                             envio.EnvioRecibido
+                               ? "bg-green-100 text-green-800 hover:bg-green-200"
+                               : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                           }`}
               >
+                <Package className="w-3 h-3" />
                 {envio.EnvioRecibido ? "Recibido" : "Pendiente"}
-              </span>
+              </button>
             </td>
             <td className="p-2">
               <div className="relative">
@@ -204,7 +216,6 @@ const EnvioListar = () => {
                     {envio.DiasTranscurridos} días
                   </span>
                 </div>
-                {/* Contenedor del tooltip con z-index alto y posición estática */}
                 <div className="static">
                   <TiempoTooltip
                     envioId={envio.id}
@@ -219,7 +230,11 @@ const EnvioListar = () => {
             <td className="p-2">
               <div className="flex justify-center gap-1">
                 <button
-                  onClick={() => handleUpdateModalOpen(envio)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleUpdateModalOpen(envio);
+                  }}
                   className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
                            transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
                   title="Editar envío"
@@ -228,7 +243,11 @@ const EnvioListar = () => {
                   Editar
                 </button>
                 <button
-                  onClick={() => handleDelete(envio)}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleDelete(envio);
+                  }}
                   className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
                            relative overflow-hidden group transition-all duration-200 ease-in-out 
                            hover:scale-105 active:scale-95"

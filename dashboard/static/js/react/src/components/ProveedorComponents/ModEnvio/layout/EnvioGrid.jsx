@@ -9,7 +9,7 @@ import {
   Clock,
 } from "lucide-react";
 
-const EnvioGrid = ({ envio, onEdit, onDelete }) => {
+const EnvioGrid = ({ envio, onEdit, onDelete, onToggleEstado }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "Fecha no disponible";
     try {
@@ -60,17 +60,8 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
           </div>
         )}
 
-        {/* Badges en columna */}
-        <div className="absolute top-2 right-2 flex flex-col gap-1">
-          <span
-            className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-              envio.EnvioRecibido
-                ? "bg-green-100 text-green-800"
-                : "bg-yellow-100 text-yellow-800"
-            }`}
-          >
-            {envio.EnvioRecibido ? "Recibido" : "Pendiente"}
-          </span>
+        {/* Badge de días */}
+        <div className="absolute top-2 right-2">
           <span
             className={`px-2 py-0.5 rounded-full text-xs font-medium ${getDiasTranscurridosStyle()}`}
           >
@@ -89,7 +80,7 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
           >
             {envio.NombreEnvio}
           </h3>
-          <div className="flex items-center mt-1">
+          <div className="flex items-center gap-2 mt-1">
             <span
               className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium ${
                 envio.TipoEnvio === "material"
@@ -99,6 +90,26 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
             >
               {envio.TipoEnvio === "material" ? "Material" : "Herramienta"}
             </span>
+            {/* Botón de estado */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleEstado(envio.id);
+              }}
+              className={`px-2 py-0.5 rounded-full text-xs font-medium 
+                         inline-flex items-center gap-1
+                         transition-all duration-200 hover:scale-105 cursor-pointer
+                         ${
+                           envio.EnvioRecibido
+                             ? "bg-green-100 text-green-800 hover:bg-green-200"
+                             : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+                         }`}
+            >
+              <Package className="w-3 h-3" />
+              {envio.EnvioRecibido ? "Recibido" : "Pendiente"}
+            </button>
           </div>
           <div
             className="mt-1 text-xs text-gray-600 truncate"
@@ -131,7 +142,11 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
         {/* Botones */}
         <div className="grid grid-cols-2 gap-2 pt-2 border-t">
           <button
-            onClick={onEdit}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onEdit();
+            }}
             className="flex items-center justify-center gap-1 p-1 text-xs text-blue-600 hover:text-blue-800
                      border border-blue-600 hover:border-blue-800 rounded-lg
                      transition-all duration-200 ease-in-out hover:bg-blue-50"
@@ -140,7 +155,11 @@ const EnvioGrid = ({ envio, onEdit, onDelete }) => {
             <span>Editar</span>
           </button>
           <button
-            onClick={onDelete}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onDelete();
+            }}
             className="flex items-center justify-center gap-1 p-1 text-xs text-red-600 hover:text-red-800
                      border border-red-600 hover:border-red-800 rounded-lg
                      transition-all duration-200 ease-in-out hover:bg-red-50"

@@ -28,9 +28,14 @@ from cloudinary.models import CloudinaryField
 from cloudinary.utils import cloudinary_url
 from cloudinary_storage.storage import MediaCloudinaryStorage
 from cloudinary.exceptions import Error as CloudinaryError
+from datetime import date
+
+
 
 # Excel imports
 import xlsxwriter
+from django.http import JsonResponse
+
 
 # Local imports
 from .models import Proveedor, Factura, Envio
@@ -2073,3 +2078,35 @@ def obtener_tiempo_detallado(request, envio_id):
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
+    
+@require_http_methods(["PATCH"])
+def toggle_envio_status(request, envio_id):
+    try:
+        envio = Envio.objects.get(pk=envio_id)
+        envio.EnvioRecibido = not envio.EnvioRecibido
+        
+        # Si el envío se marca como no recibido, actualizar los días transcurridos
+        if not envio.EnvioRecibido:
+            envio.DiasTranscurridos = (date.today() - envio.FechaCompraEnvio).days
+            
+        envio.save()
+        
+        return JsonResponse({
+            'status': 'success',
+            'data': {
+                'id': envio.id,
+                'estado': envio.EnvioRecibido,
+                'diasTranscurridos': envio.DiasTranscurridos
+            }
+        })
+        
+    except Envio.DoesNotExist:
+        return JsonResponse({
+            'status': 'error',
+            'error': 'Envío no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'status': 'error',
+            'error': str(e)
+        }, status=400)

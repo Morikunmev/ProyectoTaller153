@@ -45,6 +45,7 @@ urlpatterns = [
     path('api/envio/tiempo-detallado/<int:envio_id>/', 
          views.obtener_tiempo_detallado, 
          name='obtener_tiempo_detallado'),
+    path('api/envios/<int:envio_id>/toggle-status/', views.toggle_envio_status, name='toggle-envio-status'),
 
 
     
