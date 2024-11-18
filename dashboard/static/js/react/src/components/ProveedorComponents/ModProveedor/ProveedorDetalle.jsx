@@ -1,127 +1,117 @@
-import React, { useState } from "react";
-import { ArrowLeft, Save } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Calendar, MapPin, Phone, Building2 } from "lucide-react";
 
 const ProveedorDetalle = ({ onBack }) => {
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [proveedores, setProveedores] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      // Aquí irá la lógica para guardar en la base de datos
-      console.log("Guardando...", { title, content });
-      // Simular tiempo de guardado
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      onBack(); // Volver a la vista principal después de guardar
-    } catch (error) {
-      console.error("Error al guardar:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const fetchProveedores = async () => {
+      try {
+        const response = await fetch("/api/consultar_proveedores");
+        const data = await response.json();
+        setProveedores(data);
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProveedores();
+  }, []);
+
+  if (loading) {
+    return <div className="text-center p-4">Cargando...</div>;
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg">
-      {/* Header del Editor */}
-      <div className="border-b px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Volver"
+    <div className="container mx-auto p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {proveedores.map((proveedor, index) => (
+          <div
+            key={index}
+            className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
           >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="text-xl font-bold text-gray-900">Detalle Proveedor</h1>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white
-               transition-all duration-200 
-               ${
-                 loading
-                   ? "bg-blue-400 cursor-not-allowed"
-                   : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-               }`}
-        >
-          <Save className="w-4 h-4" />
-          {loading ? "Guardando..." : "Guardar cambios"}
-        </button>
-      </div>
-
-      {/* Formulario del Editor */}
-      <form onSubmit={handleSave} className="p-6 space-y-6">
-        {/* Campo Título */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Título de la página
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={loading}
-            className="w-full px-4 py-2 border rounded-lg 
-                     focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                     disabled:bg-gray-100 disabled:cursor-not-allowed"
-            placeholder="Ingrese el título..."
-          />
-        </div>
-
-        {/* Campo Contenido */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Contenido
-          </label>
-          <div className="border rounded-lg p-4 bg-gray-50">
-            {/* Barra de herramientas del editor (simulada) */}
-            <div className="flex gap-2 mb-4 pb-4 border-b">
-              <button
-                type="button"
-                className="p-2 hover:bg-gray-200 rounded"
-                title="Negrita"
-              >
-                B
-              </button>
-              <button
-                type="button"
-                className="p-2 hover:bg-gray-200 rounded italic"
-                title="Cursiva"
-              >
-                I
-              </button>
-              <button
-                type="button"
-                className="p-2 hover:bg-gray-200 rounded underline"
-                title="Subrayado"
-              >
-                U
-              </button>
+            {/* Imagen/Preview */}
+            <div className="w-full h-48 bg-gray-100 relative">
+              {proveedor.FotoProveedor ? (
+                <img
+                  src={proveedor.FotoProveedor}
+                  alt={proveedor.NombreProveedor}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    e.target.nextSibling.style.display = "flex";
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Building2 className="w-16 h-16 text-gray-400" />
+                </div>
+              )}
             </div>
 
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              disabled={loading}
-              rows={15}
-              className="w-full px-4 py-2 border rounded-lg
-                       focus:ring-2 focus:ring-blue-500 focus:border-blue-500
-                       disabled:bg-gray-100 disabled:cursor-not-allowed"
-              placeholder="Ingrese el contenido de la página..."
-            />
-          </div>
-        </div>
+            {/* Contenido */}
+            <div className="p-4">
+              <h3 className="text-xl font-semibold mb-2">
+                {proveedor.NombreProveedor}
+              </h3>
 
-        {/* Información adicional */}
-        <div className="text-sm text-gray-500">
-          <p>* Los cambios se guardarán automáticamente</p>
-          <p>* Use las herramientas de formato para mejorar el contenido</p>
-        </div>
-      </form>
+              <div className="space-y-3 text-gray-600">
+                <p>
+                  <span className="font-medium">RUT:</span>{" "}
+                  {proveedor.RutProveedor}
+                </p>
+                <p>
+                  <span className="font-medium">Marca:</span>{" "}
+                  {proveedor.MarcaProveedor}
+                </p>
+
+                {proveedor.CiudadProveedor && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-400" />
+                    <span>
+                      {[
+                        proveedor.CiudadProveedor,
+                        proveedor.RegionProveedor,
+                        proveedor.PaisProveedor,
+                      ]
+                        .filter(Boolean)
+                        .join(", ")}
+                    </span>
+                  </div>
+                )}
+
+                {proveedor.TelefonoProveedor && (
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <span>{proveedor.TelefonoProveedor}</span>
+                  </div>
+                )}
+              </div>
+
+              {proveedor.ComentarioProveedor && (
+                <div className="mt-4 p-3 bg-gray-50 rounded text-sm">
+                  {proveedor.ComentarioProveedor}
+                </div>
+              )}
+
+              <div className="mt-4 pt-4 border-t text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>
+                    Creado:{" "}
+                    {new Date(
+                      proveedor.FechaCreacionProveedor
+                    ).toLocaleDateString("es-ES")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

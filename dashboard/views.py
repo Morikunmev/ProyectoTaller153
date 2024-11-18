@@ -29,6 +29,7 @@ from cloudinary.utils import cloudinary_url
 from cloudinary_storage.storage import MediaCloudinaryStorage
 from cloudinary.exceptions import Error as CloudinaryError
 from datetime import date
+from django.views import View
 
 
 
@@ -2110,3 +2111,49 @@ def toggle_envio_status(request, envio_id):
             'status': 'error',
             'error': str(e)
         }, status=400)
+        
+        
+def consultar_proveedores(request):
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT * FROM consultar_proveedores()")
+        columns = [col[0] for col in cursor.description]
+        proveedores = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        formatted_proveedores = []
+        for proveedor in proveedores:
+            foto_url = proveedor['foto_proveedor']
+            if foto_url and not foto_url.startswith('http'):
+                foto_url = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
+
+            formatted_proveedores.append({
+                'NombreProveedor': proveedor['nombre_proveedor'],
+                'RutProveedor': proveedor['rut_proveedor'],
+                'MarcaProveedor': proveedor['marca_proveedor'],
+                'ComentarioProveedor': proveedor['comentario_proveedor'],
+                'CiudadProveedor': proveedor['ciudad_proveedor'],
+                'RegionProveedor': proveedor['region_proveedor'],
+                'PaisProveedor': proveedor['pais_proveedor'],
+                'TelefonoProveedor': proveedor['telefono_proveedor'],
+                'FotoProveedor': foto_url,
+                'FechaCreacionProveedor': proveedor['fecha_creacion'],
+                'FechaModificacionProveedor': proveedor['fecha_modificacion']
+            })
+    
+    return JsonResponse(formatted_proveedores, safe=False)
+
+def proveedor_detail(request, pk):
+   proveedor = Proveedor.objects.get(pk=pk)
+   data = {
+       'NombreProveedor': proveedor.NombreProveedor,
+       'RutProveedor': proveedor.RutProveedor,
+       'MarcaProveedor': proveedor.MarcaProveedor,
+       'ComentarioProveedor': proveedor.ComentarioProveedor,
+       'CiudadProveedor': proveedor.CiudadProveedor,
+       'RegionProveedor': proveedor.RegionProveedor,
+       'PaisProveedor': proveedor.PaisProveedor,
+       'TelefonoProveedor': proveedor.TelefonoProveedor,
+       'FotoProveedor': str(proveedor.FotoProveedor.url) if proveedor.FotoProveedor else None,
+       'FechaCreacionProveedor': proveedor.FechaCreacionProveedor,
+       'FechaModificacionProveedor': proveedor.FechaModificacionProveedor,
+   }
+   return JsonResponse(data)

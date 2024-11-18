@@ -20,6 +20,8 @@ urlpatterns = [
     path('api/proveedor/<int:proveedor_id>/eliminar/', views.eliminar_proveedor, name='eliminar_proveedor'),
     path('api/proveedores/<int:proveedor_id>/actualizar', views.actualizar_proveedor, name='actualizar_proveedor'),
     path('api/proveedores/exportar-excel/', views.exportar_proveedores_excel, name='exportar_proveedores_excel'),
+    path('api/proveedor/<int:pk>/', views.proveedor_detail, name='proveedor-detail'),   
+    path('api/consultar_proveedores/', views.consultar_proveedores, name='consultar-proveedores'),
 
 
 
