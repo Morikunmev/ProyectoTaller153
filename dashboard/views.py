@@ -2115,45 +2115,104 @@ def toggle_envio_status(request, envio_id):
         
 def consultar_proveedores(request):
     with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM consultar_proveedores()")
-        columns = [col[0] for col in cursor.description]
-        proveedores = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        try:
+            print("Ejecutando consulta de proveedores...")
+            cursor.execute("""
+                SELECT 
+                    p."NombreProveedor",
+                    p."RutProveedor",
+                    p."MarcaProveedor",
+                    p."ComentarioProveedor",
+                    p."CiudadProveedor",
+                    p."RegionProveedor",
+                    p."PaisProveedor",
+                    p."TelefonoProveedor",
+                    p."FotoProveedor",
+                    p."FechaCreacionProveedor",
+                    p."FechaModificacionProveedor"
+                FROM consultar_proveedores() p
+                ORDER BY p."NombreProveedor"
+            """)
+            
+            columns = [col[0] for col in cursor.description]
+            proveedores = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            
+            formatted_proveedores = []
+            for proveedor in proveedores:
+                foto_url = proveedor['FotoProveedor']
+                if foto_url:
+                    foto_url = foto_url.strip()
+                    # Eliminar 'image/upload/' si ya está presente
+                    if foto_url.startswith('image/upload/'):
+                        foto_url = foto_url.replace('image/upload/', '')
+                    
+                    # Asegurarse de que la URL tenga el formato correcto
+                    foto_url = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
+                    print(f"URL de foto final:", foto_url)
+
+                formatted_proveedores.append({
+                    'NombreProveedor': proveedor['NombreProveedor'],
+                    'RutProveedor': proveedor['RutProveedor'],
+                    'MarcaProveedor': proveedor['MarcaProveedor'],
+                    'ComentarioProveedor': proveedor['ComentarioProveedor'] or '',
+                    'CiudadProveedor': proveedor['CiudadProveedor'] or '',
+                    'RegionProveedor': proveedor['RegionProveedor'] or '',
+                    'PaisProveedor': proveedor['PaisProveedor'] or '',
+                    'TelefonoProveedor': proveedor['TelefonoProveedor'] or '',
+                    'FotoProveedor': foto_url,
+                    'FechaCreacionProveedor': proveedor['FechaCreacionProveedor'].isoformat() if proveedor['FechaCreacionProveedor'] else None,
+                    'FechaModificacionProveedor': proveedor['FechaModificacionProveedor'].isoformat() if proveedor['FechaModificacionProveedor'] else None
+                })
+
+            if formatted_proveedores:
+                print("Primer proveedor formateado:", formatted_proveedores[0])
+
+            return JsonResponse({
+                'success': True,
+                'proveedores': formatted_proveedores
+            })
+
+        except Exception as e:
+            print("Error en consultar_proveedores:", str(e))
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+def proveedor_detail(request, pk):
+    try:
+        proveedor = Proveedor.objects.get(pk=pk)
         
-        formatted_proveedores = []
-        for proveedor in proveedores:
-            foto_url = proveedor['foto_proveedor']
-            if foto_url and not foto_url.startswith('http'):
+        # Manejar la URL de la foto
+        foto_url = None
+        if proveedor.FotoProveedor:
+            foto_url = str(proveedor.FotoProveedor.url)
+            if not foto_url.startswith(('http://', 'https://')):
                 foto_url = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
 
-            formatted_proveedores.append({
-                'NombreProveedor': proveedor['nombre_proveedor'],
-                'RutProveedor': proveedor['rut_proveedor'],
-                'MarcaProveedor': proveedor['marca_proveedor'],
-                'ComentarioProveedor': proveedor['comentario_proveedor'],
-                'CiudadProveedor': proveedor['ciudad_proveedor'],
-                'RegionProveedor': proveedor['region_proveedor'],
-                'PaisProveedor': proveedor['pais_proveedor'],
-                'TelefonoProveedor': proveedor['telefono_proveedor'],
-                'FotoProveedor': foto_url,
-                'FechaCreacionProveedor': proveedor['fecha_creacion'],
-                'FechaModificacionProveedor': proveedor['fecha_modificacion']
-            })
-    
-    return JsonResponse(formatted_proveedores, safe=False)
-
-def proveedor_detail(request, pk):
-   proveedor = Proveedor.objects.get(pk=pk)
-   data = {
-       'NombreProveedor': proveedor.NombreProveedor,
-       'RutProveedor': proveedor.RutProveedor,
-       'MarcaProveedor': proveedor.MarcaProveedor,
-       'ComentarioProveedor': proveedor.ComentarioProveedor,
-       'CiudadProveedor': proveedor.CiudadProveedor,
-       'RegionProveedor': proveedor.RegionProveedor,
-       'PaisProveedor': proveedor.PaisProveedor,
-       'TelefonoProveedor': proveedor.TelefonoProveedor,
-       'FotoProveedor': str(proveedor.FotoProveedor.url) if proveedor.FotoProveedor else None,
-       'FechaCreacionProveedor': proveedor.FechaCreacionProveedor,
-       'FechaModificacionProveedor': proveedor.FechaModificacionProveedor,
-   }
-   return JsonResponse(data)
+        data = {
+            'NombreProveedor': proveedor.NombreProveedor,
+            'RutProveedor': proveedor.RutProveedor,
+            'MarcaProveedor': proveedor.MarcaProveedor,
+            'ComentarioProveedor': proveedor.ComentarioProveedor or '',
+            'CiudadProveedor': proveedor.CiudadProveedor or '',
+            'RegionProveedor': proveedor.RegionProveedor or '',
+            'PaisProveedor': proveedor.PaisProveedor or '',
+            'TelefonoProveedor': proveedor.TelefonoProveedor or '',
+            'FotoProveedor': foto_url,
+            'FechaCreacionProveedor': proveedor.FechaCreacionProveedor,
+            'FechaModificacionProveedor': proveedor.FechaModificacionProveedor,
+        }
+        return JsonResponse({
+            'success': True,
+            'proveedor': data
+        })
+    except Proveedor.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Proveedor no encontrado'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)

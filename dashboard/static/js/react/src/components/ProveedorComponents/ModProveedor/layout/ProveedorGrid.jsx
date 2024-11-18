@@ -2,20 +2,14 @@ import React from "react";
 import { Calendar, UserCircle, Pencil, Trash2 } from "lucide-react";
 
 const ProveedorGrid = ({ proveedor, onEdit, onDelete }) => {
-  // Función para formatear la fecha
   const formatDate = (dateString) => {
     if (!dateString) return "Fecha no disponible";
 
     try {
-      // Crear objeto Date desde la cadena ISO
       const date = new Date(dateString);
-
-      // Verificar si la fecha es válida
       if (isNaN(date.getTime())) {
         return "Fecha no disponible";
       }
-
-      // Configurar opciones de formato
       const options = {
         year: "numeric",
         month: "long",
@@ -24,8 +18,6 @@ const ProveedorGrid = ({ proveedor, onEdit, onDelete }) => {
         minute: "2-digit",
         hour12: true,
       };
-
-      // Formatear en español
       return new Intl.DateTimeFormat("es-ES", options).format(date);
     } catch (error) {
       console.error("Error al formatear la fecha:", error, dateString);
@@ -33,9 +25,8 @@ const ProveedorGrid = ({ proveedor, onEdit, onDelete }) => {
     }
   };
 
-
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
+    <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200">
       {/* Imagen/Preview */}
       <div className="w-full h-48 bg-gray-100 relative">
         {proveedor.FotoProveedor ? (
@@ -55,11 +46,11 @@ const ProveedorGrid = ({ proveedor, onEdit, onDelete }) => {
         )}
       </div>
 
-      {/* Contenido */}
-      <div className="p-4">
+      {/* Contenido con scroll automático */}
+      <div className="p-4 max-h-[calc(100vh-16rem)] overflow-y-auto">
         {/* Nombre */}
         <h3
-          className="font-medium text-lg mb-2 truncate"
+          className="font-medium text-lg mb-2"
           title={proveedor.NombreProveedor}
         >
           {proveedor.NombreProveedor}
@@ -70,7 +61,7 @@ const ProveedorGrid = ({ proveedor, onEdit, onDelete }) => {
           <p className="text-sm text-gray-500">RUT: {proveedor.RutProveedor}</p>
           <div className="flex items-center text-sm text-gray-500">
             <Calendar className="w-4 h-4 mr-2" />
-            <span>
+            <span className="break-words">
               Creado el {formatDate(proveedor.FechaCreacionProveedor)}
             </span>
           </div>

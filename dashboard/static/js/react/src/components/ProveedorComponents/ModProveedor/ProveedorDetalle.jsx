@@ -4,15 +4,23 @@ import { Calendar, MapPin, Phone, Building2 } from "lucide-react";
 const ProveedorDetalle = ({ onBack }) => {
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchProveedores = async () => {
       try {
         const response = await fetch("/api/consultar_proveedores");
         const data = await response.json();
-        setProveedores(data);
+
+        if (data.success && data.proveedores) {
+          console.log("Datos recibidos:", data.proveedores);
+          setProveedores(data.proveedores);
+        } else {
+          throw new Error("Formato de respuesta inválido");
+        }
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error al cargar proveedores:", error);
+        setError("Error al cargar los proveedores");
       } finally {
         setLoading(false);
       }
@@ -22,7 +30,27 @@ const ProveedorDetalle = ({ onBack }) => {
   }, []);
 
   if (loading) {
-    return <div className="text-center p-4">Cargando...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <p className="text-gray-600">Cargando proveedores...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  if (!proveedores.length) {
+    return (
+      <div className="flex items-center justify-center min-h-[200px]">
+        <p className="text-gray-600">No hay proveedores disponibles</p>
+      </div>
+    );
   }
 
   return (
@@ -31,19 +59,33 @@ const ProveedorDetalle = ({ onBack }) => {
         {proveedores.map((proveedor, index) => (
           <div
             key={index}
-            className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+            className="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
           >
             {/* Imagen/Preview */}
             <div className="w-full h-48 bg-gray-100 relative">
               {proveedor.FotoProveedor ? (
                 <img
                   src={proveedor.FotoProveedor}
-                  alt={proveedor.NombreProveedor}
+                  alt={`Vista previa de ${proveedor.NombreProveedor}`}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
+                    console.error(
+                      "Error cargando imagen:",
+                      proveedor.FotoProveedor
+                    );
+                    const fallbackDiv = document.createElement("div");
+                    fallbackDiv.className =
+                      "w-full h-full flex items-center justify-center";
+                    fallbackDiv.innerHTML =
+                      '<svg class="w-16 h-16 text-gray-400" ...></svg>';
+                    e.target.parentNode.replaceChild(fallbackDiv, e.target);
                   }}
+                  onLoad={() =>
+                    console.log(
+                      "Imagen cargada correctamente:",
+                      proveedor.FotoProveedor
+                    )
+                  }
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
