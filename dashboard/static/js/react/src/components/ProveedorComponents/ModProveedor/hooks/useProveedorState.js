@@ -26,6 +26,8 @@ export const useProveedorState = () => {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [proveedorToUpdate, setProveedorToUpdate] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [currentView, setCurrentView] = useState("list");
+
 
   // Estados para el proceso de eliminación
   const [proveedorToDelete, setProveedorToDelete] = useState(null);
@@ -240,6 +242,8 @@ export const useProveedorState = () => {
     updateModalOpen,
     proveedorToUpdate,
     isUpdating,
+    currentView,
+    setCurrentView,
 
     // Manejadores
     handleOpenModal,
