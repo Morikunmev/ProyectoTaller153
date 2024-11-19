@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Calendar, MapPin, Phone, Building2 } from "lucide-react";
+import { Calendar, MapPin, Phone, Building2, Search } from "lucide-react";
 
 const ProveedorDetalle = ({ onBack }) => {
   const [proveedores, setProveedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchProveedores = async () => {
@@ -28,6 +29,10 @@ const ProveedorDetalle = ({ onBack }) => {
 
     fetchProveedores();
   }, []);
+
+  const filteredProveedores = proveedores.filter((proveedor) =>
+    proveedor.NombreProveedor.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -54,9 +59,27 @@ const ProveedorDetalle = ({ onBack }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 m-16">
+    <div className="space-y-6">
+      {/* Título del módulo */}
+      <h1 className="text-2xl font-bold text-gray-900">Detalle Proveedores</h1>
+
+      {/* Barra de búsqueda */}
+      <div className="relative w-[300px]">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Buscar proveedor..."
+          className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
+                    focus:outline-none focus:ring-1 focus:ring-blue-500
+                    transition-colors duration-200"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      {/* Grid de proveedores */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {proveedores.map((proveedor, index) => (
+        {filteredProveedores.map((proveedor, index) => (
           <div
             key={index}
             className="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
