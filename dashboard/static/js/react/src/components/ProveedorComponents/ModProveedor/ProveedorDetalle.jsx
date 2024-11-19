@@ -1,8 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar, MapPin, Phone, Building2, Search } from "lucide-react";
 
 const ProveedorDetalle = ({ proveedores, loading, error }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   const filteredProveedores = proveedores.filter((proveedor) =>
     proveedor.NombreProveedor.toLowerCase().includes(searchTerm.toLowerCase())
@@ -33,11 +38,12 @@ const ProveedorDetalle = ({ proveedores, loading, error }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div
+      className={`space-y-6 transition-all duration-300 ease-in-out
+      ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+    >
       {/* Título del módulo */}
-      <h1 className="text-2xl font-bold text-gray-900">
-        Detalle Proveedores
-      </h1>
+      <h1 className="text-2xl font-bold text-gray-900">Detalle Proveedores</h1>
 
       {/* Barra de búsqueda */}
       <div className="relative w-[300px]">
