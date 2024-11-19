@@ -226,7 +226,11 @@ const ProveedorListar = () => {
         {/* Main Content */}
         <div className="max-w-7xl mx-auto p-6">
           {currentView === "detalle" ? (
-            <ProveedorDetalle onBack={() => setCurrentView("list")} />
+            <ProveedorDetalle
+              proveedores={filteredProveedores}
+              loading={loading}
+              error={error}
+            />
           ) : (
             <>
               {/* Título del módulo */}

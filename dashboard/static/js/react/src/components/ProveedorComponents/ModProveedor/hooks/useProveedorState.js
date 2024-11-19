@@ -28,7 +28,6 @@ export const useProveedorState = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [currentView, setCurrentView] = useState("list");
 
-
   // Estados para el proceso de eliminación
   const [proveedorToDelete, setProveedorToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -69,6 +68,8 @@ export const useProveedorState = () => {
       setError(null);
     };
   }, []);
+
+  
 
   // Función para manejar la apertura del modal de eliminación
   const handleDelete = useCallback((proveedor) => {

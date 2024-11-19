@@ -1,34 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Calendar, MapPin, Phone, Building2, Search } from "lucide-react";
 
-const ProveedorDetalle = ({ onBack }) => {
-  const [proveedores, setProveedores] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const ProveedorDetalle = ({ proveedores, loading, error }) => {
   const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    const fetchProveedores = async () => {
-      try {
-        const response = await fetch("/api/consultar_proveedores");
-        const data = await response.json();
-
-        if (data.success && data.proveedores) {
-          console.log("Datos recibidos:", data.proveedores);
-          setProveedores(data.proveedores);
-        } else {
-          throw new Error("Formato de respuesta inválido");
-        }
-      } catch (error) {
-        console.error("Error al cargar proveedores:", error);
-        setError("Error al cargar los proveedores");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProveedores();
-  }, []);
 
   const filteredProveedores = proveedores.filter((proveedor) =>
     proveedor.NombreProveedor.toLowerCase().includes(searchTerm.toLowerCase())
@@ -61,7 +35,9 @@ const ProveedorDetalle = ({ onBack }) => {
   return (
     <div className="space-y-6">
       {/* Título del módulo */}
-      <h1 className="text-2xl font-bold text-gray-900">Detalle Proveedores</h1>
+      <h1 className="text-2xl font-bold text-gray-900">
+        Detalle Proveedores
+      </h1>
 
       {/* Barra de búsqueda */}
       <div className="relative w-[300px]">
