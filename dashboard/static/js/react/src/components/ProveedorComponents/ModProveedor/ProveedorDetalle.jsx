@@ -211,21 +211,23 @@ const ProveedorDetalle = () => {
         {filteredProveedores.map((proveedor, index) => (
           <div
             key={index}
-            className="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200"
+            className="bg-gray-300 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 h-auto"
           >
-            <div className="w-full h-48 bg-gray-100 relative">
+            <div className="relative">
+              {" "}
+              {/* Quita w-full h-48 bg-gray-100 */}
               {proveedor.FotoProveedor ? (
                 <img
                   src={proveedor.FotoProveedor}
                   alt={`Vista previa de ${proveedor.NombreProveedor}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-48 object-cover" // Mantén las dimensiones en la imagen
                   onError={(e) => {
                     e.target.style.display = "none";
                     e.target.nextSibling.style.display = "flex";
                   }}
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full h-48 flex items-center justify-center bg-gray-100">
                   <Building2 className="w-16 h-16 text-gray-400" />
                 </div>
               )}
@@ -287,60 +289,70 @@ const ProveedorDetalle = () => {
                 </div>
               )}
 
-              {proveedor.facturas && proveedor.facturas.length > 0 && (
+              {proveedor.facturas && proveedor.facturas.length > 0 ? (
                 <div className="mt-4 border-t pt-4">
                   <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
                     <FileText className="w-5 h-5" />
                     Facturas ({proveedor.facturas.length})
                   </h4>
-                  {proveedor.facturas.map((factura, facturaIdx) => (
-                    <div
-                      key={facturaIdx}
-                      className="mb-4 p-3 bg-gray-50 rounded relative"
-                    >
-                      <div
-                        className="absolute top-2 right-2 w-6 h-6 bg-blue-100 rounded-full 
-                                    flex items-center justify-center text-xs font-medium text-blue-600"
-                      >
-                        {facturaIdx + 1}
-                      </div>
-                      <p className="font-medium">#{factura.NumeroFactura}</p>
-                      <p className="text-sm text-gray-600">
-                        {new Date(factura.FechaEmision).toLocaleDateString(
-                          "es-ES"
-                        )}
-                      </p>
+                  {proveedor.facturas.map((factura, facturaIdx) => {
+                    const allEnviosRecibidos = factura.envios?.every(
+                      (envio) => envio.EnvioRecibido
+                    );
 
-                      {factura.envios && factura.envios.length > 0 && (
-                        <div className="mt-3 border-t border-gray-200 pt-3">
-                          <h5 className="text-sm font-medium flex items-center gap-2 mb-2">
-                            <Package className="w-4 h-4" />
-                            Envíos ({factura.envios.length})
-                          </h5>
-                          {factura.envios.map((envio, envioIdx) => (
-                            <div
-                              key={envioIdx}
-                              className="text-sm p-2 bg-white rounded mb-2 last:mb-0"
-                            >
-                              <p className="font-medium">{envio.NombreEnvio}</p>
-                              <p className="text-gray-600">
-                                Cantidad: {envio.CantidadEnvio} - Total: $
-                                {envio.TotalEnvio}
-                              </p>
-                              <p className="text-gray-600">
-                                Estado:{" "}
-                                {envio.EnvioRecibido
-                                  ? "Recibido"
-                                  : "En tránsito"}
-                              </p>
-                            </div>
-                          ))}
+                    return (
+                      <div
+                        key={facturaIdx}
+                        className={`mb-4 p-3 ${
+                          allEnviosRecibidos ? "bg-green-200" : "bg-red-200"
+                        } rounded relative`}
+                      >
+                        <div
+                          className="absolute top-2 right-2 w-6 h-6 bg-blue-100 rounded-full 
+                     flex items-center justify-center text-xs font-medium text-blue-600"
+                        >
+                          {facturaIdx + 1}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <p className="font-medium">#{factura.NumeroFactura}</p>
+                        <p className="text-sm text-gray-600">
+                          {new Date(factura.FechaEmision).toLocaleDateString(
+                            "es-ES"
+                          )}
+                        </p>
+
+                        {factura.envios && factura.envios.length > 0 && (
+                          <div className="mt-3 border-t border-gray-200 pt-3">
+                            <h5 className="text-sm font-medium flex items-center gap-2 mb-2">
+                              <Package className="w-4 h-4" />
+                              Envíos ({factura.envios.length})
+                            </h5>
+                            {factura.envios.map((envio, envioIdx) => (
+                              <div
+                                key={envioIdx}
+                                className="text-sm p-2 bg-white rounded mb-2 last:mb-0"
+                              >
+                                <p className="font-medium">
+                                  {envio.NombreEnvio}
+                                </p>
+                                <p className="text-gray-600">
+                                  Cantidad: {envio.CantidadEnvio} - Total: $
+                                  {envio.TotalEnvio}
+                                </p>
+                                <p className="text-gray-600">
+                                  Estado:{" "}
+                                  {envio.EnvioRecibido
+                                    ? "Recibido"
+                                    : "En tránsito"}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         ))}
