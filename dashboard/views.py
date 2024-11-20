@@ -2114,71 +2114,77 @@ def toggle_envio_status(request, envio_id):
         
         
 def consultar_proveedores_detalle(request):
-    with connection.cursor() as cursor:
-        try:
-            cursor.execute("""
-                SELECT 
-                    p.id,
-                    p."NombreProveedor",
-                    p."RutProveedor",
-                    p."MarcaProveedor",
-                    p."ComentarioProveedor",
-                    p."CiudadProveedor",
-                    p."RegionProveedor",
-                    p."PaisProveedor",
-                    p."TelefonoProveedor",
-                    p."FotoProveedor",
-                    p."FechaCreacionProveedor",
-                    json_agg(
-                        json_build_object(
-                            'NumeroFactura', f."NumeroFactura",
-                            'FechaEmision', f."FechaEmision",
-                            'envios', COALESCE(
-                                (
-                                    SELECT json_agg(
-                                        json_build_object(
-                                            'NombreEnvio', e."NombreEnvio",
-                                            'CantidadEnvio', e."CantidadEnvio",
-                                            'TotalEnvio', e."TotalEnvio",
-                                            'EnvioRecibido', e."EnvioRecibido"
-                                        )
-                                    )
-                                    FROM dashboard_envio e
-                                    WHERE e."Factura_id" = f.id
-                                ),
-                                '[]'::json
-                            )
-                        )
-                    ) FILTER (WHERE f.id IS NOT NULL) as facturas
-                FROM dashboard_proveedor p
-                LEFT JOIN dashboard_factura f ON f."Proveedor_id" = p.id
-                GROUP BY p.id
-            """)
-            
-            columns = [col[0] for col in cursor.description]
-            proveedores = [dict(zip(columns, row)) for row in cursor.fetchall()]
-            
-            for proveedor in proveedores:
-                if proveedor['FotoProveedor']:
-                    foto_url = proveedor['FotoProveedor'].strip()
-                    if foto_url.startswith('image/upload/'):
-                        foto_url = foto_url.replace('image/upload/', '')
-                    proveedor['FotoProveedor'] = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
-                
-                # Convert datetime to string
-                if proveedor['FechaCreacionProveedor']:
-                    proveedor['FechaCreacionProveedor'] = proveedor['FechaCreacionProveedor'].isoformat()
-                
-                # Ensure facturas is always a list
-                if proveedor['facturas'] is None:
-                    proveedor['facturas'] = []
-            return JsonResponse({
-                'success': True,
-                'proveedores': proveedores
-            })
-        except Exception as e:
-            print("Error en consultar_proveedores_detalle:", str(e))
-            return JsonResponse({
-                'success': False,
-                'message': str(e)
-            }, status=500)
+   with connection.cursor() as cursor:
+       try:
+           # Consulta SQL que obtiene proveedores y sus facturas/envíos anidados
+           cursor.execute("""
+               WITH envios_json AS (
+                   SELECT 
+                       f.id as factura_id,
+                       json_agg(
+                           json_build_object(
+                               'NombreEnvio', e."NombreEnvio",
+                               'CantidadEnvio', e."CantidadEnvio", 
+                               'TotalEnvio', e."TotalEnvio",
+                               'EnvioRecibido', e."EnvioRecibido"
+                           )
+                       ) as envios_data
+                   FROM dashboard_envio e
+                   JOIN dashboard_factura f ON e."Factura_id" = f.id 
+                   GROUP BY f.id
+               )
+               SELECT 
+                   p.id,
+                   p."NombreProveedor",
+                   p."RutProveedor",
+                   p."MarcaProveedor",
+                   p."ComentarioProveedor", 
+                   p."CiudadProveedor",
+                   p."RegionProveedor",
+                   p."PaisProveedor",
+                   p."TelefonoProveedor",
+                   p."FotoProveedor",
+                   p."FechaCreacionProveedor",
+                   COALESCE(
+                       json_agg(
+                           json_build_object(
+                               'NumeroFactura', f."NumeroFactura",
+                               'FechaEmision', f."FechaEmision",
+                               'envios', COALESCE(ej.envios_data, '[]'::json)
+                           )
+                       ) FILTER (WHERE f.id IS NOT NULL),
+                       '[]'::json
+                   ) as facturas
+               FROM dashboard_proveedor p
+               LEFT JOIN dashboard_factura f ON f."Proveedor_id" = p.id
+               LEFT JOIN envios_json ej ON ej.factura_id = f.id
+               GROUP BY p.id
+           """)
+           
+           columns = [col[0] for col in cursor.description]
+           proveedores = [dict(zip(columns, row)) for row in cursor.fetchall()]
+           
+           # Procesa las URLs de fotos y fechas
+           for proveedor in proveedores:
+               if proveedor['FotoProveedor']:
+                   foto_url = proveedor['FotoProveedor'].strip()
+                   if foto_url.startswith('image/upload/'):
+                       foto_url = foto_url.replace('image/upload/', '')
+                   proveedor['FotoProveedor'] = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
+               
+               if proveedor['FechaCreacionProveedor']:
+                   proveedor['FechaCreacionProveedor'] = proveedor['FechaCreacionProveedor'].isoformat()
+               
+               if proveedor['facturas'] is None:
+                   proveedor['facturas'] = []
+
+           return JsonResponse({
+               'success': True,
+               'proveedores': proveedores
+           })
+       except Exception as e:
+           print("Error en consultar_proveedores_detalle:", str(e))
+           return JsonResponse({
+               'success': False,
+               'message': str(e)
+           }, status=500)

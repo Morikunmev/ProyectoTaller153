@@ -302,18 +302,22 @@ var ProveedorDetalle = function ProveedorDetalle() {
     _useState10 = _slicedToArray(_useState9, 2),
     proveedores = _useState10[0],
     setProveedores = _useState10[1];
-  var _useState11 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(true),
+  var _useState11 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)([]),
     _useState12 = _slicedToArray(_useState11, 2),
-    loading = _useState12[0],
-    setLoading = _useState12[1];
-  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null),
+    filteredResults = _useState12[0],
+    setFilteredResults = _useState12[1];
+  var _useState13 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(true),
     _useState14 = _slicedToArray(_useState13, 2),
-    error = _useState14[0],
-    setError = _useState14[1];
+    loading = _useState14[0],
+    setLoading = _useState14[1];
   var _useState15 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null),
     _useState16 = _slicedToArray(_useState15, 2),
-    lastFetch = _useState16[0],
-    setLastFetch = _useState16[1];
+    error = _useState16[0],
+    setError = _useState16[1];
+  var _useState17 = (0,react__WEBPACK_IMPORTED_MODULE_0__.useState)(null),
+    _useState18 = _slicedToArray(_useState17, 2),
+    lastFetch = _useState18[0],
+    setLastFetch = _useState18[1];
   var fetchProveedores = /*#__PURE__*/function () {
     var _ref2 = _asyncToGenerator(/*#__PURE__*/_regeneratorRuntime().mark(function _callee() {
       var force,
@@ -321,6 +325,7 @@ var ProveedorDetalle = function ProveedorDetalle() {
         _JSON$parse,
         data,
         timestamp,
+        processed,
         response,
         result,
         processedData,
@@ -332,40 +337,42 @@ var ProveedorDetalle = function ProveedorDetalle() {
             force = _args.length > 0 && _args[0] !== undefined ? _args[0] : false;
             _context.prev = 1;
             if (force) {
-              _context.next = 11;
+              _context.next = 13;
               break;
             }
             cached = localStorage.getItem(CACHE_KEY);
             if (!cached) {
-              _context.next = 11;
+              _context.next = 13;
               break;
             }
             _JSON$parse = JSON.parse(cached), data = _JSON$parse.data, timestamp = _JSON$parse.timestamp;
             if (!(Date.now() - timestamp < CACHE_DURATION)) {
-              _context.next = 11;
+              _context.next = 13;
               break;
             }
-            setProveedores(processProveedores(data));
+            processed = processProveedores(data);
+            setProveedores(processed);
+            setFilteredResults(processed);
             setLoading(false);
             setLastFetch(timestamp);
             return _context.abrupt("return");
-          case 11:
-            _context.next = 13;
-            return fetch("/api/consultar_proveedores_detalle/");
           case 13:
+            _context.next = 15;
+            return fetch("/api/consultar_proveedores_detalle/");
+          case 15:
             response = _context.sent;
             if (response.ok) {
-              _context.next = 16;
+              _context.next = 18;
               break;
             }
             throw new Error("Error HTTP: ".concat(response.status));
-          case 16:
-            _context.next = 18;
-            return response.json();
           case 18:
+            _context.next = 20;
+            return response.json();
+          case 20:
             result = _context.sent;
             if (!result.success) {
-              _context.next = 27;
+              _context.next = 30;
               break;
             }
             processedData = processProveedores(result.proveedores);
@@ -375,28 +382,29 @@ var ProveedorDetalle = function ProveedorDetalle() {
             };
             localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
             setProveedores(processedData);
+            setFilteredResults(processedData);
             setLastFetch(Date.now());
-            _context.next = 28;
-            break;
-          case 27:
-            throw new Error(result.message || "Error al cargar los proveedores");
-          case 28:
-            _context.next = 34;
+            _context.next = 31;
             break;
           case 30:
-            _context.prev = 30;
+            throw new Error(result.message || "Error al cargar los proveedores");
+          case 31:
+            _context.next = 37;
+            break;
+          case 33:
+            _context.prev = 33;
             _context.t0 = _context["catch"](1);
             setError("No se pudieron cargar los proveedores");
             console.error(_context.t0);
-          case 34:
-            _context.prev = 34;
-            setLoading(false);
-            return _context.finish(34);
           case 37:
+            _context.prev = 37;
+            setLoading(false);
+            return _context.finish(37);
+          case 40:
           case "end":
             return _context.stop();
         }
-      }, _callee, null, [[1, 30, 34, 37]]);
+      }, _callee, null, [[1, 33, 37, 40]]);
     }));
     return function fetchProveedores() {
       return _ref2.apply(this, arguments);
@@ -423,24 +431,30 @@ var ProveedorDetalle = function ProveedorDetalle() {
       return clearInterval(interval);
     };
   }, []);
+  (0,react__WEBPACK_IMPORTED_MODULE_0__.useEffect)(function () {
+    var filtered = proveedores.map(function (proveedor) {
+      // Primero filtra las facturas que tienen envíos que coinciden
+      var filteredFacturas = proveedor.facturas.filter(function (factura) {
+        var _factura$envios;
+        var facturaMatch = facturaSearch === "" || factura.NumeroFactura.toLowerCase().includes(facturaSearch.toLowerCase());
+        var enviosMatch = materialSearch === "" || ((_factura$envios = factura.envios) === null || _factura$envios === void 0 ? void 0 : _factura$envios.some(function (envio) {
+          return envio.NombreEnvio.toLowerCase().includes(materialSearch.toLowerCase());
+        }));
+        return facturaMatch || enviosMatch;
+      });
+      return _objectSpread(_objectSpread({}, proveedor), {}, {
+        facturas: filteredFacturas
+      });
+    }).filter(function (proveedor) {
+      var proveedorMatch = proveedor.NombreProveedor.toLowerCase().includes(searchTerm.toLowerCase());
+      return proveedorMatch && (materialSearch === "" || proveedor.facturas.length > 0);
+    });
+    setFilteredResults(filtered);
+  }, [searchTerm, facturaSearch, materialSearch, proveedores]);
   var handleRefresh = function handleRefresh() {
     setLoading(true);
     fetchProveedores(true);
   };
-  var filteredProveedores = (0,react__WEBPACK_IMPORTED_MODULE_0__.useMemo)(function () {
-    return proveedores.filter(function (proveedor) {
-      return proveedor.NombreProveedor.toLowerCase().includes(searchTerm.toLowerCase());
-    }).map(function (proveedor) {
-      return _objectSpread(_objectSpread({}, proveedor), {}, {
-        facturas: proveedor.facturas.filter(function (factura) {
-          var _factura$envios;
-          return (facturaSearch === "" || factura.NumeroFactura.toLowerCase().includes(facturaSearch.toLowerCase())) && (materialSearch === "" || ((_factura$envios = factura.envios) === null || _factura$envios === void 0 ? void 0 : _factura$envios.some(function (envio) {
-            return envio.NombreEnvio.toLowerCase().includes(materialSearch.toLowerCase());
-          })));
-        })
-      });
-    });
-  }, [proveedores, searchTerm, facturaSearch, materialSearch]);
   if (loading) return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "flex items-center justify-center min-h-[200px]"
   }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("p", {
@@ -506,17 +520,16 @@ var ProveedorDetalle = function ProveedorDetalle() {
     className: "text-sm text-gray-500"
   }, "\xDAltima actualizaci\xF3n: ", new Date(lastFetch).toLocaleString()), /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
     className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-  }, filteredProveedores.map(function (proveedor, index) {
+  }, filteredResults.map(function (proveedor, index) {
     return /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       key: index,
       className: "bg-gray-300 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 h-auto"
     }, /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("div", {
       className: "relative"
-    }, " ", proveedor.FotoProveedor ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", {
+    }, proveedor.FotoProveedor ? /*#__PURE__*/react__WEBPACK_IMPORTED_MODULE_0___default().createElement("img", {
       src: proveedor.FotoProveedor,
       alt: "Vista previa de ".concat(proveedor.NombreProveedor),
-      className: "w-full h-48 object-cover" // Mantén las dimensiones en la imagen
-      ,
+      className: "w-full h-48 object-cover",
       onError: function onError(e) {
         e.target.style.display = "none";
         e.target.nextSibling.style.display = "flex";

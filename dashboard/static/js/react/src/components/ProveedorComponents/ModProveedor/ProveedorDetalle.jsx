@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Calendar,
   MapPin,
@@ -32,6 +32,7 @@ const ProveedorDetalle = () => {
   const [materialSearch, setMaterialSearch] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const [proveedores, setProveedores] = useState([]);
+  const [filteredResults, setFilteredResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastFetch, setLastFetch] = useState(null);
@@ -43,7 +44,9 @@ const ProveedorDetalle = () => {
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
           if (Date.now() - timestamp < CACHE_DURATION) {
-            setProveedores(processProveedores(data));
+            const processed = processProveedores(data);
+            setProveedores(processed);
+            setFilteredResults(processed);
             setLoading(false);
             setLastFetch(timestamp);
             return;
@@ -63,6 +66,7 @@ const ProveedorDetalle = () => {
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
         setProveedores(processedData);
+        setFilteredResults(processedData);
         setLastFetch(Date.now());
       } else {
         throw new Error(result.message || "Error al cargar los proveedores");
@@ -96,36 +100,49 @@ const ProveedorDetalle = () => {
 
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+    const filtered = proveedores
+      .map((proveedor) => {
+        // Primero filtra las facturas que tienen envíos que coinciden
+        const filteredFacturas = proveedor.facturas.filter((factura) => {
+          const facturaMatch =
+            facturaSearch === "" ||
+            factura.NumeroFactura.toLowerCase().includes(
+              facturaSearch.toLowerCase()
+            );
 
+          const enviosMatch =
+            materialSearch === "" ||
+            factura.envios?.some((envio) =>
+              envio.NombreEnvio.toLowerCase().includes(
+                materialSearch.toLowerCase()
+              )
+            );
+
+          return facturaMatch || enviosMatch;
+        });
+
+        return {
+          ...proveedor,
+          facturas: filteredFacturas,
+        };
+      })
+      .filter((proveedor) => {
+        const proveedorMatch = proveedor.NombreProveedor.toLowerCase().includes(
+          searchTerm.toLowerCase()
+        );
+        return (
+          proveedorMatch &&
+          (materialSearch === "" || proveedor.facturas.length > 0)
+        );
+      });
+
+    setFilteredResults(filtered);
+  }, [searchTerm, facturaSearch, materialSearch, proveedores]);
   const handleRefresh = () => {
     setLoading(true);
     fetchProveedores(true);
   };
-
-  const filteredProveedores = useMemo(() => {
-    return proveedores
-      .filter((proveedor) =>
-        proveedor.NombreProveedor.toLowerCase().includes(
-          searchTerm.toLowerCase()
-        )
-      )
-      .map((proveedor) => ({
-        ...proveedor,
-        facturas: proveedor.facturas.filter(
-          (factura) =>
-            (facturaSearch === "" ||
-              factura.NumeroFactura.toLowerCase().includes(
-                facturaSearch.toLowerCase()
-              )) &&
-            (materialSearch === "" ||
-              factura.envios?.some((envio) =>
-                envio.NombreEnvio.toLowerCase().includes(
-                  materialSearch.toLowerCase()
-                )
-              ))
-        ),
-      }));
-  }, [proveedores, searchTerm, facturaSearch, materialSearch]);
 
   if (loading)
     return (
@@ -208,19 +225,17 @@ const ProveedorDetalle = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProveedores.map((proveedor, index) => (
+        {filteredResults.map((proveedor, index) => (
           <div
             key={index}
             className="bg-gray-300 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 h-auto"
           >
             <div className="relative">
-              {" "}
-              {/* Quita w-full h-48 bg-gray-100 */}
               {proveedor.FotoProveedor ? (
                 <img
                   src={proveedor.FotoProveedor}
                   alt={`Vista previa de ${proveedor.NombreProveedor}`}
-                  className="w-full h-48 object-cover" // Mantén las dimensiones en la imagen
+                  className="w-full h-48 object-cover"
                   onError={(e) => {
                     e.target.style.display = "none";
                     e.target.nextSibling.style.display = "flex";
