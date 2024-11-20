@@ -2113,12 +2113,12 @@ def toggle_envio_status(request, envio_id):
         }, status=400)
         
         
-def consultar_proveedores(request):
+def consultar_proveedores_detalle(request):
     with connection.cursor() as cursor:
         try:
-            print("Ejecutando consulta de proveedores...")
             cursor.execute("""
                 SELECT 
+                    p.id,
                     p."NombreProveedor",
                     p."RutProveedor",
                     p."MarcaProveedor",
@@ -2129,90 +2129,56 @@ def consultar_proveedores(request):
                     p."TelefonoProveedor",
                     p."FotoProveedor",
                     p."FechaCreacionProveedor",
-                    p."FechaModificacionProveedor"
-                FROM consultar_proveedores() p
-                ORDER BY p."NombreProveedor"
+                    json_agg(
+                        json_build_object(
+                            'NumeroFactura', f."NumeroFactura",
+                            'FechaEmision', f."FechaEmision",
+                            'envios', COALESCE(
+                                (
+                                    SELECT json_agg(
+                                        json_build_object(
+                                            'NombreEnvio', e."NombreEnvio",
+                                            'CantidadEnvio', e."CantidadEnvio",
+                                            'TotalEnvio', e."TotalEnvio",
+                                            'EnvioRecibido', e."EnvioRecibido"
+                                        )
+                                    )
+                                    FROM dashboard_envio e
+                                    WHERE e."Factura_id" = f.id
+                                ),
+                                '[]'::json
+                            )
+                        )
+                    ) FILTER (WHERE f.id IS NOT NULL) as facturas
+                FROM dashboard_proveedor p
+                LEFT JOIN dashboard_factura f ON f."Proveedor_id" = p.id
+                GROUP BY p.id
             """)
             
             columns = [col[0] for col in cursor.description]
             proveedores = [dict(zip(columns, row)) for row in cursor.fetchall()]
             
-            formatted_proveedores = []
             for proveedor in proveedores:
-                foto_url = proveedor['FotoProveedor']
-                if foto_url:
-                    foto_url = foto_url.strip()
-                    # Eliminar 'image/upload/' si ya está presente
+                if proveedor['FotoProveedor']:
+                    foto_url = proveedor['FotoProveedor'].strip()
                     if foto_url.startswith('image/upload/'):
                         foto_url = foto_url.replace('image/upload/', '')
-                    
-                    # Asegurarse de que la URL tenga el formato correcto
-                    foto_url = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
-                    print(f"URL de foto final:", foto_url)
-
-                formatted_proveedores.append({
-                    'NombreProveedor': proveedor['NombreProveedor'],
-                    'RutProveedor': proveedor['RutProveedor'],
-                    'MarcaProveedor': proveedor['MarcaProveedor'],
-                    'ComentarioProveedor': proveedor['ComentarioProveedor'] or '',
-                    'CiudadProveedor': proveedor['CiudadProveedor'] or '',
-                    'RegionProveedor': proveedor['RegionProveedor'] or '',
-                    'PaisProveedor': proveedor['PaisProveedor'] or '',
-                    'TelefonoProveedor': proveedor['TelefonoProveedor'] or '',
-                    'FotoProveedor': foto_url,
-                    'FechaCreacionProveedor': proveedor['FechaCreacionProveedor'].isoformat() if proveedor['FechaCreacionProveedor'] else None,
-                    'FechaModificacionProveedor': proveedor['FechaModificacionProveedor'].isoformat() if proveedor['FechaModificacionProveedor'] else None
-                })
-
-            if formatted_proveedores:
-                print("Primer proveedor formateado:", formatted_proveedores[0])
-
+                    proveedor['FotoProveedor'] = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
+                
+                # Convert datetime to string
+                if proveedor['FechaCreacionProveedor']:
+                    proveedor['FechaCreacionProveedor'] = proveedor['FechaCreacionProveedor'].isoformat()
+                
+                # Ensure facturas is always a list
+                if proveedor['facturas'] is None:
+                    proveedor['facturas'] = []
             return JsonResponse({
                 'success': True,
-                'proveedores': formatted_proveedores
+                'proveedores': proveedores
             })
-
         except Exception as e:
-            print("Error en consultar_proveedores:", str(e))
+            print("Error en consultar_proveedores_detalle:", str(e))
             return JsonResponse({
                 'success': False,
                 'message': str(e)
             }, status=500)
-def proveedor_detail(request, pk):
-    try:
-        proveedor = Proveedor.objects.get(pk=pk)
-        
-        # Manejar la URL de la foto
-        foto_url = None
-        if proveedor.FotoProveedor:
-            foto_url = str(proveedor.FotoProveedor.url)
-            if not foto_url.startswith(('http://', 'https://')):
-                foto_url = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
-
-        data = {
-            'NombreProveedor': proveedor.NombreProveedor,
-            'RutProveedor': proveedor.RutProveedor,
-            'MarcaProveedor': proveedor.MarcaProveedor,
-            'ComentarioProveedor': proveedor.ComentarioProveedor or '',
-            'CiudadProveedor': proveedor.CiudadProveedor or '',
-            'RegionProveedor': proveedor.RegionProveedor or '',
-            'PaisProveedor': proveedor.PaisProveedor or '',
-            'TelefonoProveedor': proveedor.TelefonoProveedor or '',
-            'FotoProveedor': foto_url,
-            'FechaCreacionProveedor': proveedor.FechaCreacionProveedor,
-            'FechaModificacionProveedor': proveedor.FechaModificacionProveedor,
-        }
-        return JsonResponse({
-            'success': True,
-            'proveedor': data
-        })
-    except Proveedor.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'message': 'Proveedor no encontrado'
-        }, status=404)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': str(e)
-        }, status=500)

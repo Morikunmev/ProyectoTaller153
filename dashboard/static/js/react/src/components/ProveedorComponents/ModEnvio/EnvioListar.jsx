@@ -267,7 +267,7 @@ const EnvioListar = () => {
     </table>
   );
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-6 m-16">
       {/* Título y contador del módulo */}
       <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Módulo Envío</h1>
