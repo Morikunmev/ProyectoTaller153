@@ -4,7 +4,6 @@
 {% block content %}
 {% csrf_token %}
 
-<link rel="stylesheet" href="{% static 'js/react/src/styles/index.css' %}">
-<div id="dashboard-root"></div>
-<script src="{% static 'js/react/dist/dashboard.bundle.js' %}?v={% now 'U' %}"></script>
+    <div id="dashboard-root"></div>
+    <script src="{% static 'js/react/dist/dashboard.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
 {% endblock %}
