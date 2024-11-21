@@ -100,6 +100,7 @@ const ProveedorDetalle = () => {
 
     return () => clearInterval(interval);
   }, []);
+  
   useEffect(() => {
     const filtered = proveedores
       .map((proveedor) => {

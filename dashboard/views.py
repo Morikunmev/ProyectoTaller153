@@ -2143,7 +2143,7 @@ def consultar_proveedores_detalle(request):
                    p."RegionProveedor",
                    p."PaisProveedor",
                    p."TelefonoProveedor",
-                   p."FotoProveedor",
+                   p."FotoProveedor",   
                    p."FechaCreacionProveedor",
                    COALESCE(
                        json_agg(
