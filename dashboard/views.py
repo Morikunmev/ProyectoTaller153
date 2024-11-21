@@ -2202,7 +2202,7 @@ def consultar_facturas_detalle(request):
                                'CantidadEnvio', e."CantidadEnvio", 
                                'TotalEnvio', e."TotalEnvio",
                                'EnvioRecibido', e."EnvioRecibido"
-                           )
+                           ) ORDER BY e.id
                        ) as envios_data
                    FROM dashboard_envio e
                    JOIN dashboard_factura f ON e."Factura_id" = f.id 
@@ -2216,11 +2216,13 @@ def consultar_facturas_detalle(request):
                    f."DocumentoFactura",
                    json_build_object(
                        'id', p.id,
-                       'NombreProveedor', p."NombreProveedor"
-                   ) as Proveedor,
+                       'NombreProveedor', p."NombreProveedor",
+                       'RutProveedor', p."RutProveedor",
+                       'MarcaProveedor', p."MarcaProveedor"
+                   ) as "Proveedor",
                    COALESCE(ej.envios_data, '[]'::json) as envios
                FROM dashboard_factura f
-               LEFT JOIN dashboard_proveedor p ON f."Proveedor_id" = p.id
+               INNER JOIN dashboard_proveedor p ON f."Proveedor_id" = p.id
                LEFT JOIN envios_json ej ON ej.factura_id = f.id
                ORDER BY f."FechaEmision" DESC
            """)
@@ -2228,7 +2230,6 @@ def consultar_facturas_detalle(request):
            columns = [col[0] for col in cursor.description]
            facturas = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
-           # Procesar las URLs de fotos y documentos
            for factura in facturas:
                if factura['FotoFactura']:
                    foto_url = factura['FotoFactura'].strip()
