@@ -2188,3 +2188,67 @@ def consultar_proveedores_detalle(request):
                'success': False,
                'message': str(e)
            }, status=500)
+           
+def consultar_facturas_detalle(request):
+   with connection.cursor() as cursor:
+       try:
+           cursor.execute("""
+               WITH envios_json AS (
+                   SELECT 
+                       f.id as factura_id,
+                       json_agg(
+                           json_build_object(
+                               'NombreEnvio', e."NombreEnvio",
+                               'CantidadEnvio', e."CantidadEnvio", 
+                               'TotalEnvio', e."TotalEnvio",
+                               'EnvioRecibido', e."EnvioRecibido"
+                           )
+                       ) as envios_data
+                   FROM dashboard_envio e
+                   JOIN dashboard_factura f ON e."Factura_id" = f.id 
+                   GROUP BY f.id
+               )
+               SELECT 
+                   f.id,
+                   f."NumeroFactura",
+                   f."FechaEmision",
+                   f."FotoFactura",
+                   f."DocumentoFactura",
+                   json_build_object(
+                       'id', p.id,
+                       'NombreProveedor', p."NombreProveedor"
+                   ) as Proveedor,
+                   COALESCE(ej.envios_data, '[]'::json) as envios
+               FROM dashboard_factura f
+               LEFT JOIN dashboard_proveedor p ON f."Proveedor_id" = p.id
+               LEFT JOIN envios_json ej ON ej.factura_id = f.id
+               ORDER BY f."FechaEmision" DESC
+           """)
+           
+           columns = [col[0] for col in cursor.description]
+           facturas = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+           # Procesar las URLs de fotos y documentos
+           for factura in facturas:
+               if factura['FotoFactura']:
+                   foto_url = factura['FotoFactura'].strip()
+                   if foto_url.startswith('image/upload/'):
+                       foto_url = foto_url.replace('image/upload/', '')
+                   factura['FotoFactura'] = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
+               
+               if factura['DocumentoFactura']:
+                   doc_url = factura['DocumentoFactura'].strip()
+                   if doc_url.startswith('raw/upload/'):
+                       doc_url = doc_url.replace('raw/upload/', '')
+                   factura['DocumentoFactura'] = f"https://res.cloudinary.com/dfqlvd3d4/raw/upload/{doc_url}"
+           
+           return JsonResponse({
+               'success': True,
+               'facturas': facturas
+           })
+       except Exception as e:
+           print("Error en consultar_facturas_detalle:", str(e))
+           return JsonResponse({
+               'success': False,
+               'message': str(e)
+           }, status=500)

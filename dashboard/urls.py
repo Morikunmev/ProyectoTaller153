@@ -35,6 +35,8 @@ urlpatterns = [
     path('api/factura/<int:factura_id>/actualizar/', views.actualizar_factura, name='actualizar_factura'),
     path('api/facturas/exportar-excel/', views.exportar_facturas_excel, name='exportar_facturas_excel'),
     path('api/factura/<int:factura_id>/ver-documento/', views.ver_documento_factura,  name='ver_documento_factura'),
+    path('api/consultar_facturas_detalle/', views.consultar_facturas_detalle, name='consultar_facturas_detalle'),
+
 
 
     
