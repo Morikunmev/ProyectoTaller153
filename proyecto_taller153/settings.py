@@ -14,11 +14,12 @@ from pathlib import Path
 import os
 import dj_database_url
 from dotenv import load_dotenv
+import time
 
 load_dotenv()
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -32,141 +33,122 @@ DEBUG = True
 ALLOWED_HOSTS = ['proyectotaller153-production.up.railway.app', '127.0.0.1', 'localhost']
 
 # Application definition
-
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'login',
-    'dashboard',
-    'whitenoise.runserver_nostatic',
-    'tailwind',
-    'theme',
-    'django_browser_reload',
-    'cloudinary',
-    'cloudinary_storage',
+   'django.contrib.admin',
+   'django.contrib.auth',
+   'django.contrib.contenttypes',
+   'django.contrib.sessions',
+   'django.contrib.messages',
+   'django.contrib.staticfiles',
+   'login',
+   'dashboard',
+   'whitenoise.runserver_nostatic',
+   'tailwind',
+   'theme',
+   'django_browser_reload',
+   'cloudinary',
+   'cloudinary_storage',
 ]
-TAILWIND_APP_NAME ='theme'
 
-INTERNAL_IPS=[
-    '127.0.0.1',
+TAILWIND_APP_NAME = 'theme'
+
+INTERNAL_IPS = [
+   '127.0.0.1',
 ]
 
 # Configuración de Cloudinary
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.getenv('CLOUDINARY_API_SECRET')
+   'CLOUD_NAME': os.getenv('CLOUDINARY_CLOUD_NAME'),
+   'API_KEY': os.getenv('CLOUDINARY_API_KEY'),
+   'API_SECRET': os.getenv('CLOUDINARY_API_SECRET')
 }
-#indica que los archivos multimedia se almacenarán en Cloudinary en lugar del sistema de archivos local.
+
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
+NPM_BIN_PATH = "npm"  # Cambiado para compatibilidad
 
-NPM_BIN_PATH="C:/Program Files/nodejs/npm.cmd"
+# Static files configuration
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [
+   os.path.join(BASE_DIR, 'login/static'),
+   os.path.join(BASE_DIR, 'dashboard/static')
+]
+
+# Whitenoise configuration
+WHITENOISE_MIMETYPES = {
+   '.js': 'application/javascript',
+   '.css': 'text/css',
+}
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
+# Cache version para archivos estáticos
+CACHE_VERSION = str(int(time.time()))
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',  # Primero SecurityMiddleware
-    'whitenoise.middleware.WhiteNoiseMiddleware',    # Luego WhiteNoise
-    "django_browser_reload.middleware.BrowserReloadMiddleware",
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+   'django.middleware.security.SecurityMiddleware',
+   'whitenoise.middleware.WhiteNoiseMiddleware',
+   'django_browser_reload.middleware.BrowserReloadMiddleware',
+   'django.contrib.sessions.middleware.SessionMiddleware',
+   'django.middleware.common.CommonMiddleware',
+   'django.middleware.csrf.CsrfViewMiddleware',
+   'django.contrib.auth.middleware.AuthenticationMiddleware',
+   'django.contrib.messages.middleware.MessageMiddleware',
+   'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'proyecto_taller153.urls'
 
 TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
+   {
+       'BACKEND': 'django.template.backends.django.DjangoTemplates',
+       'DIRS': [],
+       'APP_DIRS': True,
+       'OPTIONS': {
+           'context_processors': [
+               'django.template.context_processors.debug',
+               'django.template.context_processors.request',
+               'django.contrib.auth.context_processors.auth',
+               'django.contrib.messages.context_processors.messages',
+           ],
+       },
+   },
 ]
 
 WSGI_APPLICATION = 'proyecto_taller153.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
+# Database configuration
 DATABASES = {
-    'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
+   'default': dj_database_url.config(default=os.getenv('DATABASE_URL'))
 }
 
-
 # Password validation
-# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+   {
+       'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+   },
+   {
+       'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+   },
+   {
+       'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+   },
+   {
+       'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+   },
 ]
-
 
 # Internationalization
-# https://docs.djangoproject.com/en/5.1/topics/i18n/
-
-LANGUAGE_CODE = 'es-cl'  # Español de Chile
-
-TIME_ZONE = 'America/Santiago'  # Zona horaria de Chile
-
+LANGUAGE_CODE = 'es-cl'
+TIME_ZONE = 'America/Santiago'
 USE_I18N = True
-
 USE_TZ = True
 
+# Security settings
+CSRF_TRUSTED_ORIGINS = ['http://*', 'https://proyectotaller153-production.up.railway.app']
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
-
-STATIC_URL = '/static/'  # Cambia 'static/' a '/static/'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-STATICFILES_DIRS=[
-    os.path.join(BASE_DIR, 'login/static'),
-    os.path.join(BASE_DIR, 'dashboard/static')  # Añade esta línea
-
-]
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-
-# Añade esto en tu proyecto_taller153/settings.py
-CACHE_VERSION = '1.0'
-
-
-STATIC_ROOT= os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-CSRF_TRUSTED_ORIGINS = ['http://*','https://proyectotaller153-production.up.railway.app']
-
-
-# Configuración de email
+# Email configuration
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
@@ -174,13 +156,17 @@ EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 
+# ReCAPTCHA settings
 RECAPTCHA_SITE_KEY = os.environ.get('RECAPTCHA_SITE_KEY')
 
-# Para el tema de recordarme
-SESSION_COOKIE_AGE = 1209600  # Duración máxima de la cookie en segundos (2 semanas)
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Permitir que las sesiones persistan
+# Session settings
+SESSION_COOKIE_AGE = 1209600  # 2 weeks
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
-# settings.py (agregar estas configuraciones)
-LOGIN_URL = 'login'  # URL donde se redirige si el usuario no está autenticado
-LOGIN_REDIRECT_URL = 'dashboard'  # URL donde se redirige después de un login exitoso
-LOGOUT_REDIRECT_URL = 'login'  # URL donde se redirige después de cerrar sesión
+# Authentication settings
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'dashboard'
+LOGOUT_REDIRECT_URL = 'login'
+
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
