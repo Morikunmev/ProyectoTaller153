@@ -8,6 +8,7 @@ export const useFacturaState = () => {
   // Estados para el manejo de carga y errores
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentView, setCurrentView] = useState("list");
 
   // Estados para el control de la vista y animaciones
   const [isGridView, setIsGridView] = useState(false);
@@ -272,6 +273,8 @@ export const useFacturaState = () => {
     handleUpdateModalOpen,
     handleUpdateModalClose,
     handleFacturaUpdated,
+    currentView,
+    setCurrentView,
 
     // Setters
     setDeleteModalOpen,
