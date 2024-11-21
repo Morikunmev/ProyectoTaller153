@@ -1,56 +1,67 @@
 const path = require('path');
 
 module.exports = {
-    // Puntos de entrada para cada página que usará React
     entry: {
-        envio: './src/envio.js',        // Generará envio.bundle.js
-        factura: './src/factura.js',     // Generará factura.bundle.js
-        proveedor: './src/proveedor.js',  // Generará proveedor.bundle.js
-        dashboard: './src/dashboard.js', // Generará dashboard.
+        envio: './src/envio.js',
+        factura: './src/factura.js',
+        proveedor: './src/proveedor.js', 
+        dashboard: './src/dashboard.js',
     },
-    // Configuración de salida
     output: {
-        path: path.resolve(__dirname, 'dist'), // Los archivos compilados irán a la carpeta dist
-        filename: '[name].bundle.js',          // [name] será reemplazado por cada key en entry
+        path: path.resolve(__dirname, 'dist'),
+        filename: '[name].bundle.js',
+        publicPath: '/static/js/react/dist/' // Añadido publicPath
     },
-    // Reglas para procesar diferentes tipos de archivos
     module: {
         rules: [
             {
-                test: /\.(js|jsx)$/,              // Procesar archivos .js y .jsx
-                exclude: /node_modules/,           // No procesar archivos en node_modules
+                test: /\.(js|jsx)$/,
+                exclude: /node_modules/,
                 use: {
-                    loader: 'babel-loader',        // Usar babel para transpilar
+                    loader: 'babel-loader',
                     options: {
                         presets: [
-                            '@babel/preset-env',   // Para características modernas de JS
-                            '@babel/preset-react'  // Para JSX
+                            '@babel/preset-env',
+                            '@babel/preset-react'
                         ],
                         plugins: ['@babel/plugin-proposal-class-properties']
                     }
                 }
             },
             {
-                test: /\.css$/,                   // Procesar archivos CSS
+                test: /\.css$/,
                 use: [
-                    'style-loader',               // Inyecta los estilos en el DOM
+                    'style-loader',
                     {
-                        loader: 'css-loader',     // Interpreta @import, url() etc.
+                        loader: 'css-loader',
                         options: {
-                            importLoaders: 1      // Número de loaders que se aplicarán antes de css-loader
+                            importLoaders: 1,
+                            url: false // Desactiva el manejo de URLs en CSS
                         }
                     },
-                    'postcss-loader'             // Procesa CSS con PostCSS (necesario para Tailwind)
+                    {
+                        loader: 'postcss-loader',
+                        options: {
+                            postcssOptions: {
+                                plugins: [
+                                    require('tailwindcss'),
+                                    require('autoprefixer'),
+                                ]
+                            }
+                        }
+                    }
                 ]
             }
         ]
     },
-    // Configuración para resolver importaciones
     resolve: {
-        extensions: ['.js', '.jsx']  // Permite importar archivos sin especificar estas extensiones
+        extensions: ['.js', '.jsx']
     },
-    // Source maps para mejor debugging
-    devtool: 'source-map',
-    // Modo desarrollo, cambiar a 'production' para producción
-    mode: 'development'
+    devtool: process.env.NODE_ENV === 'production' ? 'source-map' : 'eval-source-map',
+    mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
+    performance: {
+        hints: process.env.NODE_ENV === 'production' ? 'warning' : false,
+        maxEntrypointSize: 512000,
+        maxAssetSize: 512000
+    }
 };
