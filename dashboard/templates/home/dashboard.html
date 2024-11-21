@@ -1,53 +1,10 @@
 {% extends "plantilla/base.html" %}
 {% load static tailwind_tags %}
+{% tailwind_css %}
 {% block content %}
-<div class="pt-20"> <!-- Container with padding for navbar -->
-    <!-- Header -->
-    <div class="bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-100">
-        <div class="flex items-center space-x-4">
-            <!-- Avatar -->
-            <div class="relative">
-                {% if request.user.usuario.FotoUsuario %}
-                <div class="w-16 h-16 rounded-full ring-2 ring-indigo-100 shadow overflow-hidden">
-                    <img src="{{ request.user.usuario.FotoUsuario.url }}" alt="Perfil"
-                        class="w-full h-full object-cover">
-                </div>
-                {% else %}
-                <div
-                    class="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center ring-2 ring-indigo-50">
-                    <span class="text-2xl font-bold text-indigo-600">
-                        {{ request.user.first_name|make_list|first|upper }}
-                    </span>
-                </div>
-                {% endif %}
-                <div class="absolute bottom-0 right-0 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>
-            </div>
+{% csrf_token %}
 
-            <!-- Info -->
-            <div class="text-gray-800">
-                <h1 class="text-2xl font-bold text-gray-900">¡Bienvenido!</h1>
-                <p class="text-lg text-gray-700">{{ request.user.first_name|default:request.user.username }}</p>
-                <div class="flex gap-2 mt-1">
-                    <span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-sm">
-                        {{ request.user.usuario.TipoUsuario }}
-                    </span>
-                    <span class="px-2 py-0.5 bg-gray-50 text-gray-600 rounded-full text-sm">
-                        {{ request.user.usuario.RutUsuario }}
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Contenido -->
-    <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-gray-800">Contenido Principal</h2>
-            <div class="text-sm text-gray-500">{% now "j F Y, g:i a" %}</div>
-        </div>
-        <div id="dashboard-root"></div>
-    </div>
-</div>
-
+<div id="dashboard-root"></div>
 <script src="{% static 'js/react/dist/dashboard.bundle.js' %}"></script>
+
 {% endblock %}
