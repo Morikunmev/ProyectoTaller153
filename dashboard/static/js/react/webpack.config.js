@@ -5,7 +5,8 @@ module.exports = {
     entry: {
         envio: './src/envio.js',        // Generará envio.bundle.js
         factura: './src/factura.js',     // Generará factura.bundle.js
-        proveedor: './src/proveedor.js'  // Generará proveedor.bundle.js
+        proveedor: './src/proveedor.js',  // Generará proveedor.bundle.js
+        dashboard: './src/dashboard.js', // Generará dashboard.
     },
     // Configuración de salida
     output: {
