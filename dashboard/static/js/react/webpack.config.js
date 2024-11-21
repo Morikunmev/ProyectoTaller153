@@ -4,13 +4,13 @@ module.exports = {
     entry: {
         envio: './src/envio.js',
         factura: './src/factura.js',
-        proveedor: './src/proveedor.js', 
+        proveedor: './src/proveedor.js',
         dashboard: './src/dashboard.js',
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
         filename: '[name].bundle.js',
-        publicPath: '/static/js/react/dist/' // Añadido publicPath
+        publicPath: '/static/js/react/dist/'
     },
     module: {
         rules: [
