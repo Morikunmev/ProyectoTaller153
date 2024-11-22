@@ -6,6 +6,7 @@ module.exports = {
         factura: './src/factura.js',
         proveedor: './src/proveedor.js',
         dashboard: './src/dashboard.js',
+        material: './src/material.js'  // Nuevo entry point
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
