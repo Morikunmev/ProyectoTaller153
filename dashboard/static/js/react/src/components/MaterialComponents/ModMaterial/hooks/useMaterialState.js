@@ -33,8 +33,10 @@ export const useMaterialState = () => {
   const procesarMateriales = (materialsData) => {
     return materialsData.sort((a, b) => {
       // Ordenar por estado primero (Activo primero)
-      if (a.EstadoMaterial === "Activo" && b.EstadoMaterial !== "Activo") return -1;
-      if (a.EstadoMaterial !== "Activo" && b.EstadoMaterial === "Activo") return 1;
+      if (a.EstadoMaterial === "Activo" && b.EstadoMaterial !== "Activo")
+        return -1;
+      if (a.EstadoMaterial !== "Activo" && b.EstadoMaterial === "Activo")
+        return 1;
 
       // Si tienen el mismo estado, ordenar por stock (menor stock primero)
       if (a.EstadoMaterial === b.EstadoMaterial) {
@@ -42,7 +44,9 @@ export const useMaterialState = () => {
           return a.StockMaterial - b.StockMaterial;
         }
         // Si el stock es igual, ordenar por fecha más reciente
-        return new Date(b.FechaCompraMaterial) - new Date(a.FechaCompraMaterial);
+        return (
+          new Date(b.FechaCompraMaterial) - new Date(a.FechaCompraMaterial)
+        );
       }
 
       return 0;
@@ -50,12 +54,15 @@ export const useMaterialState = () => {
   };
 
   // Fetch de datos
+  // In useMaterialState.js
   const fetchMaterials = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/material/listar/");
+      // Update this URL to match your Django URL pattern
+      const response = await fetch("/api/material/listar/"); // Changed from /api/material/listar/
+
       if (!response.ok) {
         throw new Error(`Error HTTP: ${response.status}`);
       }
@@ -114,7 +121,9 @@ export const useMaterialState = () => {
         };
 
         setMaterials((prevMaterials) =>
-          prevMaterials.map((m) => (m.id === materialConFoto.id ? materialConFoto : m))
+          prevMaterials.map((m) =>
+            m.id === materialConFoto.id ? materialConFoto : m
+          )
         );
 
         await fetchMaterials();
@@ -125,19 +134,22 @@ export const useMaterialState = () => {
     },
     [fetchMaterials]
   );
-
   const handleConfirmDelete = async () => {
     if (!materialToDelete) return;
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/material/${materialToDelete.id}/eliminar/`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: {
-          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value,
-        },
-      });
+      const response = await fetch(
+        `/api/material/${materialToDelete.id}/eliminar/`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+              .value,
+          },
+        }
+      );
 
       const data = await response.json();
 
@@ -226,7 +238,10 @@ export const useMaterialState = () => {
       material.NombreMaterial.toLowerCase().includes(searchString) ||
       material.EstadoMaterial.toLowerCase().includes(searchString) ||
       material.UbicacionMaterial.toLowerCase().includes(searchString) ||
-      (material.Proveedor && material.Proveedor.NombreProveedor.toLowerCase().includes(searchString)) ||
+      (material.Proveedor &&
+        material.Proveedor.NombreProveedor.toLowerCase().includes(
+          searchString
+        )) ||
       String(material.id).includes(searchString)
     );
   });
@@ -234,7 +249,10 @@ export const useMaterialState = () => {
   // Cálculos de paginación
   const totalPages = Math.ceil(filteredMaterials.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, filteredMaterials.length);
+  const endIndex = Math.min(
+    startIndex + itemsPerPage,
+    filteredMaterials.length
+  );
   const currentMaterials = filteredMaterials.slice(startIndex, endIndex);
 
   return {

@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  Search,
-  LayoutGrid,
-  List,
-  Pencil,
-  Trash2,
-  Box,
-} from "lucide-react";
+import { Search, LayoutGrid, List, Pencil, Trash2, Box } from "lucide-react";
 import PaginacionModMaterial from "./PaginacionModMaterial";
 import MaterialCreateModal from "./modals/MaterialCreateModal";
 import { useMaterialState } from "./hooks/useMaterialState";
@@ -113,7 +106,9 @@ const MaterialListar = () => {
             </td>
             <td className="p-2">{material.UbicacionMaterial}</td>
             <td className="p-2 text-gray-600">
-              {material.Proveedor ? material.Proveedor.NombreProveedor : "Sin proveedor"}
+              {material.Proveedor
+                ? material.Proveedor.NombreProveedor
+                : "Sin proveedor"}
             </td>
             <td className="p-2">
               <span
@@ -152,8 +147,10 @@ const MaterialListar = () => {
                            hover:scale-105 active:scale-95"
                   title="Eliminar material"
                 >
-                  <Trash2 className="w-3.5 h-3.5 relative z-10 transition-transform duration-200 
-                              group-hover:scale-110 group-hover:rotate-12" />
+                  <Trash2
+                    className="w-3.5 h-3.5 relative z-10 transition-transform duration-200 
+                              group-hover:scale-110 group-hover:rotate-12"
+                  />
                   <span className="relative z-10">Eliminar</span>
                 </button>
               </div>
@@ -179,9 +176,14 @@ const MaterialListar = () => {
 
   const handleExportClick = async () => {
     try {
-      await exportToExcel();
+      const result = await exportToExcel();
+      if (result) {
+        // Opcional: Mostrar mensaje de éxito
+        console.log("Excel generado correctamente");
+      }
     } catch (error) {
       console.error("Error en la exportación:", error);
+      // Opcional: Mostrar mensaje de error al usuario
     }
   };
 

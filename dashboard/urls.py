@@ -51,6 +51,17 @@ urlpatterns = [
          views.obtener_tiempo_detallado, 
          name='obtener_tiempo_detallado'),
     path('api/envios/<int:envio_id>/toggle-status/', views.toggle_envio_status, name='toggle-envio-status'),
+    
+    
+    #-------------------RUTA PARA MATERIAL-----------------
+    path('material/', views.mod_material, name='mod_material'),
+    # APIs de material
+    path('api/material/listar/', views.listar_materiales, name='listar_materiales'),
+    path('api/material/crear/', views.crear_material, name='crear_material'),
+    path('api/material/<int:material_id>/eliminar/', views.eliminar_material, name='eliminar_material'),
+    path('api/material/<int:material_id>/actualizar/', views.actualizar_material, name='actualizar_material'),
+    path('api/materiales/exportar-excel/', views.exportar_materiales_excel, name='exportar_materiales_excel'),
+
 
 
     

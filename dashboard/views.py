@@ -39,7 +39,7 @@ from django.http import JsonResponse
 
 
 # Local imports
-from .models import Proveedor, Factura, Envio
+from .models import Proveedor, Factura, Envio, Material
 from login.models import Usuario
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -2253,3 +2253,661 @@ def consultar_facturas_detalle(request):
                'success': False,
                'message': str(e)
            }, status=500)
+           
+           
+           
+           
+#------------------------LOGICA PARA EL MATERIAL---------------------
+@login_required(login_url='login')
+def mod_material(request):
+    return render(request, 'material/material.html')
+
+
+
+
+@login_required(login_url='login')
+@ensure_csrf_cookie 
+def crear_material(request):
+    if request.method == 'POST':
+        try:
+            data = request.POST
+            
+            # Validaciones de campos requeridos
+            campos_requeridos = ['NombreMaterial', 'StockMaterial', 'PrecioMaterial', 'EstadoMaterial', 'UbicacionMaterial']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores
+                }, status=400)
+            
+            # Validación y conversión de campos numéricos
+            try:
+                stock_material = int(data.get('StockMaterial'))
+                if stock_material < 0:  # Permitimos 0 en stock
+                    raise ValueError('El stock no puede ser negativo')
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'StockMaterial': 'El stock debe ser un número entero no negativo'
+                    }
+                }, status=400)
+
+            try:
+                precio_material = Decimal(data.get('PrecioMaterial'))
+                if precio_material <= 0:
+                    raise ValueError('El precio debe ser mayor a 0')
+            except (ValueError, DecimalException):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'PrecioMaterial': 'El precio debe ser un número positivo'
+                    }
+                }, status=400)
+
+            # Validación de fecha de compra opcional
+            fecha_compra = None
+            if data.get('FechaCompraMaterial'):
+                try:
+                    fecha_compra = datetime.strptime(data.get('FechaCompraMaterial'), '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FechaCompraMaterial': 'El formato de fecha debe ser YYYY-MM-DD'
+                        }
+                    }, status=400)
+
+            # Validación de Proveedor opcional
+            proveedor = None
+            if data.get('Proveedor'):
+                try:
+                    proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
+                except (Proveedor.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'Proveedor': 'Proveedor no válido'
+                        }
+                    }, status=400)
+
+            # Validación de Envío opcional
+            envio = None
+            if data.get('Envio'):
+                try:
+                    envio = Envio.objects.get(id=data.get('Envio'))
+                except (Envio.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'Envio': 'Envío no válido'
+                        }
+                    }, status=400)
+            
+            nuevo_material = Material(
+                NombreMaterial=data.get('NombreMaterial'),
+                StockMaterial=stock_material,
+                PrecioMaterial=precio_material,
+                TotalMaterial=stock_material * precio_material,
+                FechaCompraMaterial=fecha_compra,
+                DescripcionMaterial=data.get('DescripcionMaterial'),
+                ColorMaterial=data.get('ColorMaterial'),
+                PesoMaterial=data.get('PesoMaterial'),
+                DimensionesMaterial=data.get('DimensionesMaterial'),
+                DetalleMaterial=data.get('DetalleMaterial'),
+                EstadoMaterial=data.get('EstadoMaterial'),
+                UbicacionMaterial=data.get('UbicacionMaterial'),
+                Proveedor=proveedor,
+                Envio=envio
+            )
+            
+            # Manejar la foto
+            if 'FotoMaterial' in request.FILES:
+                foto = request.FILES['FotoMaterial']
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoMaterial': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF'
+                        }
+                    }, status=400)
+
+                if foto.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoMaterial': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'
+                        }
+                    }, status=400)
+
+                nuevo_material.FotoMaterial = foto
+
+            try:
+                nuevo_material.full_clean()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores_formateados
+                }, status=400)
+            
+            nuevo_material.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Material creado exitosamente',
+                'material': {
+                    'id': nuevo_material.id,
+                    'NombreMaterial': nuevo_material.NombreMaterial,
+                    'StockMaterial': nuevo_material.StockMaterial,
+                    'PrecioMaterial': str(nuevo_material.PrecioMaterial),
+                    'TotalMaterial': str(nuevo_material.TotalMaterial),
+                    'FechaCompraMaterial': nuevo_material.FechaCompraMaterial.isoformat() if nuevo_material.FechaCompraMaterial else None,
+                    'DescripcionMaterial': nuevo_material.DescripcionMaterial,
+                    'ColorMaterial': nuevo_material.ColorMaterial,
+                    'PesoMaterial': nuevo_material.PesoMaterial,
+                    'DimensionesMaterial': nuevo_material.DimensionesMaterial,
+                    'DetalleMaterial': nuevo_material.DetalleMaterial,
+                    'EstadoMaterial': nuevo_material.EstadoMaterial,
+                    'UbicacionMaterial': nuevo_material.UbicacionMaterial,
+                    'FotoMaterial': nuevo_material.FotoMaterial.url if nuevo_material.FotoMaterial else None,
+                    'RegistroFacturaMaterial': nuevo_material.RegistroFacturaMaterial,
+                    'Proveedor': {
+                        'id': nuevo_material.Proveedor.id,
+                        'NombreProveedor': nuevo_material.Proveedor.NombreProveedor,
+                        'RutProveedor': nuevo_material.Proveedor.RutProveedor
+                    } if nuevo_material.Proveedor else None,
+                    'Envio': {
+                        'id': nuevo_material.Envio.id,
+                        'NombreEnvio': nuevo_material.Envio.NombreEnvio
+                    } if nuevo_material.Envio else None
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error al crear material: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'general': f'Error al crear el material: {str(e)}'
+                }
+            }, status=400)
+    
+    return JsonResponse({
+        'success': False,
+        'errors': {
+            'general': 'Método no permitido'
+        }
+    }, status=405)
+    
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_material(request, material_id):
+    if request.method in ['PUT', 'POST']:
+        try:
+            material = get_object_or_404(Material, id=material_id)
+            data = request.POST
+            
+            # Debug: Imprimir todos los datos recibidos
+            print("Datos recibidos:", dict(data))
+            
+            campos_requeridos = ['NombreMaterial', 'StockMaterial', 'PrecioMaterial', 'EstadoMaterial', 'UbicacionMaterial']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({'success': False, 'errors': errores}, status=400)
+
+            # Validación y conversión de campos numéricos
+            try:
+                stock_material = int(data.get('StockMaterial'))
+                if stock_material < 0:  # Permitimos 0 en stock
+                    raise ValueError('El stock no puede ser negativo')
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'StockMaterial': 'El stock debe ser un número entero no negativo'}
+                }, status=400)
+
+            try:
+                precio_material = Decimal(data.get('PrecioMaterial'))
+                if precio_material <= 0:
+                    raise ValueError('El precio debe ser mayor a 0')
+            except (ValueError, DecimalException):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'PrecioMaterial': 'El precio debe ser un número positivo'}
+                }, status=400)
+
+            # Validación del estado
+            estado_material = data.get('EstadoMaterial')
+            if estado_material not in ['Activo', 'Inactivo']:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'EstadoMaterial': 'El estado debe ser Activo o Inactivo'}
+                }, status=400)
+
+            # Validación de fecha de compra opcional
+            fecha_compra = None
+            if data.get('FechaCompraMaterial'):
+                try:
+                    fecha_compra = datetime.strptime(data.get('FechaCompraMaterial'), '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FechaCompraMaterial': 'El formato de fecha debe ser YYYY-MM-DD'}
+                    }, status=400)
+            
+            # Validación del proveedor (opcional)
+            proveedor = None
+            if data.get('Proveedor'):
+                try:
+                    proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
+                except (Proveedor.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'Proveedor': 'Proveedor no válido'}
+                    }, status=400)
+
+            # Validación del envío (opcional)
+            envio = None
+            if data.get('Envio'):
+                try:
+                    envio = Envio.objects.get(id=data.get('Envio'))
+                except (Envio.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'Envio': 'Envío no válido'}
+                    }, status=400)
+
+            # Manejar la foto
+            if data.get('eliminar_FotoMaterial', '').lower() == 'true' and material.FotoMaterial:
+                try:
+                    url = material.FotoMaterial.url
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    print(f"Intentando eliminar foto con public_id: {public_id}")
+                    
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload",
+                        invalidate=True
+                    )
+                    print(f"Resultado de eliminación foto: {result}")
+                    
+                    material.FotoMaterial = None
+                    
+                except Exception as e:
+                    print(f"Error al eliminar foto: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoMaterial': f'Error al eliminar la foto: {str(e)}'}
+                    }, status=400)
+            
+            elif 'FotoMaterial' in request.FILES:
+                foto = request.FILES['FotoMaterial']
+                
+                if foto.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoMaterial': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'}
+                    }, status=400)
+                
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoMaterial': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG'}
+                    }, status=400)
+                
+                if material.FotoMaterial:
+                    try:
+                        url = material.FotoMaterial.url
+                        parts = url.split('/')
+                        public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                        
+                        cloudinary.config(
+                            cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                            api_key=os.getenv('CLOUDINARY_API_KEY'),
+                            api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                        )
+                        
+                        cloudinary.uploader.destroy(
+                            public_id,
+                            resource_type="image",
+                            type="upload",
+                            invalidate=True
+                        )
+                    except Exception as e:
+                        print(f"Error al eliminar foto anterior: {str(e)}")
+                
+                material.FotoMaterial = foto
+
+            # Actualizar campos del material
+            material.NombreMaterial = data.get('NombreMaterial')
+            material.StockMaterial = stock_material
+            material.PrecioMaterial = precio_material
+            material.TotalMaterial = stock_material * precio_material
+            material.EstadoMaterial = estado_material
+            material.UbicacionMaterial = data.get('UbicacionMaterial')
+            material.ColorMaterial = data.get('ColorMaterial', '')
+            material.PesoMaterial = data.get('PesoMaterial', '')
+            material.DimensionesMaterial = data.get('DimensionesMaterial', '')
+            material.DetalleMaterial = data.get('DetalleMaterial', '')
+            material.DescripcionMaterial = data.get('DescripcionMaterial', '')
+            material.Proveedor = proveedor
+            material.Envio = envio
+            material.FechaCompraMaterial = fecha_compra
+            
+            try:
+                material.full_clean()
+                material.save()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Material actualizado exitosamente',
+                'material': {
+                    'id': material.id,
+                    'NombreMaterial': material.NombreMaterial,
+                    'StockMaterial': material.StockMaterial,
+                    'PrecioMaterial': str(material.PrecioMaterial),
+                    'TotalMaterial': str(material.TotalMaterial),
+                    'EstadoMaterial': material.EstadoMaterial,
+                    'UbicacionMaterial': material.UbicacionMaterial,
+                    'ColorMaterial': material.ColorMaterial,
+                    'PesoMaterial': material.PesoMaterial,
+                    'DimensionesMaterial': material.DimensionesMaterial,
+                    'DetalleMaterial': material.DetalleMaterial,
+                    'DescripcionMaterial': material.DescripcionMaterial,
+                    'FechaCompraMaterial': material.FechaCompraMaterial.isoformat() if material.FechaCompraMaterial else None,
+                    'Proveedor': {
+                        'id': material.Proveedor.id,
+                        'NombreProveedor': material.Proveedor.NombreProveedor,
+                        'RutProveedor': material.Proveedor.RutProveedor
+                    } if material.Proveedor else None,
+                    'Envio': {
+                        'id': material.Envio.id,
+                        'NombreEnvio': material.Envio.NombreEnvio,
+                    } if material.Envio else None,
+                    'FotoMaterial': material.FotoMaterial.url if material.FotoMaterial else None
+                }
+            })
+            
+        except Exception as e:
+            print(f"Error general: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': {'general': f'Error al actualizar el material: {str(e)}'}
+            }, status=400)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {'general': 'Método no permitido'}
+    }, status=405)
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_material(request, material_id):
+    if request.method == 'DELETE':
+        try:
+            # Obtener el material
+            material = get_object_or_404(Material, id=material_id)
+            
+            # Guardar información para la respuesta
+            nombre_material = material.NombreMaterial
+            estado_material = material.EstadoMaterial
+            nombre_proveedor = material.Proveedor.NombreProveedor if material.Proveedor else "Sin proveedor"
+            
+            # Si existe una foto, eliminarla de Cloudinary
+            if material.FotoMaterial:
+                try:
+                    # Obtener la URL de la imagen
+                    url = material.FotoMaterial.url
+                    
+                    # Extraer el public_id
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    print(f"Intentando eliminar foto con public_id: {public_id}")
+                    
+                    # Configurar Cloudinary
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    # Eliminar la foto
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload"
+                    )
+                    print(f"Resultado de eliminación foto Cloudinary: {result}")
+                    
+                except Exception as cloud_error:
+                    print(f"Error al eliminar foto de Cloudinary: {str(cloud_error)}")
+                    print(f"URL de la foto: {material.FotoMaterial.url}")
+            
+            # Eliminar el material
+            material.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'El material "{nombre_material}" ({estado_material}) del proveedor {nombre_proveedor} y sus archivos asociados fueron eliminados exitosamente'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al eliminar el material: {str(e)}'
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, status=405)
+
+@login_required(login_url='login')
+def listar_materiales(request):
+    if request.method == 'GET':
+        try:
+            materiales = Material.objects.all().select_related('Proveedor', 'Envio')
+            data = []
+            for material in materiales:
+                # Preparar datos del envío
+                envio_data = None
+                if material.Envio:
+                    envio_data = {
+                        'id': material.Envio.id,
+                        'NombreEnvio': material.Envio.NombreEnvio,
+                    }
+
+                # Preparar datos del proveedor
+                proveedor_data = None
+                if material.Proveedor:
+                    proveedor_data = {
+                        'id': material.Proveedor.id,
+                        'NombreProveedor': material.Proveedor.NombreProveedor,
+                        'RutProveedor': material.Proveedor.RutProveedor
+                    }
+
+                data.append({
+                    'id': material.id,
+                    'NombreMaterial': material.NombreMaterial,
+                    'StockMaterial': material.StockMaterial,
+                    'PrecioMaterial': str(material.PrecioMaterial),
+                    'TotalMaterial': str(material.TotalMaterial),
+                    'EstadoMaterial': material.EstadoMaterial,
+                    'UbicacionMaterial': material.UbicacionMaterial,
+                    'ColorMaterial': material.ColorMaterial,
+                    'PesoMaterial': material.PesoMaterial,
+                    'DimensionesMaterial': material.DimensionesMaterial,
+                    'DetalleMaterial': material.DetalleMaterial,
+                    'DescripcionMaterial': material.DescripcionMaterial,
+                    'FechaCompraMaterial': material.FechaCompraMaterial.isoformat() if material.FechaCompraMaterial else None,
+                    'Proveedor': proveedor_data,
+                    'FotoMaterial': material.FotoMaterial.url if material.FotoMaterial else None,
+                    'Envio': envio_data
+                })
+            return JsonResponse({
+                'success': True,
+                'materials': data
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+    return JsonResponse({
+        'success': False, 
+        'message': 'Método no permitido'
+    }, status=405)
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def exportar_materiales_excel(request):
+    # Crear un buffer en memoria
+    output = BytesIO()
+    
+    # Crear un nuevo archivo Excel con la opción remove_timezone
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    # Hoja para los datos
+    worksheet_data = workbook.add_worksheet('Materiales')
+    # Hojas para los gráficos
+    worksheet_charts = workbook.add_worksheet('Gráficos')
+    # Agregar formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy',
+    })
+
+    # Definir encabezados
+    headers = [
+        'ID',
+        'Nombre Material',
+        'Stock',
+        'Precio',
+        'Total',
+        'Estado',
+        'Ubicación',
+        'Fecha Compra',
+        'Proveedor',
+        'Registro Factura'
+    ]
+    
+    # Escribir encabezados en hoja de datos
+    for col, header in enumerate(headers):
+        worksheet_data.write(0, col, header, header_format)
+        worksheet_data.set_column(col, col, 15)
+
+    # Obtener datos de materiales
+    materiales = Material.objects.all().select_related('Proveedor').order_by('-FechaCompraMaterial')
+
+    # Escribir datos
+    for row, material in enumerate(materiales, start=1):
+        worksheet_data.write(row, 0, material.id)
+        worksheet_data.write(row, 1, material.NombreMaterial)
+        worksheet_data.write(row, 2, material.StockMaterial)
+        worksheet_data.write(row, 3, float(material.PrecioMaterial))
+        worksheet_data.write(row, 4, float(material.TotalMaterial))
+        worksheet_data.write(row, 5, material.EstadoMaterial)
+        worksheet_data.write(row, 6, material.UbicacionMaterial)
+        worksheet_data.write_datetime(row, 7, material.FechaCompraMaterial, date_format)
+        worksheet_data.write(row, 8, material.Proveedor.NombreProveedor if material.Proveedor else 'Sin proveedor')
+        worksheet_data.write(row, 9, material.RegistroFacturaMaterial)
+
+    # Ajustar anchos de columna
+    worksheet_data.set_column('A:A', 8)   # ID
+    worksheet_data.set_column('B:B', 30)  # Nombre Material
+    worksheet_data.set_column('C:D', 15)  # Stock y Precio
+    worksheet_data.set_column('E:E', 20)  # Total
+    worksheet_data.set_column('F:J', 18)  # Resto de columnas
+
+    # Preparar datos para los gráficos
+    proveedores_dict = {}
+    estados_dict = {}
+    for material in materiales:
+        # Conteo por proveedor
+        proveedor = material.Proveedor.NombreProveedor if material.Proveedor else 'Sin proveedor'
+        proveedores_dict[proveedor] = proveedores_dict.get(proveedor, 0) + 1
+        
+        # Conteo por estado
+        estado = material.EstadoMaterial
+        estados_dict[estado] = estados_dict.get(estado, 0) + 1
+
+    # Escribir datos para gráficos
+    # Datos de proveedores
+    worksheet_charts.write_row('A1', ['Proveedor', 'Cantidad'], header_format)
+    for i, (proveedor, cantidad) in enumerate(proveedores_dict.items(), start=2):
+        worksheet_charts.write(f'A{i}', proveedor)
+        worksheet_charts.write(f'B{i}', cantidad)
+
+    # Datos de estados
+    worksheet_charts.write_row('D1', ['Estado', 'Cantidad'], header_format)
+    for i, (estado, cantidad) in enumerate(estados_dict.items(), start=2):
+        worksheet_charts.write(f'D{i}', estado)
+        worksheet_charts.write(f'E{i}', cantidad)
+
+    # Crear gráficos
+    # 1. Gráfico de columnas (Materiales por Proveedor)
+    column_chart = workbook.add_chart({'type': 'column'})
+    column_chart.add_series({
+        'name': 'Materiales por Proveedor',
+        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
+        'data_labels': {'value': True},
+    })
+    column_chart.set_title({'name': 'Distribución de Materiales por Proveedor'})
+    column_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('G2', column_chart)
+
+    # 2. Gráfico de pie (Estados de Materiales)
+    pie_chart = workbook.add_chart({'type': 'pie'})
+    pie_chart.add_series({
+        'name': 'Estados de Materiales',
+        'categories': f'=Gráficos!$D$2:$D${len(estados_dict)+1}',
+        'values': f'=Gráficos!$E$2:$E${len(estados_dict)+1}',
+        'data_labels': {'percentage': True},
+    })
+    pie_chart.set_title({'name': 'Distribución por Estado (%)'})
+    pie_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('G18', pie_chart)
+
+    workbook.close()
+
+    # Preparar la respuesta
+    output.seek(0)
+    filename = f'Materiales_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response

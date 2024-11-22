@@ -5,7 +5,7 @@ import Navbar from "./components/Navbar";
 
 import "./styles/index.css";
 
-const container = document.getElementById("react-proveedor");
+const container = document.getElementById("react-material");
 const root = createRoot(container);
 root.render(
   <>
