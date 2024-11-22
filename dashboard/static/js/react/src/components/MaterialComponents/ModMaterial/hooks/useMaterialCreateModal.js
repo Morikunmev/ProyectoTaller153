@@ -9,7 +9,7 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
     StockMaterial: "",
     PrecioMaterial: "",
     TotalMaterial: "0",
-    EstadoMaterial: "",
+    EstadoMaterial: "", // Cambiado de "Activo" a string vacío
     UbicacionMaterial: "",
     ColorMaterial: "",
     PesoMaterial: "",
@@ -41,7 +41,7 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
         StockMaterial: "",
         PrecioMaterial: "",
         TotalMaterial: "0",
-        EstadoMaterial: "",
+        EstadoMaterial: "", // String vacío aquí también
         UbicacionMaterial: "",
         ColorMaterial: "",
         PesoMaterial: "",
@@ -147,7 +147,7 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
         StockMaterial: "",
         PrecioMaterial: "",
         TotalMaterial: "0",
-        EstadoMaterial: "",
+        EstadoMaterial: "Activo", // Mantener Activo al cerrar
         UbicacionMaterial: "",
         ColorMaterial: "",
         PesoMaterial: "",
@@ -163,7 +163,6 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
       setErrors({});
     }, 150);
   };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -232,7 +231,6 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
     const fileInput = document.getElementById("foto-material");
     if (fileInput) fileInput.value = "";
   };
-
   const validateForm = () => {
     const newErrors = {};
 
@@ -287,13 +285,19 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
         formDataToSend.append("PesoMaterial", formData.PesoMaterial);
       }
       if (formData.DimensionesMaterial) {
-        formDataToSend.append("DimensionesMaterial", formData.DimensionesMaterial);
+        formDataToSend.append(
+          "DimensionesMaterial",
+          formData.DimensionesMaterial
+        );
       }
       if (formData.DetalleMaterial) {
         formDataToSend.append("DetalleMaterial", formData.DetalleMaterial);
       }
       if (formData.DescripcionMaterial) {
-        formDataToSend.append("DescripcionMaterial", formData.DescripcionMaterial);
+        formDataToSend.append(
+          "DescripcionMaterial",
+          formData.DescripcionMaterial
+        );
       }
       if (formData.Proveedor) {
         formDataToSend.append("Proveedor", formData.Proveedor);
@@ -305,10 +309,15 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
         formDataToSend.append("FotoMaterial", formData.FotoMaterial);
       }
       if (formData.FechaCompraMaterial) {
-        formDataToSend.append("FechaCompraMaterial", formData.FechaCompraMaterial);
+        formDataToSend.append(
+          "FechaCompraMaterial",
+          formData.FechaCompraMaterial
+        );
       }
 
-      const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]")?.value;
+      const csrfToken = document.querySelector(
+        "[name=csrfmiddlewaretoken]"
+      )?.value;
 
       const response = await fetch("/api/material/crear/", {
         method: "POST",
