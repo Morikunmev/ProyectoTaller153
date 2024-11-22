@@ -13,7 +13,8 @@
         <nav>
             <ul class="space-y-4">
                 <li>
-                    <a href="{% url 'dashboard' %}" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                    <a href="{% url 'dashboard' %}"
+                        class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
                         <i class="fas fa-home"></i>
                         <span class="hidden group-hover:inline-block">Dashboard</span>
                     </a>
@@ -115,29 +116,6 @@
                     </ul>
                 </li>
 
-                <!-- Menú Requerimiento -->
-                <li>
-                    <a href="javascript:void(0);" onclick="toggleSubMenu('submenu-requerimiento')"
-                        class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
-                        <i class="fas fa-clipboard-list"></i>
-                        <span class="hidden group-hover:inline-block">Requerimiento</span>
-                    </a>
-                    <ul id="submenu-requerimiento" class="hidden pl-4 space-y-2">
-                        <li>
-                            <a href="#" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
-                                <i class="fas fa-tools"></i>
-                                <span class="hidden group-hover:inline-block">Requerimiento Herramienta</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
-                                <i class="fas fa-boxes"></i>
-                                <span class="hidden group-hover:inline-block">Requerimiento Material</span>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
                 <!-- Menú Usuarios -->
                 <li>
                     <a href="javascript:void(0);" onclick="toggleSubMenu('submenu-usuarios')"
@@ -150,12 +128,6 @@
                             <a href="#" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
                                 <i class="fas fa-user-shield"></i>
                                 <span class="hidden group-hover:inline-block">Administradores</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
-                                <i class="fas fa-user-cog"></i>
-                                <span class="hidden group-hover:inline-block">Tecnicos</span>
                             </a>
                         </li>
                         <li>

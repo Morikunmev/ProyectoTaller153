@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { UserCircle } from "lucide-react";
 
-const Prueba1 = () => {
+const Seccion1 = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -114,4 +114,4 @@ const Prueba1 = () => {
   );
 };
 
-export default Prueba1;
+export default Seccion1;
