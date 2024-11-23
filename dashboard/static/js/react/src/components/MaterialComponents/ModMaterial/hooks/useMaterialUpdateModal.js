@@ -215,36 +215,40 @@ export const useMaterialUpdateModal = ({
       setIsSubmitting(true);
       try {
         const newErrors = {};
+        // Solo validamos los campos requeridos según el modelo
         if (!formData.NombreMaterial) {
           newErrors.NombreMaterial = "El nombre del material es requerido";
         }
         if (!formData.StockMaterial && formData.StockMaterial !== 0) {
           newErrors.StockMaterial = "El stock es requerido";
+        } else if (formData.StockMaterial < 0) {
+          newErrors.StockMaterial = "El stock no puede ser negativo";
         }
         if (!formData.PrecioMaterial || formData.PrecioMaterial <= 0) {
           newErrors.PrecioMaterial = "El precio debe ser mayor a 0";
         }
-        if (!formData.EstadoMaterial) {
-          newErrors.EstadoMaterial = "El estado es requerido";
-        }
-        if (!formData.UbicacionMaterial) {
-          newErrors.UbicacionMaterial = "La ubicación es requerida";
-        }
 
         if (Object.keys(newErrors).length > 0) {
           setErrors(newErrors);
-          throw new Error("Por favor complete todos los campos requeridos");
+          setIsSubmitting(false);
+          return;
         }
 
         const submitData = new FormData();
+
+        // Campos requeridos
         submitData.append("NombreMaterial", formData.NombreMaterial);
         submitData.append("StockMaterial", formData.StockMaterial);
         submitData.append("PrecioMaterial", formData.PrecioMaterial);
         submitData.append("TotalMaterial", formData.TotalMaterial);
-        submitData.append("EstadoMaterial", formData.EstadoMaterial);
-        submitData.append("UbicacionMaterial", formData.UbicacionMaterial);
 
         // Campos opcionales
+        if (formData.EstadoMaterial) {
+          submitData.append("EstadoMaterial", formData.EstadoMaterial);
+        }
+        if (formData.UbicacionMaterial) {
+          submitData.append("UbicacionMaterial", formData.UbicacionMaterial);
+        }
         if (formData.ColorMaterial) {
           submitData.append("ColorMaterial", formData.ColorMaterial);
         }
@@ -271,12 +275,6 @@ export const useMaterialUpdateModal = ({
         }
         if (formData.Envio) {
           submitData.append("Envio", formData.Envio);
-        }
-        if (formData.FechaCompraMaterial) {
-          submitData.append(
-            "FechaCompraMaterial",
-            formData.FechaCompraMaterial
-          );
         }
 
         submitData.append(

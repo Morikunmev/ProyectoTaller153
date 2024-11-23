@@ -3,23 +3,22 @@ import { useState, useEffect } from "react";
 export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const today = new Date().toISOString().split("T")[0];
 
-  // Form Data State
+  // Form Data State - Solo inicializamos los campos requeridos según el modelo
   const [formData, setFormData] = useState({
     NombreMaterial: "",
     StockMaterial: "",
     PrecioMaterial: "",
     TotalMaterial: "0",
-    EstadoMaterial: "", // Cambiado de "Activo" a string vacío
-    UbicacionMaterial: "",
-    ColorMaterial: "",
-    PesoMaterial: "",
-    DimensionesMaterial: "",
-    DetalleMaterial: "",
-    DescripcionMaterial: "",
-    Proveedor: "",
-    FotoMaterial: null,
-    Envio: "",
-    FechaCompraMaterial: today,
+    EstadoMaterial: "", // No requerido según modelo
+    UbicacionMaterial: "", // No requerido según modelo
+    ColorMaterial: "", // Opcional
+    PesoMaterial: "", // Opcional
+    DimensionesMaterial: "", // Opcional
+    DetalleMaterial: "", // Opcional
+    DescripcionMaterial: "", // Opcional
+    Proveedor: "", // Opcional
+    FotoMaterial: null, // Opcional
+    Envio: "", // Opcional
   });
 
   // UI States
@@ -41,7 +40,7 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
         StockMaterial: "",
         PrecioMaterial: "",
         TotalMaterial: "0",
-        EstadoMaterial: "", // String vacío aquí también
+        EstadoMaterial: "",
         UbicacionMaterial: "",
         ColorMaterial: "",
         PesoMaterial: "",
@@ -51,12 +50,11 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
         Proveedor: "",
         FotoMaterial: null,
         Envio: "",
-        FechaCompraMaterial: today,
       });
       setPreviewUrl(null);
       setErrors({});
     }
-  }, [isOpen, today]);
+  }, [isOpen]);
 
   const fetchEnvios = async () => {
     try {
@@ -147,7 +145,7 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
         StockMaterial: "",
         PrecioMaterial: "",
         TotalMaterial: "0",
-        EstadoMaterial: "Activo", // Mantener Activo al cerrar
+        EstadoMaterial: "",
         UbicacionMaterial: "",
         ColorMaterial: "",
         PesoMaterial: "",
@@ -157,7 +155,6 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
         Proveedor: "",
         FotoMaterial: null,
         Envio: "",
-        FechaCompraMaterial: today,
       });
       setPreviewUrl(null);
       setErrors({});
@@ -234,6 +231,7 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const validateForm = () => {
     const newErrors = {};
 
+    // Solo validamos los campos requeridos según el modelo
     if (!formData.NombreMaterial) {
       newErrors.NombreMaterial = "El nombre del material es requerido";
     }
@@ -246,17 +244,8 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
       newErrors.PrecioMaterial = "El precio debe ser mayor a 0";
     }
 
-    if (!formData.EstadoMaterial) {
-      newErrors.EstadoMaterial = "El estado es requerido";
-    }
-
-    if (!formData.UbicacionMaterial) {
-      newErrors.UbicacionMaterial = "La ubicación es requerida";
-    }
-
     return newErrors;
   };
-
   const handleSubmit = async (e) => {
     e?.preventDefault();
 
@@ -270,10 +259,13 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
 
     try {
       const formDataToSend = new FormData();
+      // Campos requeridos
       formDataToSend.append("NombreMaterial", formData.NombreMaterial);
       formDataToSend.append("StockMaterial", formData.StockMaterial);
       formDataToSend.append("PrecioMaterial", formData.PrecioMaterial);
       formDataToSend.append("TotalMaterial", formData.TotalMaterial);
+
+      // Campos no requeridos
       formDataToSend.append("EstadoMaterial", formData.EstadoMaterial);
       formDataToSend.append("UbicacionMaterial", formData.UbicacionMaterial);
 
@@ -307,12 +299,6 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
       }
       if (formData.FotoMaterial) {
         formDataToSend.append("FotoMaterial", formData.FotoMaterial);
-      }
-      if (formData.FechaCompraMaterial) {
-        formDataToSend.append(
-          "FechaCompraMaterial",
-          formData.FechaCompraMaterial
-        );
       }
 
       const csrfToken = document.querySelector(

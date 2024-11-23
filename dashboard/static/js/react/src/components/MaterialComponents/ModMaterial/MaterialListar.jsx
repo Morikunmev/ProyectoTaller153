@@ -1,14 +1,25 @@
-import React from "react";
-import { Search, LayoutGrid, List, Pencil, Trash2, Box } from "lucide-react";
+import React, { useState } from "react";
+import {
+  Search,
+  LayoutGrid,
+  List,
+  Pencil,
+  Trash2,
+  Box,
+  Info,
+  X,
+} from "lucide-react";
 import PaginacionModMaterial from "./PaginacionModMaterial";
 import MaterialCreateModal from "./modals/MaterialCreateModal";
 import { useMaterialState } from "./hooks/useMaterialState";
 import MaterialDeleteModal from "./modals/MaterialDeleteModal";
 import MaterialUpdateModal from "./modals/MaterialUpdateModal";
 import MaterialGrid from "./layout/MaterialGrid";
-import { exportToExcel } from "./utils/MaterialExport";
+import MaterialCard from "./layout/MaterialCard";
 
 const MaterialListar = () => {
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
+
   const {
     searchTerm,
     loading,
@@ -28,7 +39,6 @@ const MaterialListar = () => {
     isDeleting,
     updateModalOpen,
     materialToUpdate,
-    isUpdating,
     handleOpenModal,
     handleCloseModal,
     handleSearch,
@@ -41,9 +51,14 @@ const MaterialListar = () => {
     handleUpdateModalOpen,
     handleUpdateModalClose,
     handleMaterialUpdated,
+    handleExportClick,
     setDeleteModalOpen,
     setMaterialToDelete,
   } = useMaterialState();
+
+  const handleShowDetails = (material) => {
+    setSelectedMaterial(selectedMaterial?.id === material.id ? null : material);
+  };
 
   const renderTableView = () => (
     <table className="w-full">
@@ -55,10 +70,9 @@ const MaterialListar = () => {
           <th className="p-2 font-medium">STOCK</th>
           <th className="p-2 font-medium">PRECIO</th>
           <th className="p-2 font-medium">TOTAL</th>
-          <th className="p-2 font-medium">ESTADO</th>
-          <th className="p-2 font-medium">UBICACIÓN</th>
+          <th className="p-2 font-medium">FECHA COMPRA</th>
+          <th className="p-2 font-medium">DESCRIPCIÓN</th>
           <th className="p-2 font-medium">PROVEEDOR</th>
-          <th className="p-2 font-medium">REGISTRO</th>
           <th className="p-2 font-medium text-center">ACCIONES</th>
         </tr>
       </thead>
@@ -66,7 +80,10 @@ const MaterialListar = () => {
         {currentMaterials.map((material) => (
           <tr
             key={material.id}
-            className="border-b last:border-b-0 hover:bg-gray-50"
+            className={`border-b last:border-b-0 hover:bg-gray-50 
+                      ${
+                        selectedMaterial?.id === material.id ? "bg-gray-50" : ""
+                      }`}
           >
             <td className="p-2 font-medium text-gray-900">#{material.id}</td>
             <td className="p-2">
@@ -94,98 +111,123 @@ const MaterialListar = () => {
             <td className="p-2">${material.PrecioMaterial.toLocaleString()}</td>
             <td className="p-2">${material.TotalMaterial.toLocaleString()}</td>
             <td className="p-2">
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
-                  material.EstadoMaterial === "Activo"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-red-100 text-red-800"
-                }`}
-              >
-                {material.EstadoMaterial}
-              </span>
+              {new Date(material.FechaCompraMaterial).toLocaleDateString()}
             </td>
-            <td className="p-2">{material.UbicacionMaterial}</td>
+            <td
+              className="p-2 max-w-xs truncate"
+              title={material.DescripcionMaterial}
+            >
+              {material.DescripcionMaterial || "Sin descripción"}
+            </td>
             <td className="p-2 text-gray-600">
               {material.Proveedor
                 ? material.Proveedor.NombreProveedor
                 : "Sin proveedor"}
             </td>
             <td className="p-2">
-              <span
-                className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
-                  material.RegistroFacturaMaterial === "Si"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                {material.RegistroFacturaMaterial}
-              </span>
-            </td>
-            <td className="p-2">
               <div className="flex justify-center gap-1">
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleUpdateModalOpen(material);
-                  }}
+                  onClick={() => handleShowDetails(material)}
+                  className={`p-1 flex items-center gap-0.5 text-xs
+                           transition-all duration-200 ease-in-out hover:scale-105 active:scale-95
+                           ${
+                             selectedMaterial?.id === material.id
+                               ? "text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg"
+                               : "text-gray-600 hover:text-gray-800"
+                           }`}
+                  title={
+                    selectedMaterial?.id === material.id
+                      ? "Ocultar detalles"
+                      : "Ver detalles"
+                  }
+                >
+                  <Info
+                    className={`w-3.5 h-3.5 ${
+                      selectedMaterial?.id === material.id
+                        ? "animate-pulse"
+                        : ""
+                    }`}
+                  />
+                  {selectedMaterial?.id === material.id
+                    ? "Ocultar"
+                    : "Detalles"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateModalOpen(material)}
                   className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
                            transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
                   title="Editar material"
                 >
-                  <Pencil className="w-3.5 h-3.5 transition-transform duration-200 group-hover:scale-110" />
+                  <Pencil className="w-3.5 h-3.5" />
                   Editar
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleDelete(material);
-                  }}
+                  onClick={() => handleDelete(material)}
                   className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
                            relative overflow-hidden group transition-all duration-200 ease-in-out 
                            hover:scale-105 active:scale-95"
                   title="Eliminar material"
                 >
-                  <Trash2
-                    className="w-3.5 h-3.5 relative z-10 transition-transform duration-200 
-                              group-hover:scale-110 group-hover:rotate-12"
-                  />
-                  <span className="relative z-10">Eliminar</span>
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Eliminar</span>
                 </button>
               </div>
             </td>
           </tr>
         ))}
+        {/* Fila de detalles */}
+        {selectedMaterial && (
+          <tr>
+            <td colSpan="10" className="p-4">
+              <div className="animate-fadeIn">
+                <MaterialCard material={selectedMaterial} />
+              </div>
+            </td>
+          </tr>
+        )}
       </tbody>
     </table>
   );
 
   const renderGridView = () => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-      {currentMaterials.map((material) => (
-        <MaterialGrid
-          key={material.id}
-          material={material}
-          onEdit={() => handleUpdateModalOpen(material)}
-          onDelete={() => handleDelete(material)}
-        />
-      ))}
+    <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+        {currentMaterials.map((material) => (
+          <MaterialGrid
+            key={material.id}
+            material={material}
+            onEdit={() => handleUpdateModalOpen(material)}
+            onDelete={() => handleDelete(material)}
+            onShowDetails={() => handleShowDetails(material)}
+            isSelected={selectedMaterial?.id === material.id}
+          />
+        ))}
+      </div>
+      {/* Detalles en vista de grid con animación */}
+      {selectedMaterial && (
+        <div className="border-t mt-4">
+          <div className="animate-fadeIn p-4 bg-gray-50 rounded-lg m-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Detalles del Material
+              </h3>
+              <button
+                onClick={() => setSelectedMaterial(null)}
+                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg
+                         hover:bg-gray-200 transition-colors duration-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <MaterialCard material={selectedMaterial} />
+          </div>
+        </div>
+      )}
     </div>
   );
-
-  const handleExportClick = async () => {
-    try {
-      const result = await exportToExcel();
-      if (result) {
-        // Opcional: Mostrar mensaje de éxito
-        console.log("Excel generado correctamente");
-      }
-    } catch (error) {
-      console.error("Error en la exportación:", error);
-      // Opcional: Mostrar mensaje de error al usuario
-    }
-  };
 
   return (
     <div className="max-w-7xl mx-auto p-6 m-16">
@@ -204,7 +246,7 @@ const MaterialListar = () => {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Buscar por nombre, estado, ubicación o proveedor..."
+            placeholder="Buscar por nombre o proveedor..."
             className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
                      focus:outline-none focus:ring-1 focus:ring-blue-500
                      transition-colors duration-200"
@@ -213,6 +255,7 @@ const MaterialListar = () => {
           />
         </div>
 
+        {/* Botones de vista */}
         {/* Botones de vista */}
         <div className="max-[790px]:w-full flex justify-center">
           <div className="flex bg-white border rounded-lg overflow-hidden">
@@ -331,14 +374,12 @@ const MaterialListar = () => {
           </>
         )}
       </div>
-
       {/* Modales */}
       <MaterialCreateModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleMaterialCreated}
       />
-
       <MaterialDeleteModal
         isOpen={deleteModalOpen}
         onClose={() => {
@@ -349,7 +390,6 @@ const MaterialListar = () => {
         materialId={materialToDelete?.id}
         isDeleting={isDeleting}
       />
-
       <MaterialUpdateModal
         isOpen={updateModalOpen}
         onClose={handleUpdateModalClose}

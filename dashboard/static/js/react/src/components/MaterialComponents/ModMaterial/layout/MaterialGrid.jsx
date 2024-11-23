@@ -6,7 +6,6 @@ import {
   Trash2,
   DollarSign,
   PackageCheck,
-  MapPin,
 } from "lucide-react";
 
 const MaterialGrid = ({ material, onEdit, onDelete }) => {
@@ -18,6 +17,7 @@ const MaterialGrid = ({ material, onEdit, onDelete }) => {
       return new Intl.DateTimeFormat("es-ES", {
         day: "numeric",
         month: "short",
+        year: "numeric",
       }).format(date);
     } catch (error) {
       console.error("Error al formatear la fecha:", error, dateString);
@@ -70,37 +70,18 @@ const MaterialGrid = ({ material, onEdit, onDelete }) => {
       </div>
 
       {/* Contenido */}
-      <div className="p-2.5">
-        {/* Título y estado */}
-        <div className="mb-2">
+      <div className="p-4">
+        {/* Título y proveedor */}
+        <div className="mb-3">
           <h3
-            className="font-medium text-sm truncate"
+            className="font-medium text-sm truncate mb-1"
             title={material.NombreMaterial}
           >
             {material.NombreMaterial}
           </h3>
-          <div className="flex items-center gap-2 mt-1">
-            <span
-              className={`px-2 py-0.5 rounded-full text-xs font-medium 
-                         ${
-                           material.EstadoMaterial === "Activo"
-                             ? "bg-green-100 text-green-800"
-                             : "bg-red-100 text-red-800"
-                         }`}
-            >
-              {material.EstadoMaterial}
-            </span>
-            <span
-              className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800
-                        flex items-center gap-1"
-            >
-              <MapPin className="w-3 h-3" />
-              {material.UbicacionMaterial}
-            </span>
-          </div>
           {material.Proveedor && (
             <div
-              className="mt-1 text-xs text-gray-600 truncate"
+              className="text-xs text-gray-600 truncate"
               title={material.Proveedor.NombreProveedor}
             >
               Proveedor: {material.Proveedor.NombreProveedor}
@@ -108,15 +89,19 @@ const MaterialGrid = ({ material, onEdit, onDelete }) => {
           )}
         </div>
 
-        {/* Detalles en grid */}
-        <div className="grid grid-cols-2 gap-1 text-xs text-gray-600 mb-2">
+        {/* Detalles */}
+        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-3">
           <div className="flex items-center gap-1">
             <PackageCheck className="w-3 h-3" />
             <span>{material.StockMaterial} unidades</span>
           </div>
           <div className="flex items-center gap-1">
             <DollarSign className="w-3 h-3" />
-            <span>{formatCurrency(material.TotalMaterial)}</span>
+            <span>{formatCurrency(material.PrecioMaterial)}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <DollarSign className="w-3 h-3" />
+            <span>Total: {formatCurrency(material.TotalMaterial)}</span>
           </div>
           {material.FechaCompraMaterial && (
             <div className="flex items-center gap-1">
@@ -124,16 +109,19 @@ const MaterialGrid = ({ material, onEdit, onDelete }) => {
               <span>{formatDate(material.FechaCompraMaterial)}</span>
             </div>
           )}
-          {material.ColorMaterial && (
-            <div className="flex items-center gap-1">
-              <span
-                className="w-3 h-3 rounded-full border border-gray-300"
-                style={{ backgroundColor: material.ColorMaterial }}
-              />
-              <span>{material.ColorMaterial}</span>
-            </div>
-          )}
         </div>
+
+        {/* Descripción */}
+        {material.DescripcionMaterial && (
+          <div className="mb-3">
+            <p
+              className="text-xs text-gray-600 line-clamp-2"
+              title={material.DescripcionMaterial}
+            >
+              {material.DescripcionMaterial}
+            </p>
+          </div>
+        )}
 
         {/* Botones */}
         <div className="grid grid-cols-2 gap-2 pt-2 border-t">
@@ -143,7 +131,7 @@ const MaterialGrid = ({ material, onEdit, onDelete }) => {
               e.preventDefault();
               onEdit();
             }}
-            className="flex items-center justify-center gap-1 p-1 text-xs text-blue-600 hover:text-blue-800
+            className="flex items-center justify-center gap-1 p-1.5 text-xs text-blue-600 hover:text-blue-800
                      border border-blue-600 hover:border-blue-800 rounded-lg
                      transition-all duration-200 ease-in-out hover:bg-blue-50"
           >
@@ -156,7 +144,7 @@ const MaterialGrid = ({ material, onEdit, onDelete }) => {
               e.preventDefault();
               onDelete();
             }}
-            className="flex items-center justify-center gap-1 p-1 text-xs text-red-600 hover:text-red-800
+            className="flex items-center justify-center gap-1 p-1.5 text-xs text-red-600 hover:text-red-800
                      border border-red-600 hover:border-red-800 rounded-lg
                      transition-all duration-200 ease-in-out hover:bg-red-50"
           >

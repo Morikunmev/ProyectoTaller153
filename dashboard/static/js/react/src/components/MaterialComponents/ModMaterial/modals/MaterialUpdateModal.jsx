@@ -149,53 +149,32 @@ const MaterialUpdateModal = ({
 
               {/* Estado */}
               <div>
-                <label className="text-sm font-medium">Estado*</label>
-                <select
+                <label className="text-sm font-medium">Estado</label>
+                <input
+                  type="text"
                   name="EstadoMaterial"
                   value={formData.EstadoMaterial}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-2 border-2 rounded mt-1 
-                    focus:ring-2 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200
-                    ${
-                      formData.EstadoMaterial
-                        ? "border-green-400"
-                        : "border-gray-300"
-                    }`}
-                >
-                  <option value="">Seleccione un estado</option>
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                </select>
-                {errors.EstadoMaterial && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {errors.EstadoMaterial}
-                  </p>
-                )}
+      focus:ring-2 focus:ring-blue-500 focus:outline-none
+      transition-colors duration-200
+      ${formData.EstadoMaterial ? "border-green-400" : "border-gray-300"}`}
+                />
               </div>
 
               {/* Ubicación */}
               <div>
-                <label className="text-sm font-medium">Ubicación*</label>
+                <label className="text-sm font-medium">Ubicación</label>
                 <input
                   type="text"
                   name="UbicacionMaterial"
                   value={formData.UbicacionMaterial}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-2 border-2 rounded mt-1 
-                    focus:ring-2 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200
-                    ${
-                      formData.UbicacionMaterial
-                        ? "border-green-400"
-                        : "border-gray-300"
-                    }`}
+      focus:ring-2 focus:ring-blue-500 focus:outline-none
+      transition-colors duration-200
+      ${formData.UbicacionMaterial ? "border-green-400" : "border-gray-300"}`}
                 />
-                {errors.UbicacionMaterial && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {errors.UbicacionMaterial}
-                  </p>
-                )}
               </div>
             </div>
 

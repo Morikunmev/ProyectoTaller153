@@ -1,5 +1,3 @@
-// src/components/MaterialComponents/ModMaterial/utils/MaterialExport.js
-
 function getCookie(name) {
   let cookieValue = null;
   if (document.cookie && document.cookie !== "") {
@@ -17,20 +15,6 @@ function getCookie(name) {
 
 export const exportToExcel = async () => {
   try {
-    // Primera petición para obtener los datos
-    const getDataResponse = await fetch("/api/material/listar/", {
-      method: "GET",
-      headers: {
-        "X-CSRFToken": getCookie("csrftoken"),
-      },
-      credentials: "include",
-    });
-
-    if (!getDataResponse.ok) {
-      throw new Error("Error al obtener los datos");
-    }
-
-    // Petición para generar el Excel
     const response = await fetch("/api/materiales/exportar-excel/", {
       method: "GET",
       headers: {
@@ -40,26 +24,22 @@ export const exportToExcel = async () => {
     });
 
     if (!response.ok) {
-      throw new Error("Error al generar el Excel");
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Error al generar el Excel");
     }
 
-    // Obtener el blob del archivo
     const blob = await response.blob();
-
-    // Crear URL del blob
     const url = window.URL.createObjectURL(blob);
-
-    // Crear elemento de descarga
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Materiales_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    link.download = `Materiales_${new Date().toLocaleDateString()}.xlsx`;
 
-    // Añadir al DOM, hacer clic y limpiar
+    // Trigger descarga
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    // Liberar el objeto URL
+    // Limpiar
     window.URL.revokeObjectURL(url);
 
     return true;

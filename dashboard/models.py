@@ -183,24 +183,23 @@ class Material(models.Model):
     PesoMaterial = models.CharField(max_length=50, null=True, blank=True)
     DimensionesMaterial = models.CharField(max_length=100, null=True, blank=True)
     DetalleMaterial = models.TextField(null=True, blank=True)
-    EstadoMaterial = models.CharField(max_length=50)
-    UbicacionMaterial = models.CharField(max_length=100)
+    EstadoMaterial = models.CharField(max_length=50, null=True, blank=True)  # Añadido null=True, blank=True
+    UbicacionMaterial = models.CharField(max_length=100, null=True, blank=True)  # Añadido null=True, blank=True
     FotoMaterial = CloudinaryField('imagen', folder='materiales/', null=True, blank=True)
     Envio = models.ForeignKey(Envio, on_delete=models.CASCADE, null=True, blank=True)
-    Proveedor = models.ForeignKey('Proveedor', on_delete=models.SET_NULL, null=True, blank=True)  # Modificado
+    Proveedor = models.ForeignKey('Proveedor', on_delete=models.SET_NULL, null=True, blank=True)
     RegistroFacturaMaterial = models.CharField(max_length=2, choices=[('Si', 'Si'), ('No', 'No')], default='No')
 
     def save(self, *args, **kwargs):
         self.TotalMaterial = self.StockMaterial * self.PrecioMaterial
         
-        # Si hay un envío asociado y está marcado como recibido
         if self.Envio and self.Envio.EnvioRecibido:
             self.RegistroFacturaMaterial = 'Si'
         else:
             self.RegistroFacturaMaterial = 'No'
             
         super(Material, self).save(*args, **kwargs)
-
+        
 class Herramienta(models.Model):
     NombreHerramienta = models.CharField(max_length=100, null=False, blank=False)
     StockHerramienta = models.PositiveIntegerField(null=False, blank=False)
@@ -208,12 +207,13 @@ class Herramienta(models.Model):
     TotalHerramienta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
     FechaCompraHerramienta = models.DateField(auto_now_add=True)
     DescripcionHerramienta = models.TextField(null=True, blank=True)
-    MarcaHerramienta = models.CharField(max_length=100)
-    ModeloHerramienta = models.CharField(max_length=100)
-    UbicacionHerramienta = models.CharField(max_length=100)
+    # Modificados para ser opcionales
+    MarcaHerramienta = models.CharField(max_length=100, null=True, blank=True)  
+    ModeloHerramienta = models.CharField(max_length=100, null=True, blank=True)  
+    UbicacionHerramienta = models.CharField(max_length=100, null=True, blank=True)  
     FotoHerramienta = CloudinaryField('imagen', folder='herramientas/', null=True, blank=True)
     Envio = models.ForeignKey(Envio, on_delete=models.CASCADE, null=True, blank=True)
-    Proveedor = models.ForeignKey('Proveedor', on_delete=models.SET_NULL, null=True, blank=True)  # Modificado
+    Proveedor = models.ForeignKey('Proveedor', on_delete=models.SET_NULL, null=True, blank=True)
     RegistroFacturaHerramienta = models.CharField(max_length=2, choices=[('Si', 'Si'), ('No', 'No')], default='No')
 
     def save(self, *args, **kwargs):
@@ -225,7 +225,6 @@ class Herramienta(models.Model):
             self.RegistroFacturaHerramienta = 'No'
             
         super(Herramienta, self).save(*args, **kwargs)
-
 @receiver(post_save, sender=Envio)
 def crear_material_o_herramienta(sender, instance, created, **kwargs):
     # Solo proceder si el envío está marcado como recibido
@@ -244,8 +243,8 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
                     DescripcionMaterial=instance.DescripcionEnvio,
                     FotoMaterial=instance.FotoEnvio,
                     Envio=instance,
-                    Proveedor=instance.Proveedor,  # Asignamos el proveedor del envío
-                    EstadoMaterial='Nuevo',
+                    Proveedor=instance.Proveedor,
+                    EstadoMaterial='Nuevo',  # Ya estaba correcto para Material
                     UbicacionMaterial='Por asignar'
                 )
         
@@ -263,10 +262,11 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
                     DescripcionHerramienta=instance.DescripcionEnvio,
                     FotoHerramienta=instance.FotoEnvio,
                     Envio=instance,
-                    Proveedor=instance.Proveedor,  # Asignamos el proveedor del envío
+                    Proveedor=instance.Proveedor,
                     MarcaHerramienta='Por especificar',
                     ModeloHerramienta='Por especificar',
-                    UbicacionHerramienta='Por asignar'
+                    UbicacionHerramienta='Por asignar',
+                    EstadoHerramienta='Nuevo'  # Agregado estado 'Nuevo' para Herramienta
                 )
     else:
         # Si el envío no está marcado como recibido, eliminamos ambos registros si existen

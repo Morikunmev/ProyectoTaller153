@@ -40,6 +40,7 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   if (!isVisible) return null;
+
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center
@@ -147,7 +148,7 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
               {/* Estado */}
               <div>
                 <label className="text-sm font-medium block mb-0.5">
-                  Estado*
+                  Estado
                 </label>
                 <input
                   type="text"
@@ -155,9 +156,9 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   value={formData.EstadoMaterial}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-1.5 border-2 rounded
-      focus:ring-2 focus:ring-blue-500 focus:outline-none
-      transition-colors duration-200
-      ${getInputBorderClass(formData.EstadoMaterial)}`}
+                    focus:ring-2 focus:ring-blue-500 focus:outline-none
+                    transition-colors duration-200
+                    ${getInputBorderClass(formData.EstadoMaterial)}`}
                 />
                 {errors.EstadoMaterial && (
                   <p className="text-xs text-red-500 mt-0.5">
@@ -169,7 +170,7 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
               {/* Ubicación */}
               <div>
                 <label className="text-sm font-medium block mb-0.5">
-                  Ubicación*
+                  Ubicación
                 </label>
                 <input
                   type="text"
@@ -281,8 +282,8 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-8 pr-3 py-1.5 border-2 rounded-t
-            focus:ring-2 focus:ring-blue-500 focus:outline-none
-            transition-colors duration-200 border-gray-300"
+                        focus:ring-2 focus:ring-blue-500 focus:outline-none
+                        transition-colors duration-200 border-gray-300"
                     />
                   </div>
                   <select
@@ -290,9 +291,9 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     value={formData.Envio || ""}
                     onChange={handleInputChange}
                     className={`w-full px-3 py-1.5 border-2 border-t-0 rounded-b
-          focus:ring-2 focus:ring-blue-500 focus:outline-none
-          transition-colors duration-200
-          ${getInputBorderClass(formData.Envio)}`}
+                      focus:ring-2 focus:ring-blue-500 focus:outline-none
+                      transition-colors duration-200
+                      ${getInputBorderClass(formData.Envio)}`}
                     size={5}
                   >
                     <option value="">Sin envío</option>
@@ -341,8 +342,8 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
               </div>
             </div>
 
-            {/* Foto del Material */}
             <div>
+              {/* Foto del Material */}
               <label className="text-sm font-medium block mb-0.5">
                 Foto del Material
               </label>

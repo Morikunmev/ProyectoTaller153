@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { exportToExcel } from "../utils/MaterialExport";
 
 export const useMaterialState = () => {
   // Estados principales
@@ -32,36 +33,26 @@ export const useMaterialState = () => {
 
   const procesarMateriales = (materialsData) => {
     return materialsData.sort((a, b) => {
-      // Ordenar por estado primero (Activo primero)
-      if (a.EstadoMaterial === "Activo" && b.EstadoMaterial !== "Activo")
-        return -1;
-      if (a.EstadoMaterial !== "Activo" && b.EstadoMaterial === "Activo")
-        return 1;
-
-      // Si tienen el mismo estado, ordenar por stock (menor stock primero)
-      if (a.EstadoMaterial === b.EstadoMaterial) {
-        if (a.StockMaterial !== b.StockMaterial) {
-          return a.StockMaterial - b.StockMaterial;
-        }
-        // Si el stock es igual, ordenar por fecha más reciente
-        return (
-          new Date(b.FechaCompraMaterial) - new Date(a.FechaCompraMaterial)
-        );
-      }
-
-      return 0;
+      // Ordenar por fecha de compra más reciente primero
+      return new Date(b.FechaCompraMaterial) - new Date(a.FechaCompraMaterial);
     });
   };
+  // Añadir la función handleExportClick
+  const handleExportClick = useCallback(async () => {
+    try {
+      await exportToExcel();
+      // Opcionalmente puedes mostrar un mensaje de éxito
+    } catch (error) {
+      setError("Error al exportar materiales: " + error.message);
+    }
+  }, []);
 
-  // Fetch de datos
-  // In useMaterialState.js
   const fetchMaterials = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Update this URL to match your Django URL pattern
-      const response = await fetch("/api/material/listar/"); // Changed from /api/material/listar/
+      const response = await fetch("/api/material/listar/");
 
       if (!response.ok) {
         throw new Error(`Error HTTP: ${response.status}`);
@@ -69,11 +60,25 @@ export const useMaterialState = () => {
 
       const data = await response.json();
       if (data.success) {
-        const materialsConFotos = data.materials.map((material) => ({
-          ...material,
+        // Mapear solo los campos necesarios
+        const materialsProcessed = data.materials.map((material) => ({
+          id: material.id,
+          NombreMaterial: material.NombreMaterial,
+          StockMaterial: material.StockMaterial,
+          PrecioMaterial: material.PrecioMaterial,
+          TotalMaterial: material.TotalMaterial,
+          FechaCompraMaterial: material.FechaCompraMaterial,
+          DescripcionMaterial: material.DescripcionMaterial,
           FotoMaterial: material.FotoMaterial || null,
+          Proveedor: material.Proveedor
+            ? {
+                id: material.Proveedor.id,
+                NombreProveedor: material.Proveedor.NombreProveedor,
+              }
+            : null,
         }));
-        const materialsOrdenados = procesarMateriales(materialsConFotos);
+
+        const materialsOrdenados = procesarMateriales(materialsProcessed);
         setMaterials(materialsOrdenados);
       }
     } catch (error) {
@@ -93,47 +98,41 @@ export const useMaterialState = () => {
     };
   }, []);
 
-  // Función para manejar la apertura del modal de eliminación
   const handleDelete = useCallback((material) => {
     setMaterialToDelete(material);
     setDeleteModalOpen(true);
   }, []);
 
-  // Manejador para abrir el modal de actualización
   const handleUpdateModalOpen = useCallback((material) => {
     setMaterialToUpdate(material);
     setUpdateModalOpen(true);
   }, []);
 
-  // Manejador para cerrar el modal de actualización
   const handleUpdateModalClose = useCallback(() => {
     setUpdateModalOpen(false);
     setMaterialToUpdate(null);
   }, []);
 
-  // Manejador para la actualización del material
-  const handleMaterialUpdated = useCallback(
-    async (updatedMaterial) => {
-      try {
-        const materialConFoto = {
-          ...updatedMaterial,
-          FotoMaterial: updatedMaterial.FotoMaterial || null,
-        };
+  const handleMaterialUpdated = useCallback(async (updatedMaterial) => {
+    try {
+      const materialConFoto = {
+        ...updatedMaterial,
+        FotoMaterial: updatedMaterial.FotoMaterial || null,
+      };
 
-        setMaterials((prevMaterials) =>
-          prevMaterials.map((m) =>
-            m.id === materialConFoto.id ? materialConFoto : m
-          )
-        );
+      setMaterials((prevMaterials) =>
+        prevMaterials.map((m) =>
+          m.id === materialConFoto.id ? materialConFoto : m
+        )
+      );
 
-        await fetchMaterials();
-      } catch (error) {
-        console.error("Error al actualizar el estado:", error);
-        setError("Error al actualizar el material");
-      }
-    },
-    [fetchMaterials]
-  );
+      await fetchMaterials();
+    } catch (error) {
+      console.error("Error al actualizar el estado:", error);
+      setError("Error al actualizar el material");
+    }
+  }, []);
+
   const handleConfirmDelete = async () => {
     if (!materialToDelete) return;
 
@@ -173,11 +172,9 @@ export const useMaterialState = () => {
     }
   };
 
-  // Manejadores del modal
   const handleOpenModal = () => setIsModalOpen(true);
   const handleCloseModal = () => setIsModalOpen(false);
 
-  // Manejador de búsqueda
   const handleSearch = (value) => {
     setSearchTerm(value);
     setIsSearching(true);
@@ -190,7 +187,6 @@ export const useMaterialState = () => {
     return () => clearTimeout(timer);
   };
 
-  // Manejador de cambio de vista
   const handleViewChange = (isGrid) => {
     setIsChangingView(true);
 
@@ -202,7 +198,6 @@ export const useMaterialState = () => {
     return () => clearTimeout(timer);
   };
 
-  // Manejador para crear nuevo material
   const handleMaterialCreated = async (nuevoMaterial) => {
     try {
       const materialConFoto = {
@@ -221,7 +216,6 @@ export const useMaterialState = () => {
     }
   };
 
-  // Manejadores de paginación
   const handlePreviousPage = () => {
     setCurrentPage((prev) => Math.max(prev - 1, 1));
   };
@@ -231,13 +225,13 @@ export const useMaterialState = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
-  // Filtrado de materiales
+  // Filtrado optimizado para los campos específicos
   const filteredMaterials = materials.filter((material) => {
     const searchString = searchTerm.toLowerCase();
     return (
       material.NombreMaterial.toLowerCase().includes(searchString) ||
-      material.EstadoMaterial.toLowerCase().includes(searchString) ||
-      material.UbicacionMaterial.toLowerCase().includes(searchString) ||
+      (material.DescripcionMaterial &&
+        material.DescripcionMaterial.toLowerCase().includes(searchString)) ||
       (material.Proveedor &&
         material.Proveedor.NombreProveedor.toLowerCase().includes(
           searchString
@@ -246,7 +240,6 @@ export const useMaterialState = () => {
     );
   });
 
-  // Cálculos de paginación
   const totalPages = Math.ceil(filteredMaterials.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(
@@ -256,31 +249,24 @@ export const useMaterialState = () => {
   const currentMaterials = filteredMaterials.slice(startIndex, endIndex);
 
   return {
-    // Estados
-    materials,
     searchTerm,
     loading,
     error,
     isGridView,
     isChangingView,
     isSearching,
-    currentPage,
     isModalOpen,
-    itemsPerPage,
-    filteredMaterials,
     currentMaterials,
     totalPages,
+    currentPage,
     startIndex,
     endIndex,
+    filteredMaterials,
     deleteModalOpen,
     materialToDelete,
     isDeleting,
     updateModalOpen,
     materialToUpdate,
-    isUpdating,
-    procesarMateriales,
-
-    // Manejadores
     handleOpenModal,
     handleCloseModal,
     handleSearch,
@@ -288,14 +274,12 @@ export const useMaterialState = () => {
     handleMaterialCreated,
     handlePreviousPage,
     handleNextPage,
-    fetchMaterials,
     handleDelete,
     handleConfirmDelete,
     handleUpdateModalOpen,
     handleUpdateModalClose,
     handleMaterialUpdated,
-
-    // Setters
+    handleExportClick, // Asegúrate de que esta línea esté presente
     setDeleteModalOpen,
     setMaterialToDelete,
   };

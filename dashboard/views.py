@@ -2272,8 +2272,8 @@ def crear_material(request):
         try:
             data = request.POST
             
-            # Validaciones de campos requeridos
-            campos_requeridos = ['NombreMaterial', 'StockMaterial', 'PrecioMaterial', 'EstadoMaterial', 'UbicacionMaterial']
+            # Validaciones de campos requeridos según el modelo
+            campos_requeridos = ['NombreMaterial', 'StockMaterial', 'PrecioMaterial']
             errores = {}
             
             for campo in campos_requeridos:
@@ -2289,7 +2289,7 @@ def crear_material(request):
             # Validación y conversión de campos numéricos
             try:
                 stock_material = int(data.get('StockMaterial'))
-                if stock_material < 0:  # Permitimos 0 en stock
+                if stock_material < 0:  # PositiveIntegerField validation
                     raise ValueError('El stock no puede ser negativo')
             except ValueError:
                 return JsonResponse({
@@ -2311,19 +2311,8 @@ def crear_material(request):
                     }
                 }, status=400)
 
-            # Validación de fecha de compra opcional
-            fecha_compra = None
-            if data.get('FechaCompraMaterial'):
-                try:
-                    fecha_compra = datetime.strptime(data.get('FechaCompraMaterial'), '%Y-%m-%d').date()
-                except ValueError:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {
-                            'FechaCompraMaterial': 'El formato de fecha debe ser YYYY-MM-DD'
-                        }
-                    }, status=400)
-
+            # Validación de fecha de compra opcional (no necesaria por auto_now_add=True)
+            
             # Validación de Proveedor opcional
             proveedor = None
             if data.get('Proveedor'):
@@ -2355,19 +2344,18 @@ def crear_material(request):
                 StockMaterial=stock_material,
                 PrecioMaterial=precio_material,
                 TotalMaterial=stock_material * precio_material,
-                FechaCompraMaterial=fecha_compra,
                 DescripcionMaterial=data.get('DescripcionMaterial'),
                 ColorMaterial=data.get('ColorMaterial'),
                 PesoMaterial=data.get('PesoMaterial'),
                 DimensionesMaterial=data.get('DimensionesMaterial'),
                 DetalleMaterial=data.get('DetalleMaterial'),
-                EstadoMaterial=data.get('EstadoMaterial'),
-                UbicacionMaterial=data.get('UbicacionMaterial'),
+                EstadoMaterial=data.get('EstadoMaterial', ''),  # Campo no opcional pero sin validación específica
+                UbicacionMaterial=data.get('UbicacionMaterial', ''),  # Campo no opcional pero sin validación específica
                 Proveedor=proveedor,
                 Envio=envio
             )
             
-            # Manejar la foto
+            # Manejar la foto opcional
             if 'FotoMaterial' in request.FILES:
                 foto = request.FILES['FotoMaterial']
                 if foto.content_type not in ALLOWED_FILE_TYPES:
@@ -2409,7 +2397,6 @@ def crear_material(request):
                     'StockMaterial': nuevo_material.StockMaterial,
                     'PrecioMaterial': str(nuevo_material.PrecioMaterial),
                     'TotalMaterial': str(nuevo_material.TotalMaterial),
-                    'FechaCompraMaterial': nuevo_material.FechaCompraMaterial.isoformat() if nuevo_material.FechaCompraMaterial else None,
                     'DescripcionMaterial': nuevo_material.DescripcionMaterial,
                     'ColorMaterial': nuevo_material.ColorMaterial,
                     'PesoMaterial': nuevo_material.PesoMaterial,
@@ -2458,7 +2445,8 @@ def actualizar_material(request, material_id):
             # Debug: Imprimir todos los datos recibidos
             print("Datos recibidos:", dict(data))
             
-            campos_requeridos = ['NombreMaterial', 'StockMaterial', 'PrecioMaterial', 'EstadoMaterial', 'UbicacionMaterial']
+            # Solo validamos los campos requeridos según el modelo
+            campos_requeridos = ['NombreMaterial', 'StockMaterial', 'PrecioMaterial']
             errores = {}
             
             for campo in campos_requeridos:
@@ -2471,7 +2459,7 @@ def actualizar_material(request, material_id):
             # Validación y conversión de campos numéricos
             try:
                 stock_material = int(data.get('StockMaterial'))
-                if stock_material < 0:  # Permitimos 0 en stock
+                if stock_material < 0:  # PositiveIntegerField validation
                     raise ValueError('El stock no puede ser negativo')
             except ValueError:
                 return JsonResponse({
@@ -2489,25 +2477,6 @@ def actualizar_material(request, material_id):
                     'errors': {'PrecioMaterial': 'El precio debe ser un número positivo'}
                 }, status=400)
 
-            # Validación del estado
-            estado_material = data.get('EstadoMaterial')
-            if estado_material not in ['Activo', 'Inactivo']:
-                return JsonResponse({
-                    'success': False,
-                    'errors': {'EstadoMaterial': 'El estado debe ser Activo o Inactivo'}
-                }, status=400)
-
-            # Validación de fecha de compra opcional
-            fecha_compra = None
-            if data.get('FechaCompraMaterial'):
-                try:
-                    fecha_compra = datetime.strptime(data.get('FechaCompraMaterial'), '%Y-%m-%d').date()
-                except ValueError:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {'FechaCompraMaterial': 'El formato de fecha debe ser YYYY-MM-DD'}
-                    }, status=400)
-            
             # Validación del proveedor (opcional)
             proveedor = None
             if data.get('Proveedor'):
@@ -2605,8 +2574,9 @@ def actualizar_material(request, material_id):
             material.StockMaterial = stock_material
             material.PrecioMaterial = precio_material
             material.TotalMaterial = stock_material * precio_material
-            material.EstadoMaterial = estado_material
-            material.UbicacionMaterial = data.get('UbicacionMaterial')
+            # Campos no requeridos según el modelo
+            material.EstadoMaterial = data.get('EstadoMaterial', material.EstadoMaterial)
+            material.UbicacionMaterial = data.get('UbicacionMaterial', material.UbicacionMaterial)
             material.ColorMaterial = data.get('ColorMaterial', '')
             material.PesoMaterial = data.get('PesoMaterial', '')
             material.DimensionesMaterial = data.get('DimensionesMaterial', '')
@@ -2614,7 +2584,6 @@ def actualizar_material(request, material_id):
             material.DescripcionMaterial = data.get('DescripcionMaterial', '')
             material.Proveedor = proveedor
             material.Envio = envio
-            material.FechaCompraMaterial = fecha_compra
             
             try:
                 material.full_clean()
@@ -2640,7 +2609,6 @@ def actualizar_material(request, material_id):
                     'DimensionesMaterial': material.DimensionesMaterial,
                     'DetalleMaterial': material.DetalleMaterial,
                     'DescripcionMaterial': material.DescripcionMaterial,
-                    'FechaCompraMaterial': material.FechaCompraMaterial.isoformat() if material.FechaCompraMaterial else None,
                     'Proveedor': {
                         'id': material.Proveedor.id,
                         'NombreProveedor': material.Proveedor.NombreProveedor,
@@ -2732,53 +2700,54 @@ def eliminar_material(request, material_id):
 def listar_materiales(request):
     if request.method == 'GET':
         try:
-            materiales = Material.objects.all().select_related('Proveedor', 'Envio')
+            # Optimizamos la consulta para traer solo los campos necesarios
+            materiales = Material.objects.all().select_related('Proveedor').only(
+                'id',
+                'NombreMaterial',
+                'StockMaterial',
+                'PrecioMaterial',
+                'TotalMaterial',
+                'FechaCompraMaterial',
+                'DescripcionMaterial',
+                'FotoMaterial',
+                'Proveedor__id',
+                'Proveedor__NombreProveedor'
+            )
+
             data = []
             for material in materiales:
-                # Preparar datos del envío
-                envio_data = None
-                if material.Envio:
-                    envio_data = {
-                        'id': material.Envio.id,
-                        'NombreEnvio': material.Envio.NombreEnvio,
-                    }
-
-                # Preparar datos del proveedor
+                # Preparar datos del proveedor de forma simplificada
                 proveedor_data = None
                 if material.Proveedor:
                     proveedor_data = {
                         'id': material.Proveedor.id,
-                        'NombreProveedor': material.Proveedor.NombreProveedor,
-                        'RutProveedor': material.Proveedor.RutProveedor
+                        'NombreProveedor': material.Proveedor.NombreProveedor
                     }
 
+                # Solo incluimos los campos solicitados
                 data.append({
                     'id': material.id,
                     'NombreMaterial': material.NombreMaterial,
                     'StockMaterial': material.StockMaterial,
                     'PrecioMaterial': str(material.PrecioMaterial),
                     'TotalMaterial': str(material.TotalMaterial),
-                    'EstadoMaterial': material.EstadoMaterial,
-                    'UbicacionMaterial': material.UbicacionMaterial,
-                    'ColorMaterial': material.ColorMaterial,
-                    'PesoMaterial': material.PesoMaterial,
-                    'DimensionesMaterial': material.DimensionesMaterial,
-                    'DetalleMaterial': material.DetalleMaterial,
                     'DescripcionMaterial': material.DescripcionMaterial,
                     'FechaCompraMaterial': material.FechaCompraMaterial.isoformat() if material.FechaCompraMaterial else None,
-                    'Proveedor': proveedor_data,
                     'FotoMaterial': material.FotoMaterial.url if material.FotoMaterial else None,
-                    'Envio': envio_data
+                    'Proveedor': proveedor_data
                 })
+
             return JsonResponse({
                 'success': True,
                 'materials': data
             })
+            
         except Exception as e:
             return JsonResponse({
                 'success': False,
                 'message': str(e)
             }, status=500)
+            
     return JsonResponse({
         'success': False, 
         'message': 'Método no permitido'
@@ -2911,3 +2880,56 @@ def exportar_materiales_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
+
+@login_required(login_url='login')
+def obtener_detalles_material(request, material_id):
+    if request.method == 'GET':
+        try:
+            material = Material.objects.select_related('Proveedor', 'Envio').get(id=material_id)
+            
+            # Devolvemos todos los campos sin importar si son null
+            data = {
+                'id': material.id,
+                'NombreMaterial': material.NombreMaterial,
+                'StockMaterial': material.StockMaterial,
+                'PrecioMaterial': str(material.PrecioMaterial),
+                'TotalMaterial': str(material.TotalMaterial),
+                'FechaCompraMaterial': material.FechaCompraMaterial.isoformat() if material.FechaCompraMaterial else None,
+                'DescripcionMaterial': material.DescripcionMaterial or "Sin descripción",
+                'ColorMaterial': material.ColorMaterial or "No especificado",
+                'PesoMaterial': material.PesoMaterial or "No especificado",
+                'DimensionesMaterial': material.DimensionesMaterial or "No especificado",
+                'DetalleMaterial': material.DetalleMaterial or "Sin detalles",
+                'EstadoMaterial': material.EstadoMaterial or "No especificado",
+                'UbicacionMaterial': material.UbicacionMaterial or "No especificado",
+                'FotoMaterial': material.FotoMaterial.url if material.FotoMaterial else None,
+                'RegistroFacturaMaterial': material.RegistroFacturaMaterial or "No",
+                'Envio': {
+                    'id': material.Envio.id if material.Envio else None
+                } if material.Envio else None,
+                'Proveedor': {
+                    'id': material.Proveedor.id,
+                    'NombreProveedor': material.Proveedor.NombreProveedor
+                } if material.Proveedor else None
+            }
+
+            return JsonResponse({
+                'success': True,
+                'material': data
+            })
+            
+        except Material.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Material no encontrado'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False, 
+        'message': 'Método no permitido'
+    }, status=405)
