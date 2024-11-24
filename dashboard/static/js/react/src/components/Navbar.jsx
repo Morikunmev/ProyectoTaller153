@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { UserCircle } from "lucide-react";
 
 const Navbar = () => {
+  // Removemos isModalOpen ya que no lo necesitaremos
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -58,7 +59,6 @@ const Navbar = () => {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-gray-800 shadow-lg">
       <div className="w-full px-4">
         <div className="flex justify-between h-16 items-center">
-          {/* Logo y nombre - con flex-shrink-0 para evitar que se comprima */}
           <div className="flex items-center flex-shrink-0">
             <div className="flex items-center space-x-3">
               <img
@@ -72,9 +72,7 @@ const Navbar = () => {
             </div>
           </div>
 
-          {/* Perfil de usuario y botón de logout - con ml-auto para empujar a la derecha */}
           <div className="flex items-center space-x-4 flex-shrink-0">
-            {/* Información del usuario */}
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center ring-2 ring-white flex-shrink-0">
                 {userData?.FotoUsuario ? (
@@ -111,7 +109,6 @@ const Navbar = () => {
               )}
             </div>
 
-            {/* Botón de logout */}
             <button
               onClick={handleLogout}
               className="text-white hover:bg-red-500 px-4 py-2 rounded-md text-sm font-medium
