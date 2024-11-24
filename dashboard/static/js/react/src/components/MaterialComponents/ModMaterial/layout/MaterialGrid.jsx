@@ -6,9 +6,10 @@ import {
   Trash2,
   DollarSign,
   PackageCheck,
+  Info,
 } from "lucide-react";
 
-const MaterialGrid = ({ material, onEdit, onDelete }) => {
+const MaterialGrid = ({ material, onEdit, onDelete, onShowDetails, isSelected }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "Fecha no disponible";
     try {
@@ -40,7 +41,8 @@ const MaterialGrid = ({ material, onEdit, onDelete }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
+    <div className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200
+                    ${isSelected ? "ring-2 ring-blue-500" : ""}`}>
       {/* Imagen/Preview */}
       <div className="w-full h-36 bg-gray-100 relative">
         {material.FotoMaterial ? (
@@ -124,7 +126,24 @@ const MaterialGrid = ({ material, onEdit, onDelete }) => {
         )}
 
         {/* Botones */}
-        <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onShowDetails();
+            }}
+            className={`flex items-center justify-center gap-1 p-1.5 text-xs
+                     border rounded-lg transition-all duration-200 ease-in-out
+                     ${
+                       isSelected
+                         ? "text-blue-600 border-blue-600 bg-blue-50 hover:bg-blue-100"
+                         : "text-gray-600 border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                     }`}
+          >
+            <Info className="w-3 h-3" />
+            <span>{isSelected ? "Ocultar" : "Detalles"}</span>
+          </button>
           <button
             type="button"
             onClick={(e) => {
