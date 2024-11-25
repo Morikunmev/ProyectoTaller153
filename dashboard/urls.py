@@ -62,6 +62,18 @@ urlpatterns = [
     path('api/material/<int:material_id>/actualizar/', views.actualizar_material, name='actualizar_material'),
     path('api/materiales/exportar-excel/', views.exportar_materiales_excel, name='exportar_materiales_excel'),
     path('api/materiales/<int:material_id>/detalles/', views.obtener_detalles_material, name='obtener_detalles_material'),
+    
+    
+        #-------------------RUTA PARA HERRAMIENTA-----------------
+    path('herramienta/', views.mod_herramienta, name='mod_herramienta'),
+    path('api/herramientas/listar/', views.listar_herramientas, name='listar_herramientas'),
+    path('api/herramientas/crear/', views.crear_herramienta, name='crear_herramienta'),
+    path('api/herramientas/<int:herramienta_id>/actualizar/', views.actualizar_herramienta, name='actualizar_herramienta'),
+    path('api/herramientas/<int:herramienta_id>/eliminar/', views.eliminar_herramienta, name='eliminar_herramienta'),
+    path('api/herramientas/exportar-excel/', views.exportar_herramientas_excel, name='exportar_herramientas_excel'),
+    path('api/herramientas/<int:herramienta_id>/detalles/', views.obtener_detalles_herramienta, name='obtener_detalles_herramienta'),
+        
+
 
 
 

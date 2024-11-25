@@ -39,7 +39,7 @@ from django.http import JsonResponse
 
 
 # Local imports
-from .models import Proveedor, Factura, Envio, Material
+from .models import Proveedor, Factura, Envio, Material, Herramienta
 from login.models import Usuario
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -2933,3 +2933,662 @@ def obtener_detalles_material(request, material_id):
         'success': False, 
         'message': 'Método no permitido'
     }, status=405)
+    
+    
+#---------LOGICA PARA HERRAMIENTA
+@login_required(login_url='login')
+def mod_herramienta(request):
+    return render(request, 'material/herramienta.html')
+@login_required(login_url='login')
+@ensure_csrf_cookie 
+def crear_herramienta(request):
+    if request.method == 'POST':
+        try:
+            data = request.POST
+            
+            # Validaciones de campos requeridos según el modelo
+            campos_requeridos = ['NombreHerramienta', 'StockHerramienta', 'PrecioHerramienta']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores
+                }, status=400)
+            
+            # Validación y conversión de campos numéricos
+            try:
+                stock_herramienta = int(data.get('StockHerramienta'))
+                if stock_herramienta < 0:  # PositiveIntegerField validation
+                    raise ValueError('El stock no puede ser negativo')
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'StockHerramienta': 'El stock debe ser un número entero no negativo'
+                    }
+                }, status=400)
+
+            try:
+                precio_herramienta = Decimal(data.get('PrecioHerramienta'))
+                if precio_herramienta <= 0:
+                    raise ValueError('El precio debe ser mayor a 0')
+            except (ValueError, DecimalException):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {
+                        'PrecioHerramienta': 'El precio debe ser un número positivo'
+                    }
+                }, status=400)
+
+            # Validación de Proveedor opcional
+            proveedor = None
+            if data.get('Proveedor'):
+                try:
+                    proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
+                except (Proveedor.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'Proveedor': 'Proveedor no válido'
+                        }
+                    }, status=400)
+
+            # Validación de Envío opcional
+            envio = None
+            if data.get('Envio'):
+                try:
+                    envio = Envio.objects.get(id=data.get('Envio'))
+                except (Envio.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'Envio': 'Envío no válido'
+                        }
+                    }, status=400)
+            
+            nueva_herramienta = Herramienta(
+                NombreHerramienta=data.get('NombreHerramienta'),
+                StockHerramienta=stock_herramienta,
+                PrecioHerramienta=precio_herramienta,
+                TotalHerramienta=stock_herramienta * precio_herramienta,
+                DescripcionHerramienta=data.get('DescripcionHerramienta'),
+                MarcaHerramienta=data.get('MarcaHerramienta', ''),
+                ModeloHerramienta=data.get('ModeloHerramienta', ''),
+                UbicacionHerramienta=data.get('UbicacionHerramienta', ''),
+                Proveedor=proveedor,
+                Envio=envio
+            )
+            
+            # Manejar la foto opcional
+            if 'FotoHerramienta' in request.FILES:
+                foto = request.FILES['FotoHerramienta']
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoHerramienta': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG, PDF'
+                        }
+                    }, status=400)
+
+                if foto.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {
+                            'FotoHerramienta': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'
+                        }
+                    }, status=400)
+
+                nueva_herramienta.FotoHerramienta = foto
+
+            try:
+                nueva_herramienta.full_clean()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({
+                    'success': False,
+                    'errors': errores_formateados
+                }, status=400)
+            
+            nueva_herramienta.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Herramienta creada exitosamente',
+                'herramienta': {
+                    'id': nueva_herramienta.id,
+                    'NombreHerramienta': nueva_herramienta.NombreHerramienta,
+                    'StockHerramienta': nueva_herramienta.StockHerramienta,
+                    'PrecioHerramienta': str(nueva_herramienta.PrecioHerramienta),
+                    'TotalHerramienta': str(nueva_herramienta.TotalHerramienta),
+                    'DescripcionHerramienta': nueva_herramienta.DescripcionHerramienta,
+                    'MarcaHerramienta': nueva_herramienta.MarcaHerramienta,
+                    'ModeloHerramienta': nueva_herramienta.ModeloHerramienta,
+                    'UbicacionHerramienta': nueva_herramienta.UbicacionHerramienta,
+                    'FotoHerramienta': nueva_herramienta.FotoHerramienta.url if nueva_herramienta.FotoHerramienta else None,
+                    'RegistroFacturaHerramienta': nueva_herramienta.RegistroFacturaHerramienta,
+                    'Proveedor': {
+                        'id': nueva_herramienta.Proveedor.id,
+                        'NombreProveedor': nueva_herramienta.Proveedor.NombreProveedor,
+                        'RutProveedor': nueva_herramienta.Proveedor.RutProveedor
+                    } if nueva_herramienta.Proveedor else None,
+                    'Envio': {
+                        'id': nueva_herramienta.Envio.id,
+                        'NombreEnvio': nueva_herramienta.Envio.NombreEnvio
+                    } if nueva_herramienta.Envio else None
+                }
+            })
+            
+        except Exception as e:
+            logger.error(f"Error al crear herramienta: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': {
+                    'general': f'Error al crear la herramienta: {str(e)}'
+                }
+            }, status=400)
+    
+    return JsonResponse({
+        'success': False,
+        'errors': {
+            'general': 'Método no permitido'
+        }
+    }, status=405)
+    
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_herramienta(request, herramienta_id):
+    if request.method in ['PUT', 'POST']:
+        try:
+            herramienta = get_object_or_404(Herramienta, id=herramienta_id)
+            data = request.POST
+            
+            # Debug: Imprimir todos los datos recibidos
+            print("Datos recibidos:", dict(data))
+            
+            # Solo validamos los campos requeridos según el modelo
+            campos_requeridos = ['NombreHerramienta', 'StockHerramienta', 'PrecioHerramienta']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({'success': False, 'errors': errores}, status=400)
+
+            # Validación y conversión de campos numéricos
+            try:
+                stock_herramienta = int(data.get('StockHerramienta'))
+                if stock_herramienta < 0:
+                    raise ValueError('El stock no puede ser negativo')
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'StockHerramienta': 'El stock debe ser un número entero no negativo'}
+                }, status=400)
+
+            try:
+                precio_herramienta = Decimal(data.get('PrecioHerramienta'))
+                if precio_herramienta <= 0:
+                    raise ValueError('El precio debe ser mayor a 0')
+            except (ValueError, DecimalException):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'PrecioHerramienta': 'El precio debe ser un número positivo'}
+                }, status=400)
+
+            # Validación del proveedor (opcional)
+            proveedor = None
+            if data.get('Proveedor'):
+                try:
+                    proveedor = Proveedor.objects.get(id=data.get('Proveedor'))
+                except (Proveedor.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'Proveedor': 'Proveedor no válido'}
+                    }, status=400)
+
+            # Validación del envío (opcional)
+            envio = None
+            if data.get('Envio'):
+                try:
+                    envio = Envio.objects.get(id=data.get('Envio'))
+                except (Envio.DoesNotExist, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'Envio': 'Envío no válido'}
+                    }, status=400)
+
+            # Manejar la foto
+            if data.get('eliminar_FotoHerramienta', '').lower() == 'true' and herramienta.FotoHerramienta:
+                try:
+                    url = herramienta.FotoHerramienta.url
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload",
+                        invalidate=True
+                    )
+                    print(f"Resultado de eliminación foto: {result}")
+                    
+                    herramienta.FotoHerramienta = None
+                    
+                except Exception as e:
+                    print(f"Error al eliminar foto: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoHerramienta': f'Error al eliminar la foto: {str(e)}'}
+                    }, status=400)
+            
+            elif 'FotoHerramienta' in request.FILES:
+                foto = request.FILES['FotoHerramienta']
+                
+                if foto.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoHerramienta': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'}
+                    }, status=400)
+                
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoHerramienta': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG'}
+                    }, status=400)
+                
+                if herramienta.FotoHerramienta:
+                    try:
+                        url = herramienta.FotoHerramienta.url
+                        parts = url.split('/')
+                        public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                        
+                        cloudinary.config(
+                            cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                            api_key=os.getenv('CLOUDINARY_API_KEY'),
+                            api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                        )
+                        
+                        cloudinary.uploader.destroy(
+                            public_id,
+                            resource_type="image",
+                            type="upload",
+                            invalidate=True
+                        )
+                    except Exception as e:
+                        print(f"Error al eliminar foto anterior: {str(e)}")
+                
+                herramienta.FotoHerramienta = foto
+
+            # Actualizar campos de la herramienta
+            herramienta.NombreHerramienta = data.get('NombreHerramienta')
+            herramienta.StockHerramienta = stock_herramienta
+            herramienta.PrecioHerramienta = precio_herramienta
+            herramienta.TotalHerramienta = stock_herramienta * precio_herramienta
+            herramienta.MarcaHerramienta = data.get('MarcaHerramienta', herramienta.MarcaHerramienta)
+            herramienta.ModeloHerramienta = data.get('ModeloHerramienta', herramienta.ModeloHerramienta)
+            herramienta.UbicacionHerramienta = data.get('UbicacionHerramienta', herramienta.UbicacionHerramienta)
+            herramienta.DescripcionHerramienta = data.get('DescripcionHerramienta', '')
+            herramienta.Proveedor = proveedor
+            herramienta.Envio = envio
+            
+            try:
+                herramienta.full_clean()
+                herramienta.save()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Herramienta actualizada exitosamente',
+                'herramienta': {
+                    'id': herramienta.id,
+                    'NombreHerramienta': herramienta.NombreHerramienta,
+                    'StockHerramienta': herramienta.StockHerramienta,
+                    'PrecioHerramienta': str(herramienta.PrecioHerramienta),
+                    'TotalHerramienta': str(herramienta.TotalHerramienta),
+                    'MarcaHerramienta': herramienta.MarcaHerramienta,
+                    'ModeloHerramienta': herramienta.ModeloHerramienta,
+                    'UbicacionHerramienta': herramienta.UbicacionHerramienta,
+                    'DescripcionHerramienta': herramienta.DescripcionHerramienta,
+                    'Proveedor': {
+                        'id': herramienta.Proveedor.id,
+                        'NombreProveedor': herramienta.Proveedor.NombreProveedor,
+                        'RutProveedor': herramienta.Proveedor.RutProveedor
+                    } if herramienta.Proveedor else None,
+                    'Envio': {
+                        'id': herramienta.Envio.id,
+                        'NombreEnvio': herramienta.Envio.NombreEnvio,
+                    } if herramienta.Envio else None,
+                    'FotoHerramienta': herramienta.FotoHerramienta.url if herramienta.FotoHerramienta else None
+                }
+            })
+            
+        except Exception as e:
+            print(f"Error general: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': {'general': f'Error al actualizar la herramienta: {str(e)}'}
+            }, status=400)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {'general': 'Método no permitido'}
+    }, status=405)
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_herramienta(request, herramienta_id):
+    if request.method == 'DELETE':
+        try:
+            # Obtener la herramienta
+            herramienta = get_object_or_404(Herramienta, id=herramienta_id)
+            
+            # Guardar información para la respuesta
+            nombre_herramienta = herramienta.NombreHerramienta
+            marca_herramienta = herramienta.MarcaHerramienta
+            nombre_proveedor = herramienta.Proveedor.NombreProveedor if herramienta.Proveedor else "Sin proveedor"
+            
+            # Si existe una foto, eliminarla de Cloudinary
+            if herramienta.FotoHerramienta:
+                try:
+                    # Obtener la URL de la imagen
+                    url = herramienta.FotoHerramienta.url
+                    
+                    # Extraer el public_id
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    print(f"Intentando eliminar foto con public_id: {public_id}")
+                    
+                    # Configurar Cloudinary
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    # Eliminar la foto
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload"
+                    )
+                    print(f"Resultado de eliminación foto Cloudinary: {result}")
+                    
+                except Exception as cloud_error:
+                    print(f"Error al eliminar foto de Cloudinary: {str(cloud_error)}")
+                    print(f"URL de la foto: {herramienta.FotoHerramienta.url}")
+            
+            # Eliminar la herramienta
+            herramienta.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'La herramienta "{nombre_herramienta}" ({marca_herramienta}) del proveedor {nombre_proveedor} y sus archivos asociados fueron eliminados exitosamente'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al eliminar la herramienta: {str(e)}'
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, status=405)
+
+@login_required(login_url='login')
+def listar_herramientas(request):
+    if request.method == 'GET':
+        try:
+            # Optimizamos la consulta para traer solo los campos necesarios
+            herramientas = Herramienta.objects.all().select_related('Proveedor').only(
+                'id',
+                'NombreHerramienta',
+                'StockHerramienta',
+                'PrecioHerramienta',
+                'TotalHerramienta',
+                'FechaCompraHerramienta',
+                'DescripcionHerramienta',
+                'MarcaHerramienta',
+                'ModeloHerramienta',
+                'FotoHerramienta',
+                'Proveedor__id',
+                'Proveedor__NombreProveedor'
+            )
+
+            data = []
+            for herramienta in herramientas:
+                # Preparar datos del proveedor de forma simplificada
+                proveedor_data = None
+                if herramienta.Proveedor:
+                    proveedor_data = {
+                        'id': herramienta.Proveedor.id,
+                        'NombreProveedor': herramienta.Proveedor.NombreProveedor
+                    }
+
+                # Solo incluimos los campos solicitados
+                data.append({
+                    'id': herramienta.id,
+                    'NombreHerramienta': herramienta.NombreHerramienta,
+                    'StockHerramienta': herramienta.StockHerramienta,
+                    'PrecioHerramienta': str(herramienta.PrecioHerramienta),
+                    'TotalHerramienta': str(herramienta.TotalHerramienta),
+                    'DescripcionHerramienta': herramienta.DescripcionHerramienta,
+                    'MarcaHerramienta': herramienta.MarcaHerramienta,
+                    'ModeloHerramienta': herramienta.ModeloHerramienta,
+                    'FechaCompraHerramienta': herramienta.FechaCompraHerramienta.isoformat() if herramienta.FechaCompraHerramienta else None,
+                    'FotoHerramienta': herramienta.FotoHerramienta.url if herramienta.FotoHerramienta else None,
+                    'Proveedor': proveedor_data
+                })
+
+            return JsonResponse({
+                'success': True,
+                'herramientas': data
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False, 
+        'message': 'Método no permitido'
+    }, status=405)
+@login_required(login_url='login')
+def obtener_detalles_herramienta(request, herramienta_id):
+    if request.method == 'GET':
+        try:
+            herramienta = Herramienta.objects.select_related('Proveedor', 'Envio').get(id=herramienta_id)
+            
+            data = {
+                'id': herramienta.id,
+                'NombreHerramienta': herramienta.NombreHerramienta,
+                'StockHerramienta': herramienta.StockHerramienta,
+                'PrecioHerramienta': str(herramienta.PrecioHerramienta),
+                'TotalHerramienta': str(herramienta.TotalHerramienta),
+                'FechaCompraHerramienta': herramienta.FechaCompraHerramienta.isoformat() if herramienta.FechaCompraHerramienta else None,
+                'DescripcionHerramienta': herramienta.DescripcionHerramienta or "Sin descripción",
+                'MarcaHerramienta': herramienta.MarcaHerramienta or "No especificada",
+                'ModeloHerramienta': herramienta.ModeloHerramienta or "No especificado",
+                'UbicacionHerramienta': herramienta.UbicacionHerramienta or "No especificada",
+                'FotoHerramienta': herramienta.FotoHerramienta.url if herramienta.FotoHerramienta else None,
+                'RegistroFacturaHerramienta': herramienta.RegistroFacturaHerramienta or "No",
+                'Envio': {
+                    'id': herramienta.Envio.id if herramienta.Envio else None
+                } if herramienta.Envio else None,
+                'Proveedor': {
+                    'id': herramienta.Proveedor.id,
+                    'NombreProveedor': herramienta.Proveedor.NombreProveedor
+                } if herramienta.Proveedor else None
+            }
+
+            return JsonResponse({
+                'success': True,
+                'herramienta': data
+            })
+            
+        except Herramienta.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Herramienta no encontrada'
+            }, status=404)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False, 
+        'message': 'Método no permitido'
+    }, status=405)
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def exportar_herramientas_excel(request):
+    # Crear un buffer en memoria
+    output = BytesIO()
+    
+    # Crear un nuevo archivo Excel con la opción remove_timezone
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    # Hoja para los datos
+    worksheet_data = workbook.add_worksheet('Herramientas')
+    # Hojas para los gráficos
+    worksheet_charts = workbook.add_worksheet('Gráficos')
+    # Agregar formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy',
+    })
+
+    # Definir encabezados
+    headers = [
+        'ID',
+        'Nombre Herramienta',
+        'Stock',
+        'Precio',
+        'Total',
+        'Marca',
+        'Modelo',
+        'Ubicación',
+        'Fecha Compra',
+        'Proveedor',
+        'Registro Factura'
+    ]
+    
+    # Escribir encabezados en hoja de datos
+    for col, header in enumerate(headers):
+        worksheet_data.write(0, col, header, header_format)
+        worksheet_data.set_column(col, col, 15)
+
+    # Obtener datos de herramientas
+    herramientas = Herramienta.objects.all().select_related('Proveedor').order_by('-FechaCompraHerramienta')
+
+    # Escribir datos
+    for row, herramienta in enumerate(herramientas, start=1):
+        worksheet_data.write(row, 0, herramienta.id)
+        worksheet_data.write(row, 1, herramienta.NombreHerramienta)
+        worksheet_data.write(row, 2, herramienta.StockHerramienta)
+        worksheet_data.write(row, 3, float(herramienta.PrecioHerramienta))
+        worksheet_data.write(row, 4, float(herramienta.TotalHerramienta))
+        worksheet_data.write(row, 5, herramienta.MarcaHerramienta or 'No especificada')
+        worksheet_data.write(row, 6, herramienta.ModeloHerramienta or 'No especificado')
+        worksheet_data.write(row, 7, herramienta.UbicacionHerramienta)
+        worksheet_data.write_datetime(row, 8, herramienta.FechaCompraHerramienta, date_format)
+        worksheet_data.write(row, 9, herramienta.Proveedor.NombreProveedor if herramienta.Proveedor else 'Sin proveedor')
+        worksheet_data.write(row, 10, herramienta.RegistroFacturaHerramienta)
+
+    # Ajustar anchos de columna
+    worksheet_data.set_column('A:A', 8)   # ID
+    worksheet_data.set_column('B:B', 30)  # Nombre Herramienta
+    worksheet_data.set_column('C:D', 15)  # Stock y Precio
+    worksheet_data.set_column('E:E', 20)  # Total
+    worksheet_data.set_column('F:K', 18)  # Resto de columnas
+
+    # Preparar datos para los gráficos
+    proveedores_dict = {}
+    marcas_dict = {}
+    for herramienta in herramientas:
+        # Conteo por proveedor
+        proveedor = herramienta.Proveedor.NombreProveedor if herramienta.Proveedor else 'Sin proveedor'
+        proveedores_dict[proveedor] = proveedores_dict.get(proveedor, 0) + 1
+        
+        # Conteo por marca
+        marca = herramienta.MarcaHerramienta or 'Sin marca'
+        marcas_dict[marca] = marcas_dict.get(marca, 0) + 1
+
+    # Escribir datos para gráficos
+    # Datos de proveedores
+    worksheet_charts.write_row('A1', ['Proveedor', 'Cantidad'], header_format)
+    for i, (proveedor, cantidad) in enumerate(proveedores_dict.items(), start=2):
+        worksheet_charts.write(f'A{i}', proveedor)
+        worksheet_charts.write(f'B{i}', cantidad)
+
+    # Datos de marcas
+    worksheet_charts.write_row('D1', ['Marca', 'Cantidad'], header_format)
+    for i, (marca, cantidad) in enumerate(marcas_dict.items(), start=2):
+        worksheet_charts.write(f'D{i}', marca)
+        worksheet_charts.write(f'E{i}', cantidad)
+
+    # Crear gráficos
+    # 1. Gráfico de columnas (Herramientas por Proveedor)
+    column_chart = workbook.add_chart({'type': 'column'})
+    column_chart.add_series({
+        'name': 'Herramientas por Proveedor',
+        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
+        'data_labels': {'value': True},
+    })
+    column_chart.set_title({'name': 'Distribución de Herramientas por Proveedor'})
+    column_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('G2', column_chart)
+
+    # 2. Gráfico de pie (Marcas de Herramientas)
+    pie_chart = workbook.add_chart({'type': 'pie'})
+    pie_chart.add_series({
+        'name': 'Marcas de Herramientas',
+        'categories': f'=Gráficos!$D$2:$D${len(marcas_dict)+1}',
+        'values': f'=Gráficos!$E$2:$E${len(marcas_dict)+1}',
+        'data_labels': {'percentage': True},
+    })
+    pie_chart.set_title({'name': 'Distribución por Marca (%)'})
+    pie_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('G18', pie_chart)
+
+    workbook.close()
+
+    # Preparar la respuesta
+    output.seek(0)
+    filename = f'Herramientas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response

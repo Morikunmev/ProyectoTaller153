@@ -1,21 +1,6 @@
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === name + "=") {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
 export const exportToExcel = async () => {
   try {
-    const response = await fetch("/api/materiales/exportar-excel/", {
+    const response = await fetch("/api/herramientas/exportar-excel/", {
       method: "GET",
       headers: {
         "X-CSRFToken": getCookie("csrftoken"),
@@ -32,7 +17,7 @@ export const exportToExcel = async () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `Materiales_${new Date().toLocaleDateString()}.xlsx`;
+    link.download = `Herramientas_${new Date().toLocaleDateString()}.xlsx`;
 
     // Trigger descarga
     document.body.appendChild(link);
