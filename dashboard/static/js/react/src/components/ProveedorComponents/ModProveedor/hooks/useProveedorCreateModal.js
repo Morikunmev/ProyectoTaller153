@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
   // Form Data State
@@ -33,8 +33,33 @@ export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }
   }, [isOpen]);
 
+  // Validación de archivos
+  const validateFile = useCallback((file) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return "El archivo es demasiado grande. El tamaño máximo permitido es 10MB";
+    }
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/bmp",
+      "image/webp",
+      "image/tiff",
+      "image/svg+xml",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      return "Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG";
+    }
+
+    return null;
+  }, []);
+
   // Handle modal close
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsAnimating(false);
     setTimeout(() => {
       onClose();
@@ -52,84 +77,136 @@ export const useProveedorCreateModal = ({ isOpen, onClose, onSubmit }) => {
       setPreviewUrl(null);
       setErrors({});
     }, 150);
-  };
+  }, [onClose]);
 
   // Handle input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+  const handleInputChange = useCallback(
+    (e) => {
+      const { name, value } = e.target;
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+
+      // Limpiar errores al modificar un campo
+      if (errors[name]) {
+        setErrors((prev) => ({
+          ...prev,
+          [name]: null,
+        }));
+      }
+    },
+    [errors]
+  );
 
   // Handle file input
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFormData((prev) => ({ ...prev, FotoProveedor: file }));
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
+  const handleFileChange = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const error = validateFile(file);
+        if (error) {
+          setErrors((prev) => ({ ...prev, FotoProveedor: error }));
+          e.target.value = "";
+          return;
+        }
+
+        setFormData((prev) => ({ ...prev, FotoProveedor: file }));
+        setPreviewUrl(URL.createObjectURL(file));
+
+        // Limpiar error si existe
+        if (errors.FotoProveedor) {
+          setErrors((prev) => ({ ...prev, FotoProveedor: null }));
+        }
+      }
+    },
+    [errors, validateFile]
+  );
 
   // Handle form submission
-  const handleSubmit = async (e) => {
-    e?.preventDefault();
-    setIsSubmitting(true);
+  const handleSubmit = useCallback(
+    async (e) => {
+      e?.preventDefault();
+      setIsSubmitting(true);
 
-    try {
-      const formDataToSend = new FormData();
-      Object.keys(formData).forEach((key) => {
-        if (formData[key] !== null && formData[key] !== "") {
-          formDataToSend.append(key, formData[key]);
+      try {
+        // Validaciones
+        const newErrors = {};
+        if (!formData.NombreProveedor.trim()) {
+          newErrors.NombreProveedor = "El nombre es requerido";
         }
-      });
-
-      const response = await fetch("/api/proveedor/crear/", {
-        method: "POST",
-        headers: {
-          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
-            .value,
-        },
-        body: formDataToSend,
-        credentials: "include",
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.errors) {
-          setErrors(data.errors);
-          throw new Error(Object.values(data.errors)[0]);
+        if (!formData.RutProveedor.trim()) {
+          newErrors.RutProveedor = "El RUT es requerido";
         }
-        throw new Error(data.message || "Error al crear el proveedor");
-      }
+        if (!formData.MarcaProveedor.trim()) {
+          newErrors.MarcaProveedor = "La marca es requerida";
+        }
 
-      if (data.success) {
-        onSubmit(data.proveedor);
-        handleClose();
+        // Validar formato de teléfono si se proporciona
+        if (
+          formData.TelefonoProveedor &&
+          !/^\+?[\d\s-]+$/.test(formData.TelefonoProveedor)
+        ) {
+          newErrors.TelefonoProveedor = "Formato de teléfono no válido";
+        }
+
+        if (Object.keys(newErrors).length > 0) {
+          setErrors(newErrors);
+          setIsSubmitting(false);
+          return;
+        }
+
+        const formDataToSend = new FormData();
+        Object.keys(formData).forEach((key) => {
+          if (formData[key] !== null && formData[key] !== "") {
+            formDataToSend.append(key, formData[key]);
+          }
+        });
+
+        const response = await fetch("/api/proveedor/crear/", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+              .value,
+          },
+          body: formDataToSend,
+          credentials: "include",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (data.errors) {
+            setErrors(data.errors);
+            throw new Error(Object.values(data.errors)[0]);
+          }
+          throw new Error(data.message || "Error al crear el proveedor");
+        }
+
+        if (data.success) {
+          onSubmit(data.proveedor);
+          handleClose();
+        }
+      } catch (error) {
+        console.error("Error al crear proveedor:", error);
+        setErrors((prev) => ({
+          ...prev,
+          general: error.message || "Error al crear el proveedor",
+        }));
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (error) {
-      console.error("Error al crear proveedor:", error);
-      setErrors((prev) => ({
-        ...prev,
-        general: error.message || "Error al crear el proveedor",
-      }));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    },
+    [formData, handleClose, onSubmit]
+  );
 
   return {
-    // States
     formData,
     errors,
     isSubmitting,
     isAnimating,
     isVisible,
     previewUrl,
-
-    // Event Handlers
     handleClose,
     handleSubmit,
     handleInputChange,

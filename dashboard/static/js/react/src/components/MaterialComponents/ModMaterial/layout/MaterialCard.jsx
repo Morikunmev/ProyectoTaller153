@@ -11,6 +11,7 @@ import {
   AlertCircle,
   FileCheck,
   Loader,
+  Truck, // Añadido para el ícono de envío
 } from "lucide-react";
 
 const MaterialCard = ({ material: initialMaterial }) => {
@@ -47,7 +48,6 @@ const MaterialCard = ({ material: initialMaterial }) => {
       }
     };
 
-    // Mostrar los datos iniciales inmediatamente
     setLoading(true);
     fetchDetallesMaterial();
 
@@ -101,52 +101,78 @@ const MaterialCard = ({ material: initialMaterial }) => {
       {/* Detalles */}
       <div className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Mostramos todos los campos, incluso los null */}
+          {/* Información del Envío */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Truck className="w-4 h-4" />
+            <span>
+              Envío: {material.Envio ? `#${material.Envio.id}` : "Sin envío"}
+            </span>
+          </div>
+
+          {/* Información del Proveedor */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Package className="w-4 h-4" />
+            <span>
+              Proveedor:{" "}
+              {material.Proveedor
+                ? material.Proveedor.NombreProveedor
+                : "Sin proveedor"}
+            </span>
+          </div>
+
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Palette className="w-4 h-4" />
-            <span>Color: {material.ColorMaterial}</span>
+            <span>Color: {material.ColorMaterial || "No especificado"}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Weight className="w-4 h-4" />
-            <span>Peso: {material.PesoMaterial}</span>
+            <span>Peso: {material.PesoMaterial || "No especificado"}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Ruler className="w-4 h-4" />
-            <span>Dimensiones: {material.DimensionesMaterial}</span>
+            <span>
+              Dimensiones: {material.DimensionesMaterial || "No especificado"}
+            </span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <MapPin className="w-4 h-4" />
-            <span>Ubicación: {material.UbicacionMaterial}</span>
+            <span>
+              Ubicación: {material.UbicacionMaterial || "No especificado"}
+            </span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <AlertCircle className="w-4 h-4" />
-            <span>Estado: {material.EstadoMaterial}</span>
+            <span>Estado: {material.EstadoMaterial || "No especificado"}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <FileCheck className="w-4 h-4" />
-            <span>Registro Factura: {material.RegistroFacturaMaterial}</span>
+            <span>
+              Registro Factura: {material.RegistroFacturaMaterial || "No"}
+            </span>
           </div>
         </div>
 
         {/* Detalles adicionales */}
-        <div className="mt-4 pt-4 border-t">
-          <div className="flex items-start gap-2">
-            <FileText className="w-4 h-4 text-gray-500 mt-0.5" />
-            <div className="flex-1">
-              <span className="block text-sm font-medium text-gray-900 mb-1">
-                Detalles adicionales
-              </span>
-              <p className="text-sm text-gray-600 leading-relaxed">
-                {material.DetalleMaterial}
-              </p>
+        {material.DetalleMaterial && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-start gap-2">
+              <FileText className="w-4 h-4 text-gray-500 mt-0.5" />
+              <div className="flex-1">
+                <span className="block text-sm font-medium text-gray-900 mb-1">
+                  Detalles adicionales
+                </span>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {material.DetalleMaterial}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

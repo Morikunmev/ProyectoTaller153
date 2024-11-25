@@ -8,6 +8,7 @@ import {
   Loader,
   Settings,
   Tag,
+  Truck, // Añadido para el ícono de envío
 } from "lucide-react";
 
 const HerramientaCard = ({ herramienta: initialHerramienta }) => {
@@ -97,6 +98,26 @@ const HerramientaCard = ({ herramienta: initialHerramienta }) => {
       {/* Detalles */}
       <div className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Información del Envío */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Truck className="w-4 h-4" />
+            <span>
+              Envío:{" "}
+              {herramienta.Envio ? `#${herramienta.Envio.id}` : "Sin envío"}
+            </span>
+          </div>
+
+          {/* Información del Proveedor */}
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Package className="w-4 h-4" />
+            <span>
+              Proveedor:{" "}
+              {herramienta.Proveedor
+                ? herramienta.Proveedor.NombreProveedor
+                : "Sin proveedor"}
+            </span>
+          </div>
+
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Tag className="w-4 h-4" />
             <span>
@@ -121,7 +142,7 @@ const HerramientaCard = ({ herramienta: initialHerramienta }) => {
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <FileCheck className="w-4 h-4" />
             <span>
-              Registro Factura: {herramienta.RegistroFacturaHerramienta}
+              Registro Factura: {herramienta.RegistroFacturaHerramienta || "No"}
             </span>
           </div>
         </div>
@@ -137,23 +158,6 @@ const HerramientaCard = ({ herramienta: initialHerramienta }) => {
                 </span>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   {herramienta.DescripcionHerramienta || "Sin descripción"}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Información del Proveedor */}
-        {herramienta.Proveedor && (
-          <div className="mt-4 pt-4 border-t">
-            <div className="flex items-start gap-2">
-              <Package className="w-4 h-4 text-gray-500 mt-0.5" />
-              <div className="flex-1">
-                <span className="block text-sm font-medium text-gray-900 mb-1">
-                  Información del Proveedor
-                </span>
-                <p className="text-sm text-gray-600">
-                  {herramienta.Proveedor.NombreProveedor}
                 </p>
               </div>
             </div>

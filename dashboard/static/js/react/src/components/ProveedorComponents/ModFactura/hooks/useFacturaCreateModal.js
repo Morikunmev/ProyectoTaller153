@@ -69,20 +69,21 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
-      setTimeout(() => setIsAnimating(true), 1);
+      // Reducimos el tiempo a 10ms para que la animación sea más suave
+      setTimeout(() => setIsAnimating(true), 10);
     } else {
       setIsAnimating(false);
-      const timer = setTimeout(() => setIsVisible(false), 150);
-      return () => clearTimeout(timer);
+      // Aumentamos el tiempo a 300ms para coincidir con la duración de la transición CSS
+      setTimeout(() => setIsVisible(false), 300);
     }
   }, [isOpen]);
-
   const handleClose = () => {
     setIsAnimating(false);
     setTimeout(() => {
       onClose();
       setFormData({
         FechaEmision: today,
+        NumeroFactura: "",
         Proveedor: "",
         FotoFactura: null,
         DocumentoFactura: null,
@@ -90,7 +91,7 @@ export const useFacturaCreateModal = ({ isOpen, onClose, onSubmit }) => {
       setPreviewUrl(null);
       setDocumentPreviewUrl(null);
       setErrors({});
-    }, 150);
+    }, 300); // Ajustamos el tiempo aquí también
   };
 
   const handleInputChange = (e) => {
