@@ -163,27 +163,35 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
 
-    // Si el cambio es en el campo Envio
+    // Lógica especial para cuando se selecciona un envío
     if (name === "Envio") {
-      // Si se seleccionó un envío
       if (value) {
-        // Encontrar el envío seleccionado
-        const selectedEnvio = envios.find(
+        // Si se selecciona un envío, encuentra el envío en la lista
+        const envioSeleccionado = envios.find(
           (envio) => envio.id.toString() === value
         );
-        if (selectedEnvio) {
-          // Actualizar tanto el envío como el proveedor
+        if (envioSeleccionado) {
+          // Actualiza tanto el envío como el proveedor
           setFormData((prev) => ({
             ...prev,
             [name]: value,
-            Proveedor: selectedEnvio.Proveedor.id.toString(), // Actualizar automáticamente el proveedor
+            // Actualiza automáticamente el proveedor al del envío
+            Proveedor: envioSeleccionado.Proveedor.id.toString(),
           }));
           return;
         }
+      } else {
+        // Si se deselecciona el envío, limpia también el proveedor
+        setFormData((prev) => ({
+          ...prev,
+          [name]: "",
+          Proveedor: "",
+        }));
+        return;
       }
     }
 
-    // Para otros campos, mantener el comportamiento normal
+    // Para el resto de los campos, manejo normal
     setFormData((prev) => ({
       ...prev,
       [name]: value,

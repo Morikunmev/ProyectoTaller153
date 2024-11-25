@@ -66,7 +66,6 @@ const HerramientaListar = ({ isModalOpen, setIsModalOpen }) => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
   };
-
   const renderTableView = () => (
     <table className="w-full">
       <thead>
@@ -86,168 +85,164 @@ const HerramientaListar = ({ isModalOpen, setIsModalOpen }) => {
         </tr>
       </thead>
       <tbody>
-        {currentHerramientas.map((herramienta) => (
-          <tr
-            key={herramienta.id}
-            className={`border-b last:border-b-0 hover:bg-gray-50 
-                      ${
-                        selectedHerramienta?.id === herramienta.id
-                          ? "bg-gray-50"
-                          : ""
-                      }`}
-          >
-            <td className="p-2 font-medium text-gray-900">#{herramienta.id}</td>
-            <td className="p-2">
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                {herramienta.FotoHerramienta ? (
-                  <img
-                    src={herramienta.FotoHerramienta}
-                    alt={`Herramienta: ${herramienta.NombreHerramienta}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.style.display = "none";
-                      e.target.parentNode.classList.add("bg-gray-200");
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Box className="w-4 h-4 text-gray-400" />{" "}
-                    {/* Cambiar Box por Tool */}
+        {currentHerramientas.map((herramienta) => {
+          const isSelected = selectedHerramienta?.id === herramienta.id;
+          return (
+            <React.Fragment key={herramienta.id}>
+              <tr
+                className={`border-b ${
+                  isSelected ? "border-b-0" : ""
+                } hover:bg-gray-50 ${isSelected ? "bg-gray-50" : ""}`}
+              >
+                <td className="p-2 font-medium text-gray-900">
+                  #{herramienta.id}
+                </td>
+                <td className="p-2">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                    {herramienta.FotoHerramienta ? (
+                      <img
+                        src={herramienta.FotoHerramienta}
+                        alt={`Herramienta: ${herramienta.NombreHerramienta}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = "none";
+                          e.target.parentNode.classList.add("bg-gray-200");
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                        <Box className="w-4 h-4 text-gray-400" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </td>
-            <td className="p-2 font-medium">{herramienta.NombreHerramienta}</td>
-            <td className="p-2">{herramienta.StockHerramienta}</td>
-            <td className="p-2">
-              ${herramienta.PrecioHerramienta.toLocaleString()}
-            </td>
-            <td className="p-2">
-              ${herramienta.TotalHerramienta.toLocaleString()}
-            </td>
-            <td className="p-2">
-              {new Date(
-                herramienta.FechaCompraHerramienta
-              ).toLocaleDateString()}
-            </td>
-            <td
-              className="p-2 max-w-xs truncate"
-              title={herramienta.DescripcionHerramienta}
-            >
-              {herramienta.DescripcionHerramienta || "Sin descripción"}
-            </td>
-            <td className="p-2">
-              {herramienta.MarcaHerramienta || "Sin marca"}
-            </td>
-            <td className="p-2">
-              {herramienta.ModeloHerramienta || "Sin modelo"}
-            </td>
-            <td className="p-2 text-gray-600">
-              {herramienta.Proveedor
-                ? herramienta.Proveedor.NombreProveedor
-                : "Sin proveedor"}
-            </td>
-            <td className="p-2">
-              <div className="flex justify-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleShowDetails(herramienta)}
-                  className={`p-1 flex items-center gap-0.5 text-xs
-                           transition-all duration-200 ease-in-out hover:scale-105 active:scale-95
-                           ${
-                             selectedHerramienta?.id === herramienta.id
-                               ? "text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg"
-                               : "text-gray-600 hover:text-gray-800"
-                           }`}
-                  title={
-                    selectedHerramienta?.id === herramienta.id
-                      ? "Ocultar detalles"
-                      : "Ver detalles"
-                  }
+                </td>
+                <td className="p-2 font-medium">
+                  {herramienta.NombreHerramienta}
+                </td>
+                <td className="p-2">{herramienta.StockHerramienta}</td>
+                <td className="p-2">
+                  ${herramienta.PrecioHerramienta.toLocaleString()}
+                </td>
+                <td className="p-2">
+                  ${herramienta.TotalHerramienta.toLocaleString()}
+                </td>
+                <td className="p-2">
+                  {new Date(
+                    herramienta.FechaCompraHerramienta
+                  ).toLocaleDateString()}
+                </td>
+                <td
+                  className="p-2 max-w-xs truncate"
+                  title={herramienta.DescripcionHerramienta}
                 >
-                  <Info
-                    className={`w-3.5 h-3.5 ${
-                      selectedHerramienta?.id === herramienta.id
-                        ? "animate-pulse"
-                        : ""
-                    }`}
-                  />
-                  {selectedHerramienta?.id === herramienta.id
-                    ? "Ocultar"
-                    : "Detalles"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleUpdateModalOpen(herramienta)}
-                  className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
-                           transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
-                  title="Editar herramienta"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(herramienta)}
-                  className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
-                           relative overflow-hidden group transition-all duration-200 ease-in-out 
-                           hover:scale-105 active:scale-95"
-                  title="Eliminar herramienta"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Eliminar</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-        ))}
-        {selectedHerramienta && (
-          <tr>
-            <td colSpan="12" className="p-4">
-              <div className="animate-fadeIn">
-                <HerramientaCard herramienta={selectedHerramienta} />
-              </div>
-            </td>
-          </tr>
-        )}
+                  {herramienta.DescripcionHerramienta || "Sin descripción"}
+                </td>
+                <td className="p-2">
+                  {herramienta.MarcaHerramienta || "Sin marca"}
+                </td>
+                <td className="p-2">
+                  {herramienta.ModeloHerramienta || "Sin modelo"}
+                </td>
+                <td className="p-2 text-gray-600">
+                  {herramienta.Proveedor
+                    ? herramienta.Proveedor.NombreProveedor
+                    : "Sin proveedor"}
+                </td>
+                <td className="p-2">
+                  <div className="flex justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleShowDetails(herramienta)}
+                      className={`p-1 flex items-center gap-0.5 text-xs
+                               transition-all duration-200 ease-in-out hover:scale-105 active:scale-95
+                               ${
+                                 isSelected
+                                   ? "text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg"
+                                   : "text-gray-600 hover:text-gray-700"
+                               }`}
+                      title={isSelected ? "Ocultar detalles" : "Ver detalles"}
+                    >
+                      <Info
+                        className={`w-3.5 h-3.5 ${
+                          isSelected ? "animate-pulse" : ""
+                        }`}
+                      />
+                      {isSelected ? "Ocultar" : "Detalles"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateModalOpen(herramienta)}
+                      className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
+                               transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
+                      title="Editar herramienta"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(herramienta)}
+                      className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
+                               relative overflow-hidden group transition-all duration-200 ease-in-out 
+                               hover:scale-105 active:scale-95"
+                      title="Eliminar herramienta"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {isSelected && (
+                <tr>
+                  <td colSpan="12" className="p-0">
+                    <div className="animate-fadeIn border-t border-b">
+                      <HerramientaCard herramienta={herramienta} />
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
+          );
+        })}
       </tbody>
     </table>
   );
-
   const renderGridView = () => (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
         {currentHerramientas.map((herramienta) => (
-          <HerramientaGrid
-            key={herramienta.id}
-            herramienta={herramienta}
-            onEdit={() => handleUpdateModalOpen(herramienta)}
-            onDelete={() => handleDelete(herramienta)}
-            onShowDetails={() => handleShowDetails(herramienta)}
-            isSelected={selectedHerramienta?.id === herramienta.id}
-          />
+          <div key={herramienta.id} className="space-y-4">
+            <HerramientaGrid
+              herramienta={herramienta}
+              onEdit={() => handleUpdateModalOpen(herramienta)}
+              onDelete={() => handleDelete(herramienta)}
+              onShowDetails={() => handleShowDetails(herramienta)}
+              isSelected={selectedHerramienta?.id === herramienta.id}
+            />
+            {selectedHerramienta?.id === herramienta.id && (
+              <div className="animate-fadeIn bg-gray-50 rounded-lg border">
+                <div className="flex justify-between items-center p-3 border-b">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Detalles de la Herramienta
+                  </h3>
+                  <button
+                    onClick={() => setSelectedHerramienta(null)}
+                    className="text-gray-500 hover:text-gray-700 p-1 rounded-lg
+                             hover:bg-gray-200 transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-4">
+                  <HerramientaCard herramienta={herramienta} />
+                </div>
+              </div>
+            )}
+          </div>
         ))}
       </div>
-      {selectedHerramienta && (
-        <div className="border-t mt-4">
-          <div className="animate-fadeIn p-4 bg-gray-50 rounded-lg m-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Detalles de la Herramienta
-              </h3>
-              <button
-                onClick={() => setSelectedHerramienta(null)}
-                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg
-                         hover:bg-gray-200 transition-colors duration-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <HerramientaCard herramienta={selectedHerramienta} />
-          </div>
-        </div>
-      )}
     </div>
   );
 

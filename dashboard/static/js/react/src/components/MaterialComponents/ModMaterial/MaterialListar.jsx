@@ -64,7 +64,6 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
   };
-
   const renderTableView = () => (
     <table className="w-full">
       <thead>
@@ -82,153 +81,155 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
         </tr>
       </thead>
       <tbody>
-        {currentMaterials.map((material) => (
-          <tr
-            key={material.id}
-            className={`border-b last:border-b-0 hover:bg-gray-50 
-                      ${
-                        selectedMaterial?.id === material.id ? "bg-gray-50" : ""
-                      }`}
-          >
-            <td className="p-2 font-medium text-gray-900">#{material.id}</td>
-            <td className="p-2">
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                {material.FotoMaterial ? (
-                  <img
-                    src={material.FotoMaterial}
-                    alt={`Material: ${material.NombreMaterial}`}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.style.display = "none";
-                      e.target.parentNode.classList.add("bg-gray-200");
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Box className="w-4 h-4 text-gray-400" />
+        {currentMaterials.map((material) => {
+          const isSelected = selectedMaterial?.id === material.id;
+          return (
+            <React.Fragment key={material.id}>
+              <tr
+                className={`border-b ${
+                  isSelected ? "border-b-0" : "last:border-b-0"
+                } hover:bg-gray-50 
+                ${isSelected ? "bg-gray-50" : ""}`}
+              >
+                <td className="p-2 font-medium text-gray-900">
+                  #{material.id}
+                </td>
+                <td className="p-2">
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                    {material.FotoMaterial ? (
+                      <img
+                        src={material.FotoMaterial}
+                        alt={`Material: ${material.NombreMaterial}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.style.display = "none";
+                          e.target.parentNode.classList.add("bg-gray-200");
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                        <Box className="w-4 h-4 text-gray-400" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </td>
-            <td className="p-2 font-medium">{material.NombreMaterial}</td>
-            <td className="p-2">{material.StockMaterial}</td>
-            <td className="p-2">${material.PrecioMaterial.toLocaleString()}</td>
-            <td className="p-2">${material.TotalMaterial.toLocaleString()}</td>
-            <td className="p-2">
-              {new Date(material.FechaCompraMaterial).toLocaleDateString()}
-            </td>
-            <td
-              className="p-2 max-w-xs truncate"
-              title={material.DescripcionMaterial}
-            >
-              {material.DescripcionMaterial || "Sin descripción"}
-            </td>
-            <td className="p-2 text-gray-600">
-              {material.Proveedor
-                ? material.Proveedor.NombreProveedor
-                : "Sin proveedor"}
-            </td>
-            <td className="p-2">
-              <div className="flex justify-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleShowDetails(material)}
-                  className={`p-1 flex items-center gap-0.5 text-xs
-                           transition-all duration-200 ease-in-out hover:scale-105 active:scale-95
-                           ${
-                             selectedMaterial?.id === material.id
-                               ? "text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg"
-                               : "text-gray-600 hover:text-gray-800"
-                           }`}
-                  title={
-                    selectedMaterial?.id === material.id
-                      ? "Ocultar detalles"
-                      : "Ver detalles"
-                  }
+                </td>
+                <td className="p-2 font-medium">{material.NombreMaterial}</td>
+                <td className="p-2">{material.StockMaterial}</td>
+                <td className="p-2">
+                  ${material.PrecioMaterial.toLocaleString()}
+                </td>
+                <td className="p-2">
+                  ${material.TotalMaterial.toLocaleString()}
+                </td>
+                <td className="p-2">
+                  {new Date(material.FechaCompraMaterial).toLocaleDateString()}
+                </td>
+                <td
+                  className="p-2 max-w-xs truncate"
+                  title={material.DescripcionMaterial}
                 >
-                  <Info
-                    className={`w-3.5 h-3.5 ${
-                      selectedMaterial?.id === material.id
-                        ? "animate-pulse"
-                        : ""
-                    }`}
-                  />
-                  {selectedMaterial?.id === material.id
-                    ? "Ocultar"
-                    : "Detalles"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleUpdateModalOpen(material)}
-                  className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
-                           transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
-                  title="Editar material"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(material)}
-                  className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
-                           relative overflow-hidden group transition-all duration-200 ease-in-out 
-                           hover:scale-105 active:scale-95"
-                  title="Eliminar material"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Eliminar</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-        ))}
-        {selectedMaterial && (
-          <tr>
-            <td colSpan="10" className="p-4">
-              <div className="animate-fadeIn">
-                <MaterialCard material={selectedMaterial} />
-              </div>
-            </td>
-          </tr>
-        )}
+                  {material.DescripcionMaterial || "Sin descripción"}
+                </td>
+                <td className="p-2 text-gray-600">
+                  {material.Proveedor
+                    ? material.Proveedor.NombreProveedor
+                    : "Sin proveedor"}
+                </td>
+                <td className="p-2">
+                  <div className="flex justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleShowDetails(material)}
+                      className={`p-1 flex items-center gap-0.5 text-xs
+                               transition-all duration-200 ease-in-out hover:scale-105 active:scale-95
+                               ${
+                                 isSelected
+                                   ? "text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg"
+                                   : "text-gray-600 hover:text-gray-800"
+                               }`}
+                      title={isSelected ? "Ocultar detalles" : "Ver detalles"}
+                    >
+                      <Info
+                        className={`w-3.5 h-3.5 ${
+                          isSelected ? "animate-pulse" : ""
+                        }`}
+                      />
+                      {isSelected ? "Ocultar" : "Detalles"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateModalOpen(material)}
+                      className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
+                               transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
+                      title="Editar material"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(material)}
+                      className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
+                               relative overflow-hidden group transition-all duration-200 ease-in-out 
+                               hover:scale-105 active:scale-95"
+                      title="Eliminar material"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {isSelected && (
+                <tr>
+                  <td colSpan="10" className="p-0">
+                    <div className="animate-fadeIn border-t border-b">
+                      <MaterialCard material={material} />
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
+          );
+        })}
       </tbody>
     </table>
   );
-
   const renderGridView = () => (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
         {currentMaterials.map((material) => (
-          <MaterialGrid
-            key={material.id}
-            material={material}
-            onEdit={() => handleUpdateModalOpen(material)}
-            onDelete={() => handleDelete(material)}
-            onShowDetails={() => handleShowDetails(material)}
-            isSelected={selectedMaterial?.id === material.id}
-          />
+          <div key={material.id} className="space-y-4">
+            <MaterialGrid
+              material={material}
+              onEdit={() => handleUpdateModalOpen(material)}
+              onDelete={() => handleDelete(material)}
+              onShowDetails={() => handleShowDetails(material)}
+              isSelected={selectedMaterial?.id === material.id}
+            />
+            {selectedMaterial?.id === material.id && (
+              <div className="animate-fadeIn bg-gray-50 rounded-lg border">
+                <div className="flex justify-between items-center p-3 border-b">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Detalles del Material
+                  </h3>
+                  <button
+                    onClick={() => setSelectedMaterial(null)}
+                    className="text-gray-500 hover:text-gray-700 p-1 rounded-lg
+                             hover:bg-gray-200 transition-colors duration-200"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-4">
+                  <MaterialCard material={material} />
+                </div>
+              </div>
+            )}
+          </div>
         ))}
       </div>
-      {selectedMaterial && (
-        <div className="border-t mt-4">
-          <div className="animate-fadeIn p-4 bg-gray-50 rounded-lg m-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Detalles del Material
-              </h3>
-              <button
-                onClick={() => setSelectedMaterial(null)}
-                className="text-gray-500 hover:text-gray-700 p-1 rounded-lg
-                         hover:bg-gray-200 transition-colors duration-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <MaterialCard material={selectedMaterial} />
-          </div>
-        </div>
-      )}
     </div>
   );
   return (

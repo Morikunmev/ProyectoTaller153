@@ -119,6 +119,36 @@ export const useMaterialUpdateModal = ({
   const handleInputChange = useCallback(
     (e) => {
       const { name, value } = e.target;
+
+      // Lógica especial para cuando se selecciona un envío
+      if (name === "Envio") {
+        if (value) {
+          // Si se selecciona un envío, encuentra el envío en la lista
+          const envioSeleccionado = envios.find(
+            (envio) => envio.id.toString() === value
+          );
+          if (envioSeleccionado) {
+            // Actualiza tanto el envío como el proveedor
+            setFormData((prev) => ({
+              ...prev,
+              [name]: value,
+              // Actualiza automáticamente el proveedor al del envío
+              Proveedor: envioSeleccionado.Proveedor.id.toString(),
+            }));
+            return;
+          }
+        } else {
+          // Si se deselecciona el envío, limpia también el proveedor
+          setFormData((prev) => ({
+            ...prev,
+            [name]: "",
+            Proveedor: "",
+          }));
+          return;
+        }
+      }
+
+      // Para el resto de los campos, manejo normal
       setFormData((prev) => ({
         ...prev,
         [name]: value,
@@ -131,7 +161,7 @@ export const useMaterialUpdateModal = ({
         }));
       }
     },
-    [errors]
+    [errors, envios]
   );
 
   // Función de validación de archivos
