@@ -119,7 +119,7 @@ export const useMaterialUpdateModal = ({
   const handleInputChange = useCallback(
     (e) => {
       const { name, value } = e.target;
-
+  
       // Lógica especial para cuando se selecciona un envío
       if (name === "Envio") {
         if (value) {
@@ -147,13 +147,13 @@ export const useMaterialUpdateModal = ({
           return;
         }
       }
-
+  
       // Para el resto de los campos, manejo normal
       setFormData((prev) => ({
         ...prev,
         [name]: value,
       }));
-
+  
       if (errors[name]) {
         setErrors((prev) => ({
           ...prev,

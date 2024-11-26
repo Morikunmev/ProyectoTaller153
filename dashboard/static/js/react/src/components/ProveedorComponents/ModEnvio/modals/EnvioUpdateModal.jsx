@@ -215,10 +215,10 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
                   onChange={handleInputChange}
                   disabled={formData.Factura ? true : false}
                   className={`w-full px-3 py-1.5 border rounded
-                  focus:ring-1 focus:ring-blue-500 focus:outline-none
-                  transition-colors duration-200
-                  ${formData.Factura ? "bg-gray-100" : ""}
-                  ${getInputBorderClass(formData.Proveedor)}`}
+    focus:ring-1 focus:ring-blue-500 focus:outline-none
+    transition-colors duration-200
+    ${formData.Factura ? "bg-gray-100" : ""}
+    ${getInputBorderClass(formData.Proveedor)}`}
                 >
                   <option value="">Seleccione un proveedor</option>
                   {proveedores.map((proveedor) => (

@@ -188,13 +188,11 @@ export const useEnvioUpdateModal = ({
         }
       }
 
-      // Para otros campos, actualización normal
       setFormData((prev) => ({
         ...prev,
         [name]: newValue,
       }));
 
-      // Limpiar errores si existían
       if (errors[name]) {
         setErrors((prev) => ({
           ...prev,

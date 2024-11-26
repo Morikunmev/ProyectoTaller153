@@ -110,6 +110,7 @@ export const useHerramientaUpdateModal = ({
   }, [formData.StockHerramienta, formData.PrecioHerramienta]);
 
   // Manejador de cambios en los inputs
+  // Manejador de cambios en los inputs
   const handleInputChange = useCallback(
     (e) => {
       const { name, value } = e.target;

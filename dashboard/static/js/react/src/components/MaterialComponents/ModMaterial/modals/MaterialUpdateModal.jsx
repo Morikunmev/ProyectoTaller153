@@ -220,19 +220,20 @@ const MaterialUpdateModal = ({
                     ${getInputBorderClass(formData.DimensionesMaterial)}`}
                   />
                 </div>
-
                 <div>
                   <label className="text-sm font-medium block mb-1">
-                    Proveedor
+                    Proveedor*
                   </label>
                   <select
                     name="Proveedor"
-                    value={formData.Proveedor || ""}
+                    value={formData.Proveedor}
                     onChange={handleInputChange}
+                    disabled={formData.Envio ? true : false}
                     className={`w-full px-3 py-1.5 border rounded
-                    focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200
-                    ${getInputBorderClass(formData.Proveedor)}`}
+    focus:ring-1 focus:ring-blue-500 focus:outline-none
+    transition-colors duration-200
+    ${formData.Envio ? "bg-gray-100" : ""}
+    ${getInputBorderClass(formData.Proveedor)}`}
                   >
                     <option value="">Seleccione un proveedor</option>
                     {proveedores.map((proveedor) => (
@@ -241,6 +242,11 @@ const MaterialUpdateModal = ({
                       </option>
                     ))}
                   </select>
+                  {errors.Proveedor && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.Proveedor}
+                    </p>
+                  )}
                 </div>
 
                 {/* Envío con búsqueda */}
