@@ -12,6 +12,8 @@ from datetime import date
 from django.utils import timezone
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+from django.contrib.auth.models import User
+
 
 
 
@@ -272,3 +274,186 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
         # Si el envío no está marcado como recibido, eliminamos ambos registros si existen
         Material.objects.filter(Envio=instance).delete()
         Herramienta.objects.filter(Envio=instance).delete()
+
+class Categoria(models.Model):
+    # Campos obligatorios
+    NombreCategoria = models.CharField(max_length=100, unique=True, null=False, blank=False)
+    # Campos opcionales
+    DescripcionCategoria = models.TextField(null=True, blank=True)
+    StockCategoria = models.PositiveIntegerField(default=0, editable=False)  # Campo automático, no editable
+    FotoCategoria = CloudinaryField('imagen', folder='categorias/', null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Categoría"
+        verbose_name_plural = "Categorías"
+        ordering = ['NombreCategoria']
+
+    def __str__(self):
+        return self.NombreCategoria
+
+class Producto(models.Model):
+    # Campos obligatorios
+    NombreProducto = models.CharField(max_length=100, null=False, blank=False)
+    StockProducto = models.PositiveIntegerField(null=False, blank=False)
+    PrecioUnitarioProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
+    # Campo calculado automático
+    PrecioTotalProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
+    # Campo obligatorio - Relación con Categoría
+    Categoria = models.ForeignKey('Categoria', on_delete=models.CASCADE,null=False, blank=False,related_name='productos')
+    # Campos de control de stock
+    CantidadProductoVendido = models.PositiveIntegerField(default=0, editable=False)
+    CantidadProductoDesechado = models.PositiveIntegerField(default=0, editable=False)
+    # Campos opcionales
+    DescripcionProducto = models.TextField(null=True, blank=True)
+    UbicacionProducto = models.CharField(max_length=100, null=True, blank=True)
+    EstadoProducto = models.CharField(max_length=50, null=True, blank=True)
+    FechaProducto = models.DateField(auto_now_add=True)
+    DiasProducto = models.IntegerField(default=0, editable=False)
+    ProductoVendido = models.BooleanField(default=False)
+    HoraCreacion = models.DateTimeField(default=timezone.now)
+    FotoProducto = CloudinaryField('imagen', folder='productos/', null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Producto"
+        verbose_name_plural = "Productos"
+        ordering = ['-FechaProducto']
+
+    def save(self, *args, **kwargs):
+        # Calcular el precio total
+        self.PrecioTotalProducto = self.StockProducto * self.PrecioUnitarioProducto
+        
+        # Si es nuevo producto, establecer la fecha
+        if not self.pk:
+            self.FechaProducto = date.today()
+        
+        # Actualizar días transcurridos si el producto no está vendido
+        if not self.ProductoVendido:
+            self.DiasProducto = (date.today() - self.FechaProducto).days
+            
+        # Verificar si todo el stock está agotado (vendido o desechado)
+        total_salidas = self.CantidadProductoVendido + self.CantidadProductoDesechado
+        if total_salidas >= self.StockProducto:
+            self.ProductoVendido = True
+            self.StockProducto = 0
+        
+        # Guardar el producto
+        super(Producto, self).save(*args, **kwargs)
+        
+        # Actualizar el stock de la categoría
+        total_stock = Producto.objects.filter(
+            Categoria=self.Categoria
+        ).aggregate(
+            total=models.Sum('StockProducto')
+        )['total'] or 0
+        
+        self.Categoria.StockCategoria = total_stock
+        self.Categoria.save()
+
+class Cliente(models.Model):
+    TIPO_CHOICES = [
+        ('particular', 'Particular'),
+        ('empresa', 'Empresa'),
+    ]
+    # Campos obligatorios
+    NombreCliente = models.CharField(max_length=100, null=False, blank=False)
+    ApellidoCliente = models.CharField(max_length=100, null=False, blank=False)
+    RutCliente = models.CharField(max_length=12, unique=True,null=False, blank=False,
+        validators=[
+            RegexValidator(
+                regex=r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$',
+                message='RUT debe tener formato XX.XXX.XXX-X'
+            )
+        ]
+    )
+    TipoCliente = models.CharField(max_length=20,choices=TIPO_CHOICES,default='particular')
+    # Campos opcionales
+    NombreCompañia = models.CharField(max_length=100, null=True, blank=True)
+    ComentarioCliente = models.TextField(null=True, blank=True)
+    TelefonoCliente = models.CharField(max_length=15, null=True, blank=True)
+    FechaCliente = models.DateField(auto_now_add=True)
+    # Campos de auditoría
+    Usuario = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Usuario que registró al cliente"
+    )
+    FechaRegistro = models.DateTimeField(auto_now_add=True)
+    UltimaModificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Cliente"
+        verbose_name_plural = "Clientes"
+        ordering = ['NombreCliente']
+
+    def __str__(self):
+        if self.TipoCliente == 'empresa':
+            return f"{self.NombreCompañia} - {self.RutCliente}"
+        return f"{self.NombreCliente} {self.ApellidoCliente} - {self.RutCliente}"
+
+class Ventas(models.Model):
+    # Campos obligatorios
+    NombreVenta = models.CharField(max_length=100, null=False, blank=False)
+    CantidadVenta = models.PositiveIntegerField(null=False, blank=False)
+    PrecioVenta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
+    PrecioTotalVenta = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    FechaVenta = models.DateField(auto_now_add=True)
+    # Relaciones
+    Producto = models.ForeignKey(
+        'Producto', 
+        on_delete=models.PROTECT,
+        related_name='ventas'
+    )
+    Cliente = models.ForeignKey(
+        'Cliente', 
+        on_delete=models.SET_DEFAULT,  # Cambiado a SET_DEFAULT
+        related_name='compras',
+        null=True, 
+        blank=True,
+        default=None,  # Valor por defecto None
+        help_text="Cliente que realizó la compra"
+    )
+    # Campo de auditoría
+    Usuario = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL,
+        null=True,
+        help_text="Usuario que registró la venta"
+    )
+    FechaRegistro = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        verbose_name = "Venta"
+        verbose_name_plural = "Ventas"
+        ordering = ['-FechaVenta']
+
+    def clean(self):
+        # Verificar stock disponible
+        if self.CantidadVenta > (self.Producto.StockProducto - self.Producto.CantidadProductoVendido):
+            raise ValidationError(
+                f"No hay suficiente stock. Disponible: "
+                f"{self.Producto.StockProducto - self.Producto.CantidadProductoVendido}"
+            )
+
+    def save(self, *args, **kwargs):
+        # Calcular precio total
+        self.PrecioTotalVenta = self.CantidadVenta * self.PrecioVenta
+        
+        # Validar stock y datos
+        self.clean()
+        
+        # Guardar la venta
+        super().save(*args, **kwargs)
+        
+        # Actualizar producto
+        self.Producto.CantidadProductoVendido += self.CantidadVenta
+        self.Producto.save()
+
+    def __str__(self):
+        cliente = "Cliente no especificado" if self.Cliente is None else str(self.Cliente)
+        return f"Venta {self.id} - {self.Producto.NombreProducto} a {cliente}"
+
+    @property
+    def nombre_cliente(self):
+        """Retorna el nombre del cliente o 'Cliente no especificado'"""
+        return str(self.Cliente) if self.Cliente else "Cliente no especificado"

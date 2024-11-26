@@ -7,7 +7,8 @@ module.exports = {
     proveedor: "./src/proveedor.js",
     dashboard: "./src/dashboard.js",
     material: "./src/material.js",
-    herramienta: "./src/herramienta.js", // Nuevo entry point para herramientas
+    herramienta: "./src/herramienta.js",
+    producto: "./src/producto.js", // Nueva entrada para productos
   },
   output: {
     path: path.resolve(__dirname, "dist"),
