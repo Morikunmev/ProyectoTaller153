@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const today = new Date().toISOString().split("T")[0];
@@ -15,8 +15,8 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     DescripcionEnvio: "",
     Proveedor: "",
     FotoEnvio: null,
-    Factura: "", // Agregado campo Factura
-    HoraCreacion: new Date().toISOString(), // Agregado campo HoraCreacion
+    Factura: "",
+    HoraCreacion: new Date().toISOString(),
   });
 
   // UI States
@@ -26,61 +26,10 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [proveedores, setProveedores] = useState([]);
-  const [facturas, setFacturas] = useState([]); // Nuevo estado para facturas
+  const [facturas, setFacturas] = useState([]);
 
-  // Efecto para cargar la lista de proveedores y resetear el formulario
-  useEffect(() => {
-    if (isOpen) {
-      fetchProveedores();
-      fetchFacturas(); // Nueva llamada
-      setFormData({
-        NombreEnvio: "",
-        TipoEnvio: "",
-        CantidadEnvio: "",
-        PrecioEnvio: "",
-        TotalEnvio: "0",
-        FechaCompraEnvio: today,
-        EnvioRecibido: false,
-        DescripcionEnvio: "",
-        Proveedor: "",
-        FotoEnvio: null,
-        Factura: "",
-        HoraCreacion: new Date().toISOString(),
-      });
-      setPreviewUrl(null);
-      setErrors({});
-    }
-  }, [isOpen, today]);
-  const fetchFacturas = async () => {
-    try {
-      const response = await fetch("/api/factura/listar/", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al cargar las facturas");
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setFacturas(data.facturas || []);
-      } else {
-        throw new Error(data.message || "Error al cargar las facturas");
-      }
-    } catch (error) {
-      console.error("Error al cargar facturas:", error);
-      setErrors((prev) => ({
-        ...prev,
-        general: "Error al cargar la lista de facturas",
-      }));
-    }
-  };
-
-  const fetchProveedores = async () => {
+  // Función para cargar proveedores
+  const fetchProveedores = useCallback(async () => {
     try {
       const response = await fetch("/api/proveedor/listar/", {
         method: "GET",
@@ -107,18 +56,72 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
         general: "Error al cargar la lista de proveedores",
       }));
     }
-  };
+  }, []);
 
+  // Función para cargar facturas
+  const fetchFacturas = useCallback(async () => {
+    try {
+      const response = await fetch("/api/factura/listar/", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Error al cargar las facturas");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setFacturas(data.facturas || []);
+      } else {
+        throw new Error(data.message || "Error al cargar las facturas");
+      }
+    } catch (error) {
+      console.error("Error al cargar facturas:", error);
+      setErrors((prev) => ({
+        ...prev,
+        general: "Error al cargar la lista de facturas",
+      }));
+    }
+  }, []);
+
+  // Efecto para animaciones
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
-      setTimeout(() => setIsAnimating(true), 1);
+      setTimeout(() => setIsAnimating(true), 10);
     } else {
       setIsAnimating(false);
-      const timer = setTimeout(() => setIsVisible(false), 150);
-      return () => clearTimeout(timer);
+      setTimeout(() => setIsVisible(false), 300);
     }
   }, [isOpen]);
+
+  // Efecto para cargar datos iniciales
+  useEffect(() => {
+    if (isOpen) {
+      fetchProveedores();
+      fetchFacturas();
+      setFormData({
+        NombreEnvio: "",
+        TipoEnvio: "",
+        CantidadEnvio: "",
+        PrecioEnvio: "",
+        TotalEnvio: "0",
+        FechaCompraEnvio: today,
+        EnvioRecibido: false,
+        DescripcionEnvio: "",
+        Proveedor: "",
+        FotoEnvio: null,
+        Factura: "",
+        HoraCreacion: new Date().toISOString(),
+      });
+      setPreviewUrl(null);
+      setErrors({});
+    }
+  }, [isOpen, today, fetchProveedores, fetchFacturas]);
 
   // Calculador de total
   useEffect(() => {
@@ -131,7 +134,8 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }
   }, [formData.CantidadEnvio, formData.PrecioEnvio]);
 
-  const handleClose = () => {
+  // Manejador de cierre
+  const handleClose = useCallback(() => {
     setIsAnimating(false);
     setTimeout(() => {
       onClose();
@@ -146,31 +150,61 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
         DescripcionEnvio: "",
         Proveedor: "",
         FotoEnvio: null,
+        Factura: "",
+        HoraCreacion: new Date().toISOString(),
       });
       setPreviewUrl(null);
       setErrors({});
-    }, 150);
-  };
+    }, 300);
+  }, [onClose, today]);
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    const newValue = type === "checkbox" ? checked : value;
+  // Manejador de cambios en inputs
+  const handleInputChange = useCallback(
+    (e) => {
+      const { name, value, type, checked } = e.target;
+      const newValue = type === "checkbox" ? checked : value;
 
-    setFormData((prev) => ({
-      ...prev,
-      [name]: newValue,
-    }));
+      if (name === "Factura") {
+        if (value) {
+          const facturaSeleccionada = facturas.find(
+            (factura) => factura.id.toString() === value
+          );
+          if (facturaSeleccionada) {
+            setFormData((prev) => ({
+              ...prev,
+              [name]: newValue,
+              Proveedor: facturaSeleccionada.Proveedor.id.toString(),
+            }));
+            return;
+          }
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            [name]: "",
+            Proveedor: "",
+          }));
+          return;
+        }
+      }
 
-    if (errors[name]) {
-      setErrors((prev) => ({
+      setFormData((prev) => ({
         ...prev,
-        [name]: null,
+        [name]: newValue,
       }));
-    }
-  };
 
-  const validateFile = (file) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB en bytes
+      if (errors[name]) {
+        setErrors((prev) => ({
+          ...prev,
+          [name]: null,
+        }));
+      }
+    },
+    [errors, facturas]
+  );
+
+  // Validación de archivos
+  const validateFile = useCallback((file) => {
+    const maxSize = 10 * 1024 * 1024;
 
     if (file.size > maxSize) {
       return `El archivo es demasiado grande. El tamaño máximo permitido es 10MB`;
@@ -192,60 +226,61 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }
 
     return null;
-  };
+  }, []);
 
-  const handleFotoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const error = validateFile(file);
-      if (error) {
-        setErrors((prev) => ({ ...prev, FotoEnvio: error }));
-        e.target.value = "";
-        return;
+  // Manejador de cambio de foto
+  const handleFotoChange = useCallback(
+    (e) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const error = validateFile(file);
+        if (error) {
+          setErrors((prev) => ({ ...prev, FotoEnvio: error }));
+          e.target.value = "";
+          return;
+        }
+
+        setFormData((prev) => ({ ...prev, FotoEnvio: file }));
+        const objectUrl = URL.createObjectURL(file);
+        setPreviewUrl(objectUrl);
+
+        if (errors.FotoEnvio) {
+          setErrors((prev) => ({ ...prev, FotoEnvio: null }));
+        }
+
+        return () => URL.revokeObjectURL(objectUrl);
       }
+    },
+    [errors, validateFile]
+  );
 
-      setFormData((prev) => ({ ...prev, FotoEnvio: file }));
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
-
-      if (errors.FotoEnvio) {
-        setErrors((prev) => ({ ...prev, FotoEnvio: null }));
-      }
-
-      return () => URL.revokeObjectURL(objectUrl);
-    }
-  };
-
-  const handleRemoveFoto = () => {
+  // Manejador para remover foto
+  const handleRemoveFoto = useCallback(() => {
     setFormData((prev) => ({ ...prev, FotoEnvio: null }));
     setPreviewUrl(null);
     const fileInput = document.getElementById("foto-envio");
     if (fileInput) fileInput.value = "";
-  };
+  }, []);
 
-  const validateForm = () => {
+  // Validación del formulario
+  const validateForm = useCallback(() => {
     const newErrors = {};
 
     if (!formData.NombreEnvio) {
       newErrors.NombreEnvio = "El nombre del envío es requerido";
     }
-
     if (!formData.TipoEnvio) {
       newErrors.TipoEnvio = "El tipo de envío es requerido";
     }
-
     if (!formData.CantidadEnvio || formData.CantidadEnvio <= 0) {
       newErrors.CantidadEnvio = "La cantidad debe ser mayor a 0";
     }
-
     if (!formData.PrecioEnvio || formData.PrecioEnvio <= 0) {
       newErrors.PrecioEnvio = "El precio debe ser mayor a 0";
     }
-
     if (!formData.Proveedor) {
       newErrors.Proveedor = "Debe seleccionar un proveedor";
     }
-
     if (formData.FechaCompraEnvio) {
       const fechaCompra = new Date(formData.FechaCompraEnvio);
       if (fechaCompra > new Date()) {
@@ -254,82 +289,84 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }
 
     return newErrors;
-  };
-  const handleSubmit = async (e) => {
-    e?.preventDefault();
+  }, [formData]);
 
-    const validationErrors = validateForm();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
-    }
+  // Manejador de envío del formulario
+  const handleSubmit = useCallback(
+    async (e) => {
+      e?.preventDefault();
 
-    setIsSubmitting(true);
-
-    try {
-      const formDataToSend = new FormData();
-      formDataToSend.append("NombreEnvio", formData.NombreEnvio);
-      formDataToSend.append("TipoEnvio", formData.TipoEnvio);
-      formDataToSend.append("CantidadEnvio", formData.CantidadEnvio);
-      formDataToSend.append("PrecioEnvio", formData.PrecioEnvio);
-      formDataToSend.append("TotalEnvio", formData.TotalEnvio);
-      formDataToSend.append("Proveedor", formData.Proveedor);
-      formDataToSend.append("EnvioRecibido", formData.EnvioRecibido);
-      formDataToSend.append("HoraCreacion", formData.HoraCreacion);
-      
-      
-
-      if (formData.Factura) {
-        formDataToSend.append("Factura", formData.Factura);
-      }
-      if (formData.FechaCompraEnvio) {
-        formDataToSend.append("FechaCompraEnvio", formData.FechaCompraEnvio);
-      }
-      if (formData.DescripcionEnvio) {
-        formDataToSend.append("DescripcionEnvio", formData.DescripcionEnvio);
-      }
-      if (formData.FotoEnvio) {
-        formDataToSend.append("FotoEnvio", formData.FotoEnvio);
+      const validationErrors = validateForm();
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        return;
       }
 
-      // Obtener el token CSRF
-      const csrfToken = document.querySelector(
-        "[name=csrfmiddlewaretoken]"
-      )?.value;
+      setIsSubmitting(true);
 
-      const response = await fetch("/api/envio/crear/", {
-        method: "POST",
-        body: formDataToSend,
-        headers: {
-          "X-CSRFToken": csrfToken, // Añadir el token CSRF en los headers
-        },
-        credentials: "include",
-      });
+      try {
+        const formDataToSend = new FormData();
+        formDataToSend.append("NombreEnvio", formData.NombreEnvio);
+        formDataToSend.append("TipoEnvio", formData.TipoEnvio);
+        formDataToSend.append("CantidadEnvio", formData.CantidadEnvio);
+        formDataToSend.append("PrecioEnvio", formData.PrecioEnvio);
+        formDataToSend.append("TotalEnvio", formData.TotalEnvio);
+        formDataToSend.append("Proveedor", formData.Proveedor);
+        formDataToSend.append("EnvioRecibido", formData.EnvioRecibido);
+        formDataToSend.append("HoraCreacion", formData.HoraCreacion);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (data.errors) {
-          setErrors(data.errors);
-          throw new Error(Object.values(data.errors)[0]);
+        if (formData.Factura) {
+          formDataToSend.append("Factura", formData.Factura);
         }
-        throw new Error(data.message || "Error al crear el envío");
-      }
+        if (formData.FechaCompraEnvio) {
+          formDataToSend.append("FechaCompraEnvio", formData.FechaCompraEnvio);
+        }
+        if (formData.DescripcionEnvio) {
+          formDataToSend.append("DescripcionEnvio", formData.DescripcionEnvio);
+        }
+        if (formData.FotoEnvio) {
+          formDataToSend.append("FotoEnvio", formData.FotoEnvio);
+        }
 
-      if (data.success) {
-        onSubmit(data.envio);
-        handleClose();
+        const csrfToken = document.querySelector(
+          "[name=csrfmiddlewaretoken]"
+        )?.value;
+
+        const response = await fetch("/api/envio/crear/", {
+          method: "POST",
+          body: formDataToSend,
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+          credentials: "include",
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          if (data.errors) {
+            setErrors(data.errors);
+            throw new Error(Object.values(data.errors)[0]);
+          }
+          throw new Error(data.message || "Error al crear el envío");
+        }
+
+        if (data.success) {
+          onSubmit(data.envio);
+          handleClose();
+        }
+      } catch (error) {
+        console.error("Error al crear envío:", error);
+        setErrors((prev) => ({
+          ...prev,
+          general: error.message || "Error al crear el envío",
+        }));
+      } finally {
+        setIsSubmitting(false);
       }
-    } catch (error) {
-      console.error("Error al crear envío:", error);
-      setErrors((prev) => ({
-        ...prev,
-        general: error.message || "Error al crear el envío",
-      }));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    },
+    [formData, validateForm, handleClose, onSubmit]
+  );
 
   return {
     formData,
@@ -339,7 +376,7 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     isVisible,
     previewUrl,
     proveedores,
-    facturas, // Agregado a los valores retornados
+    facturas,
     handleClose,
     handleSubmit,
     handleInputChange,
@@ -347,3 +384,5 @@ export const useEnvioCreateModal = ({ isOpen, onClose, onSubmit }) => {
     handleRemoveFoto,
   };
 };
+
+export default useEnvioCreateModal;

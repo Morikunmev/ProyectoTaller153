@@ -19,9 +19,11 @@ export const useEnvioUpdateModal = ({
     DescripcionEnvio: "",
     Proveedor: "",
     FotoEnvio: null,
-    Factura: "", // Campo de Factura agregado
+    Factura: "",
   });
-  const [facturas, setFacturas] = useState([]); // Estado para facturas
+
+  // UI States
+  const [facturas, setFacturas] = useState([]);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -32,6 +34,14 @@ export const useEnvioUpdateModal = ({
     foto: false,
   });
   const [searchFactura, setSearchFactura] = useState("");
+
+  // Función para manejar las clases del borde de los inputs
+  const getInputBorderClass = useCallback((value) => {
+    if (value && value.toString().trim() !== "") {
+      return "border-green-400";
+    }
+    return "border-gray-300";
+  }, []);
 
   // Efecto para animaciones de apertura/cierre
   useEffect(() => {
@@ -59,19 +69,41 @@ export const useEnvioUpdateModal = ({
     }
   }, [formData.FechaCompraEnvio, formData.EnvioRecibido]);
 
-  // Efecto para cargar proveedores y facturas
+  // Efecto para cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Cargar proveedores
-        const provResponse = await fetch("/api/proveedor/listar/");
+        const provResponse = await fetch("/api/proveedor/listar/", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (!provResponse.ok) {
+          throw new Error("Error al cargar los proveedores");
+        }
+
         const provData = await provResponse.json();
         if (provData.success) {
           setProveedores(provData.proveedores);
         }
 
         // Cargar facturas
-        const factResponse = await fetch("/api/factura/listar/");
+        const factResponse = await fetch("/api/factura/listar/", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        });
+
+        if (!factResponse.ok) {
+          throw new Error("Error al cargar las facturas");
+        }
+
         const factData = await factResponse.json();
         if (factData.success) {
           setFacturas(factData.facturas);
@@ -90,7 +122,7 @@ export const useEnvioUpdateModal = ({
     }
   }, [isOpen]);
 
-  // Efecto para cargar los datos del envío cuando se abre el modal
+  // Efecto para cargar los datos del envío
   useEffect(() => {
     if (envio && isOpen) {
       setFormData({
@@ -104,7 +136,7 @@ export const useEnvioUpdateModal = ({
         DiasTranscurridos: envio.DiasTranscurridos || 0,
         DescripcionEnvio: envio.DescripcionEnvio || "",
         Proveedor: envio.Proveedor?.id || "",
-        Factura: envio.Factura?.id || "", // Cargar ID de factura
+        Factura: envio.Factura?.id || "",
         FotoEnvio: null,
       });
       setPreviewUrl(envio.FotoEnvio || "");
@@ -123,17 +155,46 @@ export const useEnvioUpdateModal = ({
     }
   }, [formData.CantidadEnvio, formData.PrecioEnvio]);
 
-  // Manejador de cambios en los inputs
+  // Manejador de cambios en inputs
   const handleInputChange = useCallback(
     (e) => {
       const { name, value, type, checked } = e.target;
       const newValue = type === "checkbox" ? checked : value;
 
+      // Manejo especial para cuando se selecciona una factura
+      if (name === "Factura") {
+        if (value) {
+          // Buscar la factura seleccionada
+          const facturaSeleccionada = facturas.find(
+            (factura) => factura.id.toString() === value
+          );
+          if (facturaSeleccionada) {
+            // Actualizar tanto la factura como el proveedor
+            setFormData((prev) => ({
+              ...prev,
+              [name]: value,
+              Proveedor: facturaSeleccionada.Proveedor.id.toString(),
+            }));
+            return;
+          }
+        } else {
+          // Si no hay factura seleccionada, limpiar también el proveedor
+          setFormData((prev) => ({
+            ...prev,
+            [name]: "",
+            Proveedor: "",
+          }));
+          return;
+        }
+      }
+
+      // Para otros campos, actualización normal
       setFormData((prev) => ({
         ...prev,
         [name]: newValue,
       }));
 
+      // Limpiar errores si existían
       if (errors[name]) {
         setErrors((prev) => ({
           ...prev,
@@ -141,10 +202,10 @@ export const useEnvioUpdateModal = ({
         }));
       }
     },
-    [errors]
+    [errors, facturas]
   );
 
-  // Función de validación de archivos
+  // Validación de archivos
   const validateFile = useCallback((file) => {
     const maxSize = 10 * 1024 * 1024; // 10MB
 
@@ -170,7 +231,7 @@ export const useEnvioUpdateModal = ({
     return null;
   }, []);
 
-  // Manejador de cambios en la foto
+  // Manejador de cambio de foto
   const handleFotoChange = useCallback(
     (e) => {
       const file = e.target.files?.[0];
@@ -182,24 +243,22 @@ export const useEnvioUpdateModal = ({
           return;
         }
 
+        setFormData((prev) => ({ ...prev, FotoEnvio: file }));
+        setRemovedFiles((prev) => ({ ...prev, foto: false }));
+        const objectUrl = URL.createObjectURL(file);
+        setPreviewUrl(objectUrl);
+
         if (errors.FotoEnvio) {
           setErrors((prev) => ({ ...prev, FotoEnvio: null }));
         }
 
-        setFormData((prev) => ({ ...prev, FotoEnvio: file }));
-        setRemovedFiles((prev) => ({ ...prev, foto: false }));
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreviewUrl(reader.result);
-        };
-        reader.readAsDataURL(file);
+        return () => URL.revokeObjectURL(objectUrl);
       }
     },
     [errors, validateFile]
   );
 
-  // Manejador para eliminar la foto
+  // Manejador para remover foto
   const handleRemoveFoto = useCallback(() => {
     setFormData((prev) => ({ ...prev, FotoEnvio: null }));
     setPreviewUrl("");
@@ -208,7 +267,7 @@ export const useEnvioUpdateModal = ({
     if (fileInput) fileInput.value = "";
   }, []);
 
-  // Manejador de cierre del modal
+  // Manejador de cierre
   const handleClose = useCallback(() => {
     setIsAnimating(false);
     setTimeout(() => {
@@ -217,42 +276,49 @@ export const useEnvioUpdateModal = ({
     }, 150);
   }, [onClose]);
 
+  // Validación del formulario
+  const validateForm = useCallback(() => {
+    const newErrors = {};
+
+    if (!formData.NombreEnvio) {
+      newErrors.NombreEnvio = "El nombre del envío es requerido";
+    }
+    if (!formData.TipoEnvio) {
+      newErrors.TipoEnvio = "El tipo de envío es requerido";
+    }
+    if (!formData.CantidadEnvio || formData.CantidadEnvio <= 0) {
+      newErrors.CantidadEnvio = "La cantidad debe ser mayor a 0";
+    }
+    if (!formData.PrecioEnvio || formData.PrecioEnvio <= 0) {
+      newErrors.PrecioEnvio = "El precio debe ser mayor a 0";
+    }
+    if (!formData.Proveedor) {
+      newErrors.Proveedor = "Debe seleccionar un proveedor";
+    }
+    if (formData.FechaCompraEnvio) {
+      const fechaCompra = new Date(formData.FechaCompraEnvio);
+      if (fechaCompra > new Date()) {
+        newErrors.FechaCompraEnvio = "La fecha de compra no puede ser futura";
+      }
+    }
+
+    return newErrors;
+  }, [formData]);
+
   // Manejador de envío del formulario
   const handleSubmit = useCallback(
     async (e) => {
       if (e) e.preventDefault();
 
+      const validationErrors = validateForm();
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+
       setIsSubmitting(true);
+
       try {
-        const newErrors = {};
-        if (!formData.NombreEnvio) {
-          newErrors.NombreEnvio = "El nombre del envío es requerido";
-        }
-        if (!formData.TipoEnvio) {
-          newErrors.TipoEnvio = "El tipo de envío es requerido";
-        }
-        if (!formData.CantidadEnvio || formData.CantidadEnvio <= 0) {
-          newErrors.CantidadEnvio = "La cantidad debe ser mayor a 0";
-        }
-        if (!formData.PrecioEnvio || formData.PrecioEnvio <= 0) {
-          newErrors.PrecioEnvio = "El precio debe ser mayor a 0";
-        }
-        if (!formData.Proveedor) {
-          newErrors.Proveedor = "Debe seleccionar un proveedor";
-        }
-        if (formData.FechaCompraEnvio) {
-          const fechaCompra = new Date(formData.FechaCompraEnvio);
-          if (fechaCompra > new Date()) {
-            newErrors.FechaCompraEnvio =
-              "La fecha de compra no puede ser futura";
-          }
-        }
-
-        if (Object.keys(newErrors).length > 0) {
-          setErrors(newErrors);
-          throw new Error("Por favor complete todos los campos requeridos");
-        }
-
         const submitData = new FormData();
         submitData.append("NombreEnvio", formData.NombreEnvio);
         submitData.append("TipoEnvio", formData.TipoEnvio);
@@ -262,7 +328,7 @@ export const useEnvioUpdateModal = ({
         submitData.append("Proveedor", formData.Proveedor);
         submitData.append("EnvioRecibido", formData.EnvioRecibido);
         submitData.append("DiasTranscurridos", formData.DiasTranscurridos);
-        submitData.append("Factura", formData.Factura || ""); // Agregar Factura al FormData
+        submitData.append("Factura", formData.Factura || "");
 
         if (formData.FechaCompraEnvio) {
           submitData.append("FechaCompraEnvio", formData.FechaCompraEnvio);
@@ -280,11 +346,14 @@ export const useEnvioUpdateModal = ({
           submitData.append("FotoEnvio", formData.FotoEnvio);
         }
 
+        const csrfToken = document.querySelector(
+          "[name=csrfmiddlewaretoken]"
+        )?.value;
+
         const response = await fetch(`/api/envio/${envio.id}/actualizar/`, {
           method: "POST",
           headers: {
-            "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
-              .value,
+            "X-CSRFToken": csrfToken,
           },
           body: submitData,
           credentials: "include",
@@ -301,12 +370,11 @@ export const useEnvioUpdateModal = ({
         }
 
         handleClose();
-
         if (onEnvioUpdated) {
           await onEnvioUpdated(data.envio);
         }
       } catch (error) {
-        console.error("Error al actualizar el envío:", error);
+        console.error("Error al actualizar envío:", error);
         setErrors((prev) => ({
           ...prev,
           general: error.message || "Error al actualizar el envío",
@@ -315,7 +383,7 @@ export const useEnvioUpdateModal = ({
         setIsSubmitting(false);
       }
     },
-    [formData, envio, handleClose, onEnvioUpdated, removedFiles]
+    [formData, validateForm, handleClose, onEnvioUpdated, envio, removedFiles]
   );
 
   return {
@@ -327,13 +395,14 @@ export const useEnvioUpdateModal = ({
     previewUrl,
     proveedores,
     facturas,
-    searchFactura, // Agregar searchFactura
-    setSearchFactura, // Agregar setSearchFactura
+    searchFactura,
+    setSearchFactura,
     handleClose,
     handleSubmit,
     handleInputChange,
     handleFotoChange,
     handleRemoveFoto,
+    getInputBorderClass,
   };
 };
 

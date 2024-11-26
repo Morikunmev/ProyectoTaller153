@@ -16,9 +16,10 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
     handleFotoChange,
     handleRemoveFoto,
     proveedores,
-    searchFactura, // Agregar esto
-    setSearchFactura, // Agregar esto
+    searchFactura,
+    setSearchFactura,
     facturas,
+    getInputBorderClass,
   } = useEnvioUpdateModal({
     isOpen,
     onClose,
@@ -30,93 +31,81 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center
-        transition-opacity duration-150
-        ${isAnimating ? "bg-black/50" : "bg-black/0"}`}
-      onClick={handleClose}
+      className={`fixed top-16 right-0 bottom-0 w-[448px] bg-white shadow-xl z-40
+        transform transition-transform duration-300 ease-in-out flex flex-col
+        ${isAnimating ? "translate-x-0" : "translate-x-full"}`}
     >
-      <div
-        className={`bg-white w-full max-w-md rounded-lg shadow-xl my-8 flex flex-col max-h-[calc(100vh-4rem)]
-          transition-all duration-150
-          ${isAnimating ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="p-6 border-b">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold w-full text-center">
-              Editar Envío
-            </h2>
-            <button
-              onClick={handleClose}
-              className="p-1.5 hover:bg-gray-100 rounded-full transition-colors duration-150 absolute right-4"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Contenido scrolleable */}
-        <div className="p-6 overflow-y-auto flex-1">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit();
-            }}
-            className="space-y-4"
+      {/* Header */}
+      <div className="flex-none border-b">
+        <div className="p-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Editar Envío</h2>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-150"
           >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Contenido scrolleable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Campos obligatorios */}
             <div className="space-y-4">
-              <h3 className="font-medium">Información Principal</h3>
+              <h3 className="text-sm font-medium text-gray-900">
+                Información Principal
+              </h3>
 
               {/* Nombre del Envío */}
-              {/* Nombre del Envío */}
               <div>
-                <label className="text-sm font-medium">Nombre del Envío*</label>
+                <label className="text-sm font-medium block mb-1">
+                  Nombre del Envío*
+                </label>
                 <input
                   type="text"
                   name="NombreEnvio"
                   value={formData.NombreEnvio}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border-2 rounded mt-1 
-              focus:ring-2 focus:ring-blue-500 focus:outline-none
-              transition-colors duration-200
-              ${formData.NombreEnvio ? "border-green-400" : "border-gray-300"}`}
+                  className={`w-full px-3 py-1.5 border rounded
+                  focus:ring-1 focus:ring-blue-500 focus:outline-none
+                  transition-colors duration-200
+                  ${getInputBorderClass(formData.NombreEnvio)}`}
                 />
                 {errors.NombreEnvio && (
-                  <p className="text-sm text-red-500 mt-1">
+                  <p className="text-xs text-red-500 mt-1">
                     {errors.NombreEnvio}
                   </p>
                 )}
               </div>
 
-              {/* Factura - Nuevo campo a agregar */}
-              {/* Factura con búsqueda */}
+              {/* Factura */}
               <div>
-                <label className="text-sm font-medium">Factura</label>
-                <div className="relative mt-1">
+                <label className="text-sm font-medium block mb-1">
+                  Factura
+                </label>
+                <div className="relative">
                   <div className="relative">
                     <input
                       type="text"
                       placeholder="Buscar factura o proveedor..."
                       value={searchFactura}
                       onChange={(e) => setSearchFactura(e.target.value)}
-                      className="w-full px-3 py-2 pr-8 border-2 rounded
-                  focus:ring-2 focus:ring-blue-500 focus:outline-none
-                  transition-colors duration-200"
+                      className="w-full pl-8 pr-3 py-1.5 border rounded-t
+                      focus:ring-1 focus:ring-blue-500 focus:outline-none
+                      transition-colors duration-200 border-gray-300"
                     />
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-                      <Search className="h-4 w-4 text-gray-400" />
-                    </div>
+                    <Search className="absolute left-2 top-2 h-4 w-4 text-gray-400" />
                   </div>
                   <select
                     name="Factura"
                     value={formData.Factura || ""}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 border-2 rounded mt-2
-                focus:ring-2 focus:ring-blue-500 focus:outline-none
-                transition-colors duration-200
-                ${formData.Factura ? "border-green-400" : "border-gray-300"}`}
+                    className={`w-full px-3 py-1.5 border border-t-0 rounded-b
+                    focus:ring-1 focus:ring-blue-500 focus:outline-none
+                    transition-colors duration-200
+                    ${getInputBorderClass(formData.Factura)}`}
                     size={4}
                   >
                     <option value="">Sin factura</option>
@@ -139,64 +128,60 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
                   </select>
                 </div>
                 {errors.Factura && (
-                  <p className="text-sm text-red-500 mt-1">{errors.Factura}</p>
+                  <p className="text-xs text-red-500 mt-1">{errors.Factura}</p>
                 )}
               </div>
 
               {/* Tipo de Envío */}
               <div>
-                <label className="text-sm font-medium">Tipo de Envío*</label>
+                <label className="text-sm font-medium block mb-1">
+                  Tipo de Envío*
+                </label>
                 <select
                   name="TipoEnvio"
                   value={formData.TipoEnvio}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border-2 rounded mt-1 
-                            focus:ring-2 focus:ring-blue-500 focus:outline-none
-                            transition-colors duration-200
-                            ${
-                              formData.TipoEnvio
-                                ? "border-green-400"
-                                : "border-gray-300"
-                            }`}
+                  className={`w-full px-3 py-1.5 border rounded
+                  focus:ring-1 focus:ring-blue-500 focus:outline-none
+                  transition-colors duration-200
+                  ${getInputBorderClass(formData.TipoEnvio)}`}
                 >
                   <option value="">Seleccione un tipo</option>
                   <option value="material">Material</option>
                   <option value="herramienta">Herramienta</option>
                 </select>
                 {errors.TipoEnvio && (
-                  <p className="text-sm text-red-500 mt-1">
+                  <p className="text-xs text-red-500 mt-1">
                     {errors.TipoEnvio}
                   </p>
                 )}
               </div>
 
-              {/* Cantidad y Precio */}
+              {/* Cantidad y Precio en una fila */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium">Cantidad*</label>
+                  <label className="text-sm font-medium block mb-1">
+                    Cantidad*
+                  </label>
                   <input
                     type="number"
                     name="CantidadEnvio"
                     value={formData.CantidadEnvio}
                     onChange={handleInputChange}
                     min="1"
-                    className={`w-full px-3 py-2 border-2 rounded mt-1 
-                              focus:ring-2 focus:ring-blue-500 focus:outline-none
-                              transition-colors duration-200
-                              ${
-                                formData.CantidadEnvio
-                                  ? "border-green-400"
-                                  : "border-gray-300"
-                              }`}
+                    className={`w-full px-3 py-1.5 border rounded
+                    focus:ring-1 focus:ring-blue-500 focus:outline-none
+                    transition-colors duration-200
+                    ${getInputBorderClass(formData.CantidadEnvio)}`}
                   />
                   {errors.CantidadEnvio && (
-                    <p className="text-sm text-red-500 mt-1">
+                    <p className="text-xs text-red-500 mt-1">
                       {errors.CantidadEnvio}
                     </p>
                   )}
                 </div>
                 <div>
-                  <label className="text-sm font-medium">
+                  <label className="text-sm font-medium block mb-1">
                     Precio Unitario*
                   </label>
                   <input
@@ -206,17 +191,13 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
                     onChange={handleInputChange}
                     min="0"
                     step="0.01"
-                    className={`w-full px-3 py-2 border-2 rounded mt-1 
-                              focus:ring-2 focus:ring-blue-500 focus:outline-none
-                              transition-colors duration-200
-                              ${
-                                formData.PrecioEnvio
-                                  ? "border-green-400"
-                                  : "border-gray-300"
-                              }`}
+                    className={`w-full px-3 py-1.5 border rounded
+                    focus:ring-1 focus:ring-blue-500 focus:outline-none
+                    transition-colors duration-200
+                    ${getInputBorderClass(formData.PrecioEnvio)}`}
                   />
                   {errors.PrecioEnvio && (
-                    <p className="text-sm text-red-500 mt-1">
+                    <p className="text-xs text-red-500 mt-1">
                       {errors.PrecioEnvio}
                     </p>
                   )}
@@ -225,19 +206,19 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
 
               {/* Proveedor */}
               <div>
-                <label className="text-sm font-medium">Proveedor*</label>
+                <label className="text-sm font-medium block mb-1">
+                  Proveedor*
+                </label>
                 <select
                   name="Proveedor"
                   value={formData.Proveedor}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border-2 rounded mt-1 
-                            focus:ring-2 focus:ring-blue-500 focus:outline-none
-                            transition-colors duration-200
-                            ${
-                              formData.Proveedor
-                                ? "border-green-400"
-                                : "border-gray-300"
-                            }`}
+                  disabled={formData.Factura ? true : false}
+                  className={`w-full px-3 py-1.5 border rounded
+                  focus:ring-1 focus:ring-blue-500 focus:outline-none
+                  transition-colors duration-200
+                  ${formData.Factura ? "bg-gray-100" : ""}
+                  ${getInputBorderClass(formData.Proveedor)}`}
                 >
                   <option value="">Seleccione un proveedor</option>
                   {proveedores.map((proveedor) => (
@@ -247,7 +228,7 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
                   ))}
                 </select>
                 {errors.Proveedor && (
-                  <p className="text-sm text-red-500 mt-1">
+                  <p className="text-xs text-red-500 mt-1">
                     {errors.Proveedor}
                   </p>
                 )}
@@ -256,24 +237,24 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
 
             {/* Campos opcionales */}
             <div className="space-y-4">
-              <h3 className="font-medium">Información Adicional</h3>
+              <h3 className="text-sm font-medium text-gray-900">
+                Información Adicional
+              </h3>
 
               {/* Fecha de Compra */}
               <div>
-                <label className="text-sm font-medium">Fecha de Compra</label>
+                <label className="text-sm font-medium block mb-1">
+                  Fecha de Compra
+                </label>
                 <input
                   type="date"
                   name="FechaCompraEnvio"
                   value={formData.FechaCompraEnvio || ""}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border-2 rounded mt-1 
-                            focus:ring-2 focus:ring-blue-500 focus:outline-none
-                            transition-colors duration-200
-                            ${
-                              formData.FechaCompraEnvio
-                                ? "border-green-400"
-                                : "border-gray-300"
-                            }`}
+                  className={`w-full px-3 py-1.5 border rounded
+                  focus:ring-1 focus:ring-blue-500 focus:outline-none
+                  transition-colors duration-200
+                  ${getInputBorderClass(formData.FechaCompraEnvio)}`}
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   La fecha de compra se usará para calcular los días
@@ -283,8 +264,10 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
 
               {/* Estado del Envío */}
               <div>
-                <label className="text-sm font-medium">Estado del Envío</label>
-                <div className="mt-2">
+                <label className="text-sm font-medium block mb-1">
+                  Estado del Envío
+                </label>
+                <div className="mt-1">
                   <label className="inline-flex items-center">
                     <input
                       type="checkbox"
@@ -298,9 +281,9 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
                           },
                         })
                       }
-                      className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+                      className="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-1"
                     />
-                    <span className="ml-2">Envío Recibido</span>
+                    <span className="ml-2 text-sm">Envío Recibido</span>
                   </label>
                   <p className="text-xs text-gray-500 mt-1">
                     Al marcar como recibido, se detendrá el contador de días
@@ -309,22 +292,22 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
                 </div>
               </div>
 
-              {/* Días Transcurridos (solo mostrar) */}
+              {/* Días Transcurridos */}
               <div>
-                <label className="text-sm font-medium">
+                <label className="text-sm font-medium block mb-1">
                   Días Transcurridos
                 </label>
                 <div
-                  className={`mt-2 px-3 py-2 rounded bg-gray-50 text-sm 
-                              ${
-                                formData.EnvioRecibido
-                                  ? "text-gray-600"
-                                  : formData.DiasTranscurridos > 30
-                                  ? "text-red-600"
-                                  : formData.DiasTranscurridos > 15
-                                  ? "text-orange-600"
-                                  : "text-blue-600"
-                              }`}
+                  className={`mt-1 px-3 py-1.5 rounded bg-gray-50 text-sm
+                  ${
+                    formData.EnvioRecibido
+                      ? "text-gray-600"
+                      : formData.DiasTranscurridos > 30
+                      ? "text-red-600"
+                      : formData.DiasTranscurridos > 15
+                      ? "text-orange-600"
+                      : "text-blue-600"
+                  }`}
                 >
                   {formData.DiasTranscurridos} días
                 </div>
@@ -332,109 +315,104 @@ const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
 
               {/* Descripción */}
               <div>
-                <label className="text-sm font-medium">Descripción</label>
+                <label className="text-sm font-medium block mb-1">
+                  Descripción
+                </label>
                 <textarea
                   name="DescripcionEnvio"
                   value={formData.DescripcionEnvio || ""}
                   onChange={handleInputChange}
                   rows="3"
-                  className={`w-full px-3 py-2 border-2 rounded mt-1 
-                            focus:ring-2 focus:ring-blue-500 focus:outline-none
-                            transition-colors duration-200
-                            ${
-                              formData.DescripcionEnvio
-                                ? "border-green-400"
-                                : "border-gray-300"
-                            }`}
+                  className={`w-full px-3 py-1.5 border rounded
+                  focus:ring-1 focus:ring-blue-500 focus:outline-none
+                  transition-colors duration-200
+                  ${getInputBorderClass(formData.DescripcionEnvio)}`}
                 />
               </div>
-            </div>
 
-            {/* Foto del Envío */}
-            <div>
-              <label className="text-sm font-medium">Foto del Envío</label>
-              <div className="mt-1 flex items-center space-x-4">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFotoChange}
-                  className="hidden"
-                  id="foto-envio"
-                />
-                <label
-                  htmlFor="foto-envio"
-                  className="px-4 py-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 
-                           transition-colors duration-150"
-                >
-                  Seleccionar imagen
+              {/* Foto del Envío */}
+              <div>
+                <label className="text-sm font-medium block mb-1">
+                  Foto del Envío
                 </label>
-                {previewUrl && (
-                  <div className="relative group">
+                <div className="mt-1 flex items-center space-x-4">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFotoChange}
+                    className="hidden"
+                    id="foto-envio"
+                  />
+                  <label
+                    htmlFor="foto-envio"
+                    className="px-3 py-1.5 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 
+                    transition-colors duration-150 text-sm"
+                  >
+                    Seleccionar imagen
+                  </label>
+                  {previewUrl && (
                     <div className="relative">
                       <img
                         src={previewUrl}
                         alt="Vista previa"
-                        className="h-16 w-16 object-cover rounded"
+                        className="h-10 w-10 object-cover rounded"
                       />
                       <button
                         type="button"
                         onClick={handleRemoveFoto}
-                        className="absolute -top-2 -right-2 bg-white rounded-full shadow-md 
-                                 hover:bg-gray-100 p-0.5 transition-colors duration-150"
+                        className="absolute -top-1 -right-1 bg-white rounded-full shadow-md 
+                        hover:bg-gray-100 p-0.5 transition-colors duration-150"
                       >
-                        <XCircle className="w-5 h-5 text-gray-500" />
+                        <XCircle className="w-4 h-4 text-gray-500" />
                       </button>
                     </div>
-                    <div className="text-xs mt-1 text-gray-500">
-                      {formData.FotoEnvio instanceof File
-                        ? formData.FotoEnvio.name
-                        : "Foto actual"}
-                    </div>
-                  </div>
+                  )}
+                </div>
+                {errors.FotoEnvio && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.FotoEnvio}
+                  </p>
                 )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG.
+                  Máx:10MB
+                </p>
               </div>
-              {errors.FotoEnvio && (
-                <p className="text-sm text-red-500 mt-1">{errors.FotoEnvio}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG. Tamaño
-                máximo: 10MB
-              </p>
             </div>
 
             {errors.general && (
-              <div className="p-4 bg-red-50 text-red-600 rounded">
+              <div className="p-3 bg-red-50 text-red-600 rounded text-sm">
                 {errors.general}
               </div>
             )}
           </form>
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="p-6 border-t">
-          <div className="flex justify-center space-x-16">
-            <button
-              type="button"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="px-8 py-2.5 border-2 border-gray-200 rounded-lg font-medium
-                       hover:bg-gray-50 hover:border-gray-300
-                       transition-all duration-150 w-36
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-8 py-2.5 bg-black text-white rounded-lg font-medium
-                       hover:bg-gray-800 shadow-sm hover:shadow
-                       transition-all duration-150 w-36
-                       disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? "Guardando..." : "Guardar"}
-            </button>
-          </div>
+      {/* Footer */}
+      <div className="flex-none border-t bg-white p-4">
+        <div className="flex justify-end space-x-2">
+          <button
+            type="button"
+            onClick={handleClose}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm border rounded font-medium
+                     hover:bg-gray-50
+                     transition-all duration-150
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm bg-black text-white rounded font-medium
+                     hover:bg-gray-800
+                     transition-all duration-150
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Guardando..." : "Guardar"}
+          </button>
         </div>
       </div>
     </div>
