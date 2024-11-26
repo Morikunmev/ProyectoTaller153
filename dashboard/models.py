@@ -294,22 +294,30 @@ class Categoria(models.Model):
 class Producto(models.Model):
     # Campos obligatorios
     NombreProducto = models.CharField(max_length=100, null=False, blank=False)
-    StockProducto = models.PositiveIntegerField(null=False, blank=False)
+    StockProductoInicial = models.PositiveIntegerField(
+        null=False, 
+        blank=False,
+        help_text="Cantidad inicial del producto"
+    )
+    StockProductoActual = models.PositiveIntegerField(
+        editable=False,  # Hace que el campo no sea editable en el admin
+        help_text="Cantidad actual disponible (se actualiza automáticamente)"
+    )
     PrecioUnitarioProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
-    # Campo calculado automático
     PrecioTotalProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
-    # Campo obligatorio - Relación con Categoría
-    Categoria = models.ForeignKey('Categoria', on_delete=models.CASCADE,null=False, blank=False,related_name='productos')
+    Categoria = models.ForeignKey('Categoria', on_delete=models.CASCADE, null=False, blank=False, related_name='productos')
+    
     # Campos de control de stock
     CantidadProductoVendido = models.PositiveIntegerField(default=0, editable=False)
     CantidadProductoDesechado = models.PositiveIntegerField(default=0, editable=False)
+    
     # Campos opcionales
     DescripcionProducto = models.TextField(null=True, blank=True)
     UbicacionProducto = models.CharField(max_length=100, null=True, blank=True)
     EstadoProducto = models.CharField(max_length=50, null=True, blank=True)
     FechaProducto = models.DateField(auto_now_add=True)
     DiasProducto = models.IntegerField(default=0, editable=False)
-    ProductoVendido = models.BooleanField(default=False)
+    ProductoVendido = models.BooleanField(default=False, editable=False)
     HoraCreacion = models.DateTimeField(default=timezone.now)
     FotoProducto = CloudinaryField('imagen', folder='productos/', null=True, blank=True)
 
@@ -319,22 +327,25 @@ class Producto(models.Model):
         ordering = ['-FechaProducto']
 
     def save(self, *args, **kwargs):
-        # Calcular el precio total
-        self.PrecioTotalProducto = self.StockProducto * self.PrecioUnitarioProducto
-        
-        # Si es nuevo producto, establecer la fecha
+        # Si es un nuevo producto, inicializar el stock actual
         if not self.pk:
+            self.StockProductoActual = self.StockProductoInicial
             self.FechaProducto = date.today()
+        else:
+            # Actualizar el stock actual basado en ventas y desechos
+            self.StockProductoActual = max(
+                0,  # Asegura que nunca sea negativo
+                self.StockProductoInicial - (self.CantidadProductoVendido + self.CantidadProductoDesechado)
+            )
+
+        # Calcular el precio total basado en el stock actual
+        self.PrecioTotalProducto = self.StockProductoActual * self.PrecioUnitarioProducto
         
-        # Actualizar días transcurridos si el producto no está vendido
-        if not self.ProductoVendido:
-            self.DiasProducto = (date.today() - self.FechaProducto).days
+        # Actualizar días transcurridos
+        self.DiasProducto = (date.today() - self.FechaProducto).days
             
-        # Verificar si todo el stock está agotado (vendido o desechado)
-        total_salidas = self.CantidadProductoVendido + self.CantidadProductoDesechado
-        if total_salidas >= self.StockProducto:
-            self.ProductoVendido = True
-            self.StockProducto = 0
+        # Actualizar estado de venta
+        self.ProductoVendido = self.StockProductoActual == 0
         
         # Guardar el producto
         super(Producto, self).save(*args, **kwargs)
@@ -343,12 +354,37 @@ class Producto(models.Model):
         total_stock = Producto.objects.filter(
             Categoria=self.Categoria
         ).aggregate(
-            total=models.Sum('StockProducto')
+            total=models.Sum('StockProductoActual')
         )['total'] or 0
         
         self.Categoria.StockCategoria = total_stock
         self.Categoria.save()
 
+    def desechar_cantidad(self, cantidad):
+        """Método para desechar una cantidad de producto"""
+        if cantidad > self.StockProductoActual:
+            raise ValidationError(f"No hay suficiente stock. Disponible: {self.StockProductoActual}")
+        
+        self.CantidadProductoDesechado += cantidad
+        self.save()
+
+    def vender_cantidad(self, cantidad):
+        """Método para vender una cantidad de producto"""
+        if cantidad > self.StockProductoActual:
+            raise ValidationError(f"No hay suficiente stock. Disponible: {self.StockProductoActual}")
+        
+        self.CantidadProductoVendido += cantidad
+        self.save()
+
+    def __str__(self):
+        return f"{self.NombreProducto} - Stock: {self.StockProductoActual}/{self.StockProductoInicial}"
+
+    @property
+    def porcentaje_stock_disponible(self):
+        """Calcula el porcentaje de stock disponible"""
+        if self.StockProductoInicial == 0:
+            return 0
+        return (self.StockProductoActual / self.StockProductoInicial) * 100
 class Cliente(models.Model):
     TIPO_CHOICES = [
         ('particular', 'Particular'),
@@ -399,6 +435,7 @@ class Ventas(models.Model):
     PrecioVenta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     PrecioTotalVenta = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     FechaVenta = models.DateField(auto_now_add=True)
+    
     # Relaciones
     Producto = models.ForeignKey(
         'Producto', 
@@ -407,13 +444,14 @@ class Ventas(models.Model):
     )
     Cliente = models.ForeignKey(
         'Cliente', 
-        on_delete=models.SET_DEFAULT,  # Cambiado a SET_DEFAULT
+        on_delete=models.SET_DEFAULT,
         related_name='compras',
         null=True, 
         blank=True,
-        default=None,  # Valor por defecto None
+        default=None,
         help_text="Cliente que realizó la compra"
     )
+    
     # Campo de auditoría
     Usuario = models.ForeignKey(
         User, 
@@ -422,32 +460,48 @@ class Ventas(models.Model):
         help_text="Usuario que registró la venta"
     )
     FechaRegistro = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
         ordering = ['-FechaVenta']
 
     def clean(self):
-        # Verificar stock disponible
-        if self.CantidadVenta > (self.Producto.StockProducto - self.Producto.CantidadProductoVendido):
+        # Verificar stock disponible usando el StockProductoActual
+        if self.CantidadVenta > self.Producto.StockProductoActual:
             raise ValidationError(
-                f"No hay suficiente stock. Disponible: "
-                f"{self.Producto.StockProducto - self.Producto.CantidadProductoVendido}"
+                f"No hay suficiente stock. Disponible: {self.Producto.StockProductoActual}"
             )
 
     def save(self, *args, **kwargs):
-        # Calcular precio total
-        self.PrecioTotalVenta = self.CantidadVenta * self.PrecioVenta
-        
-        # Validar stock y datos
-        self.clean()
-        
-        # Guardar la venta
-        super().save(*args, **kwargs)
-        
-        # Actualizar producto
-        self.Producto.CantidadProductoVendido += self.CantidadVenta
-        self.Producto.save()
+        if not self.pk:  # Solo para nuevas ventas
+            # Validar stock disponible
+            self.clean()
+            
+            # Calcular precio total
+            self.PrecioTotalVenta = self.CantidadVenta * self.PrecioVenta
+            
+            # Guardar la venta
+            super().save(*args, **kwargs)
+            
+            # Actualizar el stock del producto usando el método vender_cantidad
+            try:
+                self.Producto.vender_cantidad(self.CantidadVenta)
+            except ValidationError as e:
+                # Si hay un error al actualizar el stock, revertir la venta
+                self.delete()
+                raise e
+        else:
+            # Para actualizaciones de ventas existentes, solo guardar los cambios
+            # sin modificar el stock
+            super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # Al eliminar una venta, restaurar el stock vendido
+        if self.pk:
+            self.Producto.CantidadProductoVendido -= self.CantidadVenta
+            self.Producto.save()
+        super().delete(*args, **kwargs)
 
     def __str__(self):
         cliente = "Cliente no especificado" if self.Cliente is None else str(self.Cliente)
