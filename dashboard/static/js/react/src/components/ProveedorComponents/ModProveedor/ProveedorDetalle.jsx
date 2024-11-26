@@ -32,10 +32,65 @@ const ProveedorDetalle = () => {
   const [materialSearch, setMaterialSearch] = useState("");
   const [isVisible, setIsVisible] = useState(false);
   const [proveedores, setProveedores] = useState([]);
-  const [filteredResults, setFilteredResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastFetch, setLastFetch] = useState(null);
+
+  const processProveedores = (provs) => {
+    return provs
+      .map((proveedor) => {
+        // Primero filtramos y ordenamos las facturas
+        let facturas = (proveedor.facturas || []).sort(
+          (a, b) => new Date(b.FechaEmision) - new Date(a.FechaEmision)
+        );
+
+        // Si hay búsqueda de factura, filtramos por número
+        if (facturaSearch) {
+          facturas = facturas.filter((factura) =>
+            factura.NumeroFactura.toLowerCase().includes(
+              facturaSearch.toLowerCase()
+            )
+          );
+        }
+
+        // Si hay búsqueda de material, filtramos los envíos
+        if (materialSearch) {
+          facturas = facturas
+            .map((factura) => ({
+              ...factura,
+              envios: (factura.envios || []).filter((envio) =>
+                envio.NombreEnvio.toLowerCase().includes(
+                  materialSearch.toLowerCase()
+                )
+              ),
+            }))
+            .filter((factura) => factura.envios.length > 0);
+        }
+
+        return {
+          ...proveedor,
+          facturas,
+        };
+      })
+      .filter((proveedor) => {
+        // Filtramos proveedores que coinciden con la búsqueda
+        const nameMatch =
+          !searchTerm ||
+          proveedor.NombreProveedor.toLowerCase().includes(
+            searchTerm.toLowerCase()
+          );
+
+        // Solo mostramos proveedores con facturas si hay búsqueda
+        const hasFacturas = !facturaSearch || proveedor.facturas.length > 0;
+
+        // Solo mostramos proveedores con envíos si hay búsqueda de material
+        const hasEnvios =
+          !materialSearch ||
+          proveedor.facturas.some((f) => f.envios.length > 0);
+
+        return nameMatch && hasFacturas && hasEnvios;
+      });
+  };
 
   const fetchProveedores = async (force = false) => {
     try {
@@ -44,9 +99,7 @@ const ProveedorDetalle = () => {
         if (cached) {
           const { data, timestamp } = JSON.parse(cached);
           if (Date.now() - timestamp < CACHE_DURATION) {
-            const processed = processProveedores(data);
-            setProveedores(processed);
-            setFilteredResults(processed);
+            setProveedores(processProveedores(data));
             setLoading(false);
             setLastFetch(timestamp);
             return;
@@ -54,19 +107,21 @@ const ProveedorDetalle = () => {
         }
       }
 
+      setLoading(true);
       const response = await fetch("/api/consultar_proveedores_detalle/");
       if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
 
       const result = await response.json();
       if (result.success) {
-        const processedData = processProveedores(result.proveedores);
+        // Guardamos datos sin procesar en caché
         const cacheData = {
           data: result.proveedores,
           timestamp: Date.now(),
         };
         localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-        setProveedores(processedData);
-        setFilteredResults(processedData);
+
+        // Procesamos los datos con los filtros actuales
+        setProveedores(processProveedores(result.proveedores));
         setLastFetch(Date.now());
       } else {
         throw new Error(result.message || "Error al cargar los proveedores");
@@ -79,15 +134,7 @@ const ProveedorDetalle = () => {
     }
   };
 
-  const processProveedores = (provs) => {
-    return provs.map((proveedor) => ({
-      ...proveedor,
-      facturas: (proveedor.facturas || []).sort(
-        (a, b) => new Date(b.FechaEmision) - new Date(a.FechaEmision)
-      ),
-    }));
-  };
-
+  // Carga inicial y refresco automático
   useEffect(() => {
     fetchProveedores();
     setIsVisible(true);
@@ -100,71 +147,44 @@ const ProveedorDetalle = () => {
 
     return () => clearInterval(interval);
   }, []);
-  
+
+  // Efecto para procesar los datos cuando cambian los filtros
   useEffect(() => {
-    const filtered = proveedores
-      .map((proveedor) => {
-        // Primero filtra las facturas que tienen envíos que coinciden
-        const filteredFacturas = proveedor.facturas.filter((factura) => {
-          const facturaMatch =
-            facturaSearch === "" ||
-            factura.NumeroFactura.toLowerCase().includes(
-              facturaSearch.toLowerCase()
-            );
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data } = JSON.parse(cached);
+      setProveedores(processProveedores(data));
+    }
+  }, [searchTerm, facturaSearch, materialSearch]);
 
-          const enviosMatch =
-            materialSearch === "" ||
-            factura.envios?.some((envio) =>
-              envio.NombreEnvio.toLowerCase().includes(
-                materialSearch.toLowerCase()
-              )
-            );
-
-          return facturaMatch || enviosMatch;
-        });
-
-        return {
-          ...proveedor,
-          facturas: filteredFacturas,
-        };
-      })
-      .filter((proveedor) => {
-        const proveedorMatch = proveedor.NombreProveedor.toLowerCase().includes(
-          searchTerm.toLowerCase()
-        );
-        return (
-          proveedorMatch &&
-          (materialSearch === "" || proveedor.facturas.length > 0)
-        );
-      });
-
-    setFilteredResults(filtered);
-  }, [searchTerm, facturaSearch, materialSearch, proveedores]);
   const handleRefresh = () => {
     setLoading(true);
     fetchProveedores(true);
   };
 
-  if (loading)
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <p className="text-gray-600">Cargando proveedores...</p>
       </div>
     );
+  }
 
-  if (error)
+  if (error) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <p className="text-red-600">{error}</p>
       </div>
     );
+  }
 
-  if (!proveedores.length)
+  if (!proveedores.length) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <p className="text-gray-600">No hay proveedores disponibles</p>
       </div>
     );
+  }
 
   return (
     <div
@@ -226,7 +246,7 @@ const ProveedorDetalle = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredResults.map((proveedor, index) => (
+        {proveedores.map((proveedor, index) => (
           <div
             key={index}
             className="bg-gray-300 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 h-auto"
@@ -325,7 +345,7 @@ const ProveedorDetalle = () => {
                       >
                         <div
                           className="absolute top-2 right-2 w-6 h-6 bg-blue-100 rounded-full 
-                     flex items-center justify-center text-xs font-medium text-blue-600"
+                          flex items-center justify-center text-xs font-medium text-blue-600"
                         >
                           {facturaIdx + 1}
                         </div>

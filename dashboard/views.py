@@ -2114,80 +2114,128 @@ def toggle_envio_status(request, envio_id):
         
         
 def consultar_proveedores_detalle(request):
-   with connection.cursor() as cursor:
-       try:
-           # Consulta SQL que obtiene proveedores y sus facturas/envíos anidados
-           cursor.execute("""
-               WITH envios_json AS (
-                   SELECT 
-                       f.id as factura_id,
-                       json_agg(
-                           json_build_object(
-                               'NombreEnvio', e."NombreEnvio",
-                               'CantidadEnvio', e."CantidadEnvio", 
-                               'TotalEnvio', e."TotalEnvio",
-                               'EnvioRecibido', e."EnvioRecibido"
-                           )
-                       ) as envios_data
-                   FROM dashboard_envio e
-                   JOIN dashboard_factura f ON e."Factura_id" = f.id 
-                   GROUP BY f.id
-               )
-               SELECT 
-                   p.id,
-                   p."NombreProveedor",
-                   p."RutProveedor",
-                   p."MarcaProveedor",
-                   p."ComentarioProveedor", 
-                   p."CiudadProveedor",
-                   p."RegionProveedor",
-                   p."PaisProveedor",
-                   p."TelefonoProveedor",
-                   p."FotoProveedor",   
-                   p."FechaCreacionProveedor",
-                   COALESCE(
-                       json_agg(
-                           json_build_object(
-                               'NumeroFactura', f."NumeroFactura",
-                               'FechaEmision', f."FechaEmision",
-                               'envios', COALESCE(ej.envios_data, '[]'::json)
-                           )
-                       ) FILTER (WHERE f.id IS NOT NULL),
-                       '[]'::json
-                   ) as facturas
-               FROM dashboard_proveedor p
-               LEFT JOIN dashboard_factura f ON f."Proveedor_id" = p.id
-               LEFT JOIN envios_json ej ON ej.factura_id = f.id
-               GROUP BY p.id
-           """)
-           
-           columns = [col[0] for col in cursor.description]
-           proveedores = [dict(zip(columns, row)) for row in cursor.fetchall()]
-           
-           # Procesa las URLs de fotos y fechas
-           for proveedor in proveedores:
-               if proveedor['FotoProveedor']:
-                   foto_url = proveedor['FotoProveedor'].strip()
-                   if foto_url.startswith('image/upload/'):
-                       foto_url = foto_url.replace('image/upload/', '')
-                   proveedor['FotoProveedor'] = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
-               
-               if proveedor['FechaCreacionProveedor']:
-                   proveedor['FechaCreacionProveedor'] = proveedor['FechaCreacionProveedor'].isoformat()
-               
-               if proveedor['facturas'] is None:
-                   proveedor['facturas'] = []
+    numero_factura = request.GET.get('factura', '').strip()
+    nombre_envio = request.GET.get('material', '').strip()
+    
+    with connection.cursor() as cursor:
+        try:
+            query = """
+                WITH envios_json AS (
+                    SELECT 
+                        f.id as factura_id,
+                        json_agg(
+                            json_build_object(
+                                'NombreEnvio', e."NombreEnvio",
+                                'CantidadEnvio', e."CantidadEnvio", 
+                                'TotalEnvio', e."TotalEnvio",
+                                'EnvioRecibido', e."EnvioRecibido"
+                            ) ORDER BY e."NombreEnvio"
+                        ) FILTER (WHERE e.id IS NOT NULL AND 
+                                (%s = '' OR LOWER(e."NombreEnvio") LIKE LOWER(%s))) as envios_data
+                    FROM dashboard_factura f
+                    LEFT JOIN dashboard_envio e ON e."Factura_id" = f.id 
+                    GROUP BY f.id
+                ),
+                facturas_filtradas AS (
+                    SELECT 
+                        f.*,
+                        ej.envios_data
+                    FROM dashboard_factura f
+                    LEFT JOIN envios_json ej ON ej.factura_id = f.id
+                    WHERE (%s = '' OR LOWER(f."NumeroFactura") LIKE LOWER(%s))
+                )
+                SELECT 
+                    p.id,
+                    p."NombreProveedor",
+                    p."RutProveedor",
+                    p."MarcaProveedor",
+                    p."ComentarioProveedor", 
+                    p."CiudadProveedor",
+                    p."RegionProveedor",
+                    p."PaisProveedor",
+                    p."TelefonoProveedor",
+                    p."FotoProveedor",   
+                    p."FechaCreacionProveedor",
+                    COALESCE(
+                        json_agg(
+                            json_build_object(
+                                'NumeroFactura', ff."NumeroFactura",
+                                'FechaEmision', ff."FechaEmision",
+                                'envios', COALESCE(ff.envios_data, '[]'::json)
+                            )
+                        ) FILTER (WHERE ff.id IS NOT NULL),
+                        '[]'::json
+                    ) as facturas
+                FROM dashboard_proveedor p
+                LEFT JOIN facturas_filtradas ff ON ff."Proveedor_id" = p.id
+                GROUP BY p.id
+                HAVING 
+                    CASE 
+                        WHEN %s != '' OR %s != '' THEN
+                            EXISTS (
+                                SELECT 1 
+                                FROM dashboard_factura f2 
+                                JOIN dashboard_envio e2 ON e2."Factura_id" = f2.id
+                                WHERE f2."Proveedor_id" = p.id 
+                                AND (
+                                    %s = '' OR LOWER(f2."NumeroFactura") LIKE LOWER(%s)
+                                )
+                                AND (
+                                    %s = '' OR LOWER(e2."NombreEnvio") LIKE LOWER(%s)
+                                )
+                            )
+                        ELSE true
+                    END
+            """
+            
+            envio_pattern = f'%{nombre_envio}%'
+            factura_pattern = f'%{numero_factura}%'
+            
+            params = [
+                nombre_envio, envio_pattern,  # Para el filtrado inicial de envíos
+                numero_factura, factura_pattern,  # Para el filtrado de facturas
+                numero_factura, nombre_envio,  # Para la condición del CASE
+                numero_factura, factura_pattern,  # Para el EXISTS de facturas
+                nombre_envio, envio_pattern,  # Para el EXISTS de envíos
+            ]
+            
+            cursor.execute(query, params)
+            
+            columns = [col[0] for col in cursor.description]
+            proveedores = [dict(zip(columns, row)) for row in cursor.fetchall()]
+            
+            # Procesa las URLs de fotos y fechas
+            for proveedor in proveedores:
+                if proveedor['FotoProveedor']:
+                    foto_url = proveedor['FotoProveedor'].strip()
+                    if foto_url.startswith('image/upload/'):
+                        foto_url = foto_url.replace('image/upload/', '')
+                    proveedor['FotoProveedor'] = f"https://res.cloudinary.com/dfqlvd3d4/image/upload/{foto_url}"
+                
+                if proveedor['FechaCreacionProveedor']:
+                    proveedor['FechaCreacionProveedor'] = proveedor['FechaCreacionProveedor'].isoformat()
+                
+                if proveedor['facturas'] is None:
+                    proveedor['facturas'] = []
+                
+                # Solo mantenemos las facturas que tienen envíos después del filtrado
+                if nombre_envio:
+                    proveedor['facturas'] = [
+                        factura for factura in proveedor['facturas']
+                        if factura['envios'] and len(factura['envios']) > 0
+                    ]
 
-           return JsonResponse({
-               'success': True,
-               'proveedores': proveedores
-           })
-       except Exception as e:
-           print("Error en consultar_proveedores_detalle:", str(e))
-           return JsonResponse({
-               'success': False,
-               'message': str(e)
-           }, status=500)
+            return JsonResponse({
+                'success': True,
+                'proveedores': proveedores
+            })
+            
+        except Exception as e:
+            print("Error en consultar_proveedores_detalle:", str(e))
+            return JsonResponse({
+                'success': False,
+                'message': str(e)
+            }, status=500)
            
 def consultar_facturas_detalle(request):
    with connection.cursor() as cursor:
