@@ -28,7 +28,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-gc$9lh%cjzd2ubw6^!s1!+5k%m-t!=qg&s3xofrnm2-f*k4c8c'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['proyectotaller153-production.up.railway.app', '127.0.0.1', 'localhost']
 
@@ -71,16 +71,21 @@ NPM_BIN_PATH = "npm"  # Cambiado para compatibilidad
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
-   os.path.join(BASE_DIR, 'login/static'),
-   os.path.join(BASE_DIR, 'dashboard/static')
+    os.path.join(BASE_DIR, 'login/static'),
+    os.path.join(BASE_DIR, 'dashboard/static/js/react/dist'),  # Solo carpeta dist
+    os.path.join(BASE_DIR, 'theme/static')
 ]
 
 # Whitenoise configuration
 WHITENOISE_MIMETYPES = {
-   '.js': 'application/javascript',
-   '.css': 'text/css',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
 }
 
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Cache version para archivos estáticos
