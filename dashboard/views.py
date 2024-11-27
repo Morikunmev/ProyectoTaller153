@@ -31,8 +31,6 @@ from cloudinary.exceptions import Error as CloudinaryError
 from datetime import date
 from django.views import View
 
-
-
 # Excel imports
 import xlsxwriter
 from django.http import JsonResponse
@@ -53,7 +51,6 @@ from django.views.decorators.http import require_http_methods
 
 # Configurar logging
 logger = logging.getLogger(__name__)
-
 
 
 

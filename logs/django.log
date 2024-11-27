@@ -1,0 +1,61 @@
+INFO 2024-11-27 02:00:41,939 autoreload 195032 111508 Watching for file changes with StatReloader
+INFO 2024-11-27 02:00:48,770 basehttp 195032 78068 "GET / HTTP/1.1" 301 0
+INFO 2024-11-27 02:00:48,781 basehttp 195032 51316 code 400, message Bad request version ('Kª;è\x05x,°ËKZ>\x00')
+ERROR 2024-11-27 02:00:48,782 basehttp 195032 51316 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:00:48,783 basehttp 195032 139604 code 400, message Bad request version ('ÊÊ\x13\x01\x13\x02\x13\x03À+À/À,À0Ì©Ì¨À\x13À\x14\x00\x9c\x00\x9d\x00/\x005\x01\x00\x06\x93')
+ERROR 2024-11-27 02:00:48,785 basehttp 195032 139604 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:00:50,082 basehttp 195032 154964 code 400, message Bad request version ('\x15&þ\x06\x03è¤?µØh\x1b>±X\x13ºQ\x01Åµs\x81U2\x8bÊâ\x93Ó¶eúEqQQ\x10@Â\x0fÐ/f\x08&ku\x80Õ\x82ä"\x06\x88Þµ')
+INFO 2024-11-27 02:00:50,083 basehttp 195032 134952 code 400, message Bad request version ('®\x9e9\x96\x97\x81î|Laâ¦\x14\x07Ø¤>\x99³Wöþ\x06\x02D\x9fÁ÷')
+ERROR 2024-11-27 02:00:50,083 basehttp 195032 154964 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2024-11-27 02:00:50,084 basehttp 195032 134952 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:00:50,086 basehttp 195032 120424 code 400, message Bad request version ('oÐ¦ÂóñÀÿw@¹:6ÊÄ\x92\x95\x92\x9f\x8e')
+INFO 2024-11-27 02:00:50,087 basehttp 195032 202128 code 400, message Bad request version ('\x9a\x9a\x13\x01\x13\x02\x13\x03À+À/À,À0Ì©Ì¨À\x13À\x14\x00\x9c\x00\x9d\x00/\x005\x01\x00\x063')
+ERROR 2024-11-27 02:00:50,087 basehttp 195032 120424 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2024-11-27 02:00:50,088 basehttp 195032 202128 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:02:14,795 autoreload 195032 111508 C:\Users\PRUEB\OneDrive\Documentos\ProyectoTaller153\proyecto_taller153\settings.py changed, reloading.
+INFO 2024-11-27 02:02:16,272 autoreload 156592 32216 Watching for file changes with StatReloader
+INFO 2024-11-27 02:02:20,095 basehttp 156592 194984 "GET /factura/ HTTP/1.1" 301 0
+INFO 2024-11-27 02:02:20,098 basehttp 156592 26304 code 400, message Bad request version ('\x8aFsÜ=Ö')
+ERROR 2024-11-27 02:02:20,099 basehttp 156592 26304 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:02:20,101 basehttp 156592 76960 code 400, message Bad request version ('\x94¬*ÉÏPGã')
+ERROR 2024-11-27 02:02:20,101 basehttp 156592 76960 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:02:28,496 basehttp 156592 68704 code 400, message Bad request version ('\x00\x12\x00\x10\x04\x03\x08\x04\x04\x01\x05\x03\x08\x05\x05\x01\x08\x06\x06\x01\x00')
+ERROR 2024-11-27 02:02:28,498 basehttp 156592 68704 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:02:28,500 basehttp 156592 62092 code 400, message Bad request version ('v$\x8c\x9cðÏ')
+ERROR 2024-11-27 02:02:28,501 basehttp 156592 62092 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:03:08,407 autoreload 156592 32216 C:\Users\PRUEB\OneDrive\Documentos\ProyectoTaller153\proyecto_taller153\settings.py changed, reloading.
+INFO 2024-11-27 02:03:09,939 autoreload 173920 164616 Watching for file changes with StatReloader
+INFO 2024-11-27 02:03:47,987 basehttp 173920 203772 code 400, message Bad request version ('Ï\x00£IÉ:]\x89`\x19\x83Ä\x97ÆÄ\x9f\x97\x93$³JF2Ç~lÃ\x81%\x96µ\x89Q¡È_=ÃÀÜÌÍ\x17\x008\x8c\x8a\x97Á±\x04"\x84FaCxþ55HwH')
+ERROR 2024-11-27 02:03:47,988 basehttp 173920 203772 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:03:47,990 basehttp 173920 127124 code 400, message Bad request version ('::\x13\x01\x13\x02\x13\x03À+À/À,À0Ì©Ì¨À\x13À\x14\x00\x9c\x00\x9d\x00/\x005\x01\x00\x06s\x1a\x1a\x00\x00\x00')
+ERROR 2024-11-27 02:03:47,991 basehttp 173920 127124 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:04:02,603 autoreload 150492 99480 Watching for file changes with StatReloader
+INFO 2024-11-27 02:04:11,689 basehttp 150492 94888 code 400, message Bad request version ('VÂÖÛ,\x86')
+ERROR 2024-11-27 02:04:11,690 basehttp 150492 94888 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:04:11,693 basehttp 150492 76628 code 400, message Bad request version ('\x80ö\\÷_¥\x10IP\x9c<áÊx\x00')
+ERROR 2024-11-27 02:04:11,693 basehttp 150492 76628 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:04:21,475 autoreload 150492 99480 C:\Users\PRUEB\OneDrive\Documentos\ProyectoTaller153\proyecto_taller153\settings.py changed, reloading.
+INFO 2024-11-27 02:04:22,881 autoreload 38868 17696 Watching for file changes with StatReloader
+INFO 2024-11-27 02:04:27,387 basehttp 38868 29940 code 400, message Bad request version ('\x00\x12\x00\x10\x04\x03\x08\x04\x04\x01\x05\x03\x08\x05\x05\x01\x08\x06\x06\x01\x00')
+ERROR 2024-11-27 02:04:27,388 basehttp 38868 29940 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:04:27,391 basehttp 38868 179140 code 400, message Bad request version ('\x00\x17\x00\x00\x00-\x00\x02\x01\x01\x00')
+ERROR 2024-11-27 02:04:27,391 basehttp 38868 179140 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:05:09,691 autoreload 38868 17696 C:\Users\PRUEB\OneDrive\Documentos\ProyectoTaller153\proyecto_taller153\settings.py changed, reloading.
+INFO 2024-11-27 02:05:11,036 autoreload 99788 71868 Watching for file changes with StatReloader
+INFO 2024-11-27 02:05:15,110 basehttp 99788 17964 code 400, message Bad request syntax ('\x16\x03\x01\x06À\x01\x00\x06¼\x03\x03U^')
+ERROR 2024-11-27 02:05:15,111 basehttp 99788 17964 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:05:15,113 basehttp 99788 126068 code 400, message Bad request version ('\x88Rv\x91\x02gÀB\x9bÙ\x9bQv\x01mkÔ\x96þ\x98<\x05B\xadº8»ÔB\x07¥w¸')
+ERROR 2024-11-27 02:05:15,114 basehttp 99788 126068 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:05:22,524 basehttp 99788 13212 code 400, message Bad request version ('\x02h2\x08http/1.1\x00')
+ERROR 2024-11-27 02:05:22,525 basehttp 99788 13212 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:05:22,526 basehttp 99788 202544 code 400, message Bad request version ('\x8fø&¹ËðØ\x06àÖÏ\x89ÉïÔÀpæ5M\x89<ó\x06åè\x83"¾lö\x84\x95\x05\x92¡#\x97ûa\x12r©\x00c¹\x9e{¯n\x14\x03\'\x16±i\x9cì½\x9dWD\x9d\x8aF\x83')
+ERROR 2024-11-27 02:05:22,527 basehttp 99788 202544 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:05:52,622 autoreload 99788 71868 C:\Users\PRUEB\OneDrive\Documentos\ProyectoTaller153\proyecto_taller153\settings.py changed, reloading.
+INFO 2024-11-27 02:05:54,039 autoreload 203252 128820 Watching for file changes with StatReloader
+INFO 2024-11-27 02:05:58,297 basehttp 203252 94356 code 400, message Bad request version ('_M\x90Ädûåú\x15¯|;\x84\x9aº%Î')
+ERROR 2024-11-27 02:05:58,299 basehttp 203252 94356 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:05:58,302 basehttp 203252 25632 code 400, message Bad request version (':\x19ã±¿ç½\x90®N¹')
+ERROR 2024-11-27 02:05:58,303 basehttp 203252 25632 You're accessing the development server over HTTPS, but it only supports HTTP.
+INFO 2024-11-27 02:06:05,100 autoreload 203252 128820 C:\Users\PRUEB\OneDrive\Documentos\ProyectoTaller153\proyecto_taller153\settings.py changed, reloading.
+INFO 2024-11-27 02:06:06,474 autoreload 61136 91316 Watching for file changes with StatReloader
+INFO 2024-11-27 02:06:32,670 autoreload 61136 91316 C:\Users\PRUEB\OneDrive\Documentos\ProyectoTaller153\proyecto_taller153\settings.py changed, reloading.
