@@ -3658,7 +3658,7 @@ def exportar_herramientas_excel(request):
 
 @login_required(login_url='login')
 def mod_producto(request):
-    return render(request, 'producto/producto.html')
+    return render(request, 'material/producto.html')
 
 @login_required(login_url='login')
 @ensure_csrf_cookie 
