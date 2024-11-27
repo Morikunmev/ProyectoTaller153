@@ -448,17 +448,9 @@ class ProductoMaterial(models.Model):
     Producto = models.ForeignKey('Producto',on_delete=models.CASCADE,related_name='materiales_usados',null=False,blank=False,help_text="Producto en el que se usó el material")
     Material = models.ForeignKey('Material',on_delete=models.PROTECT,related_name='productos_asociados',null=False,blank=False,help_text="Material utilizado en el producto")
     # Cantidad utilizada
-    CantidadUsada = models.PositiveIntegerField(
-        null=False,
-        blank=False,
-        help_text="Cantidad del material utilizada en este producto"
-    )
-    
+    CantidadUsada = models.PositiveIntegerField(null=False,blank=False,help_text="Cantidad del material utilizada en este producto")
     # Campo de descripción
-    DescripcionUso = models.TextField(
-        null=True,
-        blank=True,
-        help_text="Descripción detallada de cómo se utilizó el material en el producto"
+    DescripcionUso = models.TextField(null=True,blank=True,help_text="Descripción detallada de cómo se utilizó el material en el producto"
     )
     
     # Campos de auditoría
@@ -511,6 +503,21 @@ class ProductoMaterial(models.Model):
 
     def __str__(self):
         return f"{self.Producto.NombreProducto} - {self.Material.NombreMaterial} ({self.CantidadUsada})"
+
+    @property
+    def detalle_uso(self):
+        """Retorna una cadena con el detalle de uso del material"""
+        return f"Cantidad usada: {self.CantidadUsada} de {self.Material.StockOriginal} de {self.Material.NombreMaterial}"
+
+    @property
+    def detalle_uso_json(self):
+        """Retorna un diccionario con el detalle de uso del material"""
+        return {
+            'cantidad_usada': self.CantidadUsada,
+            'stock_original': self.Material.StockOriginal,
+            'stock_actual': self.Material.StockMaterial,
+            'nombre_material': self.Material.NombreMaterial
+        }
 
     
 class Cliente(models.Model):
