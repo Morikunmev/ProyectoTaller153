@@ -11,7 +11,10 @@ import {
   AlertCircle,
   FileCheck,
   Loader,
-  Truck, // Añadido para el ícono de envío
+  Truck,
+  Database,
+  ShoppingBag,
+  Percent,
 } from "lucide-react";
 
 const MaterialCard = ({ material: initialMaterial }) => {
@@ -24,9 +27,7 @@ const MaterialCard = ({ material: initialMaterial }) => {
 
     const fetchDetallesMaterial = async () => {
       try {
-        const response = await fetch(
-          `/api/materiales/${initialMaterial.id}/detalles/`
-        );
+        const response = await fetch(`/api/materiales/${initialMaterial.id}/detalles/`);
 
         if (!response.ok) {
           throw new Error("Error al cargar los detalles del material");
@@ -90,10 +91,37 @@ const MaterialCard = ({ material: initialMaterial }) => {
             )}
           </div>
           <div>
-            <h3 className="text-lg font-medium text-gray-900">
-              {material.NombreMaterial}
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900">{material.NombreMaterial}</h3>
             <p className="text-sm text-gray-500">ID: #{material.id}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Información de Stock */}
+      <div className="p-4 bg-blue-50 border-b">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            <Database className="w-4 h-4 text-blue-600" />
+            <div>
+              <span className="text-gray-600">Stock Actual:</span>
+              <span className="ml-1 font-medium">{material.StockMaterial}/{material.StockOriginal}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <ShoppingBag className="w-4 h-4 text-blue-600" />
+            <div>
+              <span className="text-gray-600">Stock Usado:</span>
+              <span className="ml-1 font-medium">{material.stock_usado}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-sm">
+            <Percent className="w-4 h-4 text-blue-600" />
+            <div>
+              <span className="text-gray-600">Disponible:</span>
+              <span className="ml-1 font-medium">
+                {material.porcentaje_stock_disponible.toFixed(1)}%
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -104,19 +132,14 @@ const MaterialCard = ({ material: initialMaterial }) => {
           {/* Información del Envío */}
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Truck className="w-4 h-4" />
-            <span>
-              Envío: {material.Envio ? `#${material.Envio.id}` : "Sin envío"}
-            </span>
+            <span>Envío: {material.Envio ? `#${material.Envio.id}` : "Sin envío"}</span>
           </div>
 
           {/* Información del Proveedor */}
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Package className="w-4 h-4" />
             <span>
-              Proveedor:{" "}
-              {material.Proveedor
-                ? material.Proveedor.NombreProveedor
-                : "Sin proveedor"}
+              Proveedor: {material.Proveedor ? material.Proveedor.NombreProveedor : "Sin proveedor"}
             </span>
           </div>
 
@@ -132,16 +155,12 @@ const MaterialCard = ({ material: initialMaterial }) => {
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Ruler className="w-4 h-4" />
-            <span>
-              Dimensiones: {material.DimensionesMaterial || "No especificado"}
-            </span>
+            <span>Dimensiones: {material.DimensionesMaterial || "No especificado"}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <MapPin className="w-4 h-4" />
-            <span>
-              Ubicación: {material.UbicacionMaterial || "No especificado"}
-            </span>
+            <span>Ubicación: {material.UbicacionMaterial || "No especificado"}</span>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -151,11 +170,31 @@ const MaterialCard = ({ material: initialMaterial }) => {
 
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <FileCheck className="w-4 h-4" />
-            <span>
-              Registro Factura: {material.RegistroFacturaMaterial || "No"}
-            </span>
+            <span>Registro Factura: {material.RegistroFacturaMaterial || "No"}</span>
           </div>
         </div>
+
+        {/* Productos que usan este material */}
+        {material.productos_asociados && material.productos_asociados.length > 0 && (
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="text-sm font-medium text-gray-900 mb-2">Productos que utilizan este material:</h4>
+            <div className="space-y-2">
+              {material.productos_asociados.map((producto) => (
+                <div key={producto.id} className="bg-gray-50 p-3 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{producto.NombreProducto}</p>
+                      <p className="text-sm text-gray-600">Cantidad usada: {producto.CantidadUsada}</p>
+                    </div>
+                    {producto.DescripcionUso && (
+                      <p className="text-sm text-gray-500 mt-1">{producto.DescripcionUso}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Detalles adicionales */}
         {material.DetalleMaterial && (
@@ -166,9 +205,7 @@ const MaterialCard = ({ material: initialMaterial }) => {
                 <span className="block text-sm font-medium text-gray-900 mb-1">
                   Detalles adicionales
                 </span>
-                <p className="text-sm text-gray-600 leading-relaxed">
-                  {material.DetalleMaterial}
-                </p>
+                <p className="text-sm text-gray-600 leading-relaxed">{material.DetalleMaterial}</p>
               </div>
             </div>
           </div>

@@ -72,6 +72,10 @@ urlpatterns = [
     path('api/herramientas/<int:herramienta_id>/eliminar/', views.eliminar_herramienta, name='eliminar_herramienta'),
     path('api/herramientas/exportar-excel/', views.exportar_herramientas_excel, name='exportar_herramientas_excel'),
     path('api/herramientas/<int:herramienta_id>/detalles/', views.obtener_detalles_herramienta, name='obtener_detalles_herramienta'),
+    
+    
+    #-------------------RUTA PARA PRODUCTO-----------------
+    
         
 
 

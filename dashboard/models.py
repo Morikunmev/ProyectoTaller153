@@ -176,23 +176,35 @@ class Envio(models.Model):
 class Material(models.Model):
     NombreMaterial = models.CharField(max_length=100, null=False, blank=False)
     StockMaterial = models.PositiveIntegerField(null=False, blank=False)
+    StockOriginal = models.PositiveIntegerField(editable=False, help_text="Stock inicial con el que se registró el material")
     PrecioMaterial = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     TotalMaterial = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
     FechaCompraMaterial = models.DateField(auto_now_add=True)
     DescripcionMaterial = models.TextField(null=True, blank=True)
-    #-----Campos 
+    # Campos opcionales
     ColorMaterial = models.CharField(max_length=50, null=True, blank=True)
     PesoMaterial = models.CharField(max_length=50, null=True, blank=True)
     DimensionesMaterial = models.CharField(max_length=100, null=True, blank=True)
     DetalleMaterial = models.TextField(null=True, blank=True)
-    EstadoMaterial = models.CharField(max_length=50, null=True, blank=True)  # Añadido null=True, blank=True
-    UbicacionMaterial = models.CharField(max_length=100, null=True, blank=True)  # Añadido null=True, blank=True
+    EstadoMaterial = models.CharField(max_length=50, null=True, blank=True)
+    UbicacionMaterial = models.CharField(max_length=100, null=True, blank=True)
     FotoMaterial = CloudinaryField('imagen', folder='materiales/', null=True, blank=True)
+    # Relaciones
     Envio = models.ForeignKey(Envio, on_delete=models.CASCADE, null=True, blank=True)
     Proveedor = models.ForeignKey('Proveedor', on_delete=models.SET_NULL, null=True, blank=True)
     RegistroFacturaMaterial = models.CharField(max_length=2, choices=[('Si', 'Si'), ('No', 'No')], default='No')
+    class Meta:
+        verbose_name = "Material"
+        verbose_name_plural = "Materiales"
+        ordering = ['NombreMaterial']
 
+    def __str__(self):
+        return f"{self.NombreMaterial} (Stock: {self.StockMaterial}/{self.StockOriginal})"
     def save(self, *args, **kwargs):
+        # Si es un nuevo registro (no tiene pk), establecer StockOriginal igual al StockMaterial inicial
+        if not self.pk:
+            self.StockOriginal = self.StockMaterial
+        
         self.TotalMaterial = self.StockMaterial * self.PrecioMaterial
         
         if self.Envio and self.Envio.EnvioRecibido:
@@ -201,6 +213,52 @@ class Material(models.Model):
             self.RegistroFacturaMaterial = 'No'
             
         super(Material, self).save(*args, **kwargs)
+
+    def actualizar_stock(self, cantidad_usada):
+        """
+        Actualiza el stock del material y valida que haya suficiente.
+        
+        Args:
+            cantidad_usada (int): Cantidad a descontar del stock
+            
+        Raises:
+            ValidationError: Si no hay suficiente stock
+        """
+        if cantidad_usada > self.StockMaterial:
+            raise ValidationError(
+                f"Stock insuficiente de {self.NombreMaterial}. "
+                f"Disponible: {self.StockMaterial}, Solicitado: {cantidad_usada}"
+            )
+        
+        self.StockMaterial -= cantidad_usada
+        self.save()
+
+    def restaurar_stock(self, cantidad):
+        """
+        Restaura una cantidad al stock del material.
+        
+        Args:
+            cantidad (int): Cantidad a restaurar al stock
+        """
+        self.StockMaterial += cantidad
+        if self.StockMaterial > self.StockOriginal:
+            raise ValidationError(
+                f"La cantidad a restaurar excede el stock original. "
+                f"Stock Original: {self.StockOriginal}, Stock Actual: {self.StockMaterial}"
+            )
+        self.save()
+
+    @property
+    def stock_usado(self):
+        """Retorna la cantidad de material que se ha usado en productos"""
+        return self.StockOriginal - self.StockMaterial
+
+    @property
+    def porcentaje_stock_disponible(self):
+        """Calcula el porcentaje de stock disponible"""
+        if self.StockOriginal == 0:
+            return 0
+        return (self.StockMaterial / self.StockOriginal) * 100
         
 class Herramienta(models.Model):
     NombreHerramienta = models.CharField(max_length=100, null=False, blank=False)
@@ -385,6 +443,76 @@ class Producto(models.Model):
         if self.StockProductoInicial == 0:
             return 0
         return (self.StockProductoActual / self.StockProductoInicial) * 100
+class ProductoMaterial(models.Model):
+    # Relaciones con Producto y Material
+    Producto = models.ForeignKey('Producto',on_delete=models.CASCADE,related_name='materiales_usados',null=False,blank=False,help_text="Producto en el que se usó el material")
+    Material = models.ForeignKey('Material',on_delete=models.PROTECT,related_name='productos_asociados',null=False,blank=False,help_text="Material utilizado en el producto")
+    # Cantidad utilizada
+    CantidadUsada = models.PositiveIntegerField(
+        null=False,
+        blank=False,
+        help_text="Cantidad del material utilizada en este producto"
+    )
+    
+    # Campo de descripción
+    DescripcionUso = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Descripción detallada de cómo se utilizó el material en el producto"
+    )
+    
+    # Campos de auditoría
+    FechaRegistro = models.DateTimeField(auto_now_add=True)
+    UltimaModificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Material del Producto"
+        verbose_name_plural = "Materiales del Producto"
+        unique_together = ['Producto', 'Material']
+        ordering = ['Producto', 'Material']
+
+    def clean(self):
+        if not self.pk:  # Solo para nuevos registros
+            # Verificar si hay suficiente stock disponible
+            if self.Material.StockMaterial < self.CantidadUsada:
+                raise ValidationError(
+                    f"No hay suficiente stock del material '{self.Material.NombreMaterial}'. "
+                    f"Disponible: {self.Material.StockMaterial}, Solicitado: {self.CantidadUsada}"
+                )
+
+    def save(self, *args, **kwargs):
+        if not self.pk:  # Solo para nuevos registros
+            # Validar el stock disponible
+            self.clean()
+            
+            # Guardar el registro
+            super().save(*args, **kwargs)
+            
+            # Usar el método actualizar_stock de Material
+            self.Material.actualizar_stock(self.CantidadUsada)
+        else:
+            # Para actualizaciones, calcular la diferencia
+            original = ProductoMaterial.objects.get(pk=self.pk)
+            diferencia = self.CantidadUsada - original.CantidadUsada
+            
+            if diferencia > 0:
+                # Si se necesita más material, actualizar stock
+                self.Material.actualizar_stock(diferencia)
+            elif diferencia < 0:
+                # Si se necesita menos material, restaurar stock
+                self.Material.restaurar_stock(abs(diferencia))
+            
+            super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # Usar el método restaurar_stock de Material
+        self.Material.restaurar_stock(self.CantidadUsada)
+        super().delete(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.Producto.NombreProducto} - {self.Material.NombreMaterial} ({self.CantidadUsada})"
+
+    
 class Cliente(models.Model):
     TIPO_CHOICES = [
         ('particular', 'Particular'),

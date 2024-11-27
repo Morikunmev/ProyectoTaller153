@@ -2359,8 +2359,6 @@ def crear_material(request):
                     }
                 }, status=400)
 
-            # Validación de fecha de compra opcional (no necesaria por auto_now_add=True)
-            
             # Validación de Proveedor opcional
             proveedor = None
             if data.get('Proveedor'):
@@ -2390,6 +2388,7 @@ def crear_material(request):
             nuevo_material = Material(
                 NombreMaterial=data.get('NombreMaterial'),
                 StockMaterial=stock_material,
+                # StockOriginal se establecerá automáticamente en el save() del modelo
                 PrecioMaterial=precio_material,
                 TotalMaterial=stock_material * precio_material,
                 DescripcionMaterial=data.get('DescripcionMaterial'),
@@ -2397,8 +2396,8 @@ def crear_material(request):
                 PesoMaterial=data.get('PesoMaterial'),
                 DimensionesMaterial=data.get('DimensionesMaterial'),
                 DetalleMaterial=data.get('DetalleMaterial'),
-                EstadoMaterial=data.get('EstadoMaterial', ''),  # Campo no opcional pero sin validación específica
-                UbicacionMaterial=data.get('UbicacionMaterial', ''),  # Campo no opcional pero sin validación específica
+                EstadoMaterial=data.get('EstadoMaterial', ''),
+                UbicacionMaterial=data.get('UbicacionMaterial', ''),
                 Proveedor=proveedor,
                 Envio=envio
             )
@@ -2443,6 +2442,7 @@ def crear_material(request):
                     'id': nuevo_material.id,
                     'NombreMaterial': nuevo_material.NombreMaterial,
                     'StockMaterial': nuevo_material.StockMaterial,
+                    'StockOriginal': nuevo_material.StockOriginal,  # Añadido
                     'PrecioMaterial': str(nuevo_material.PrecioMaterial),
                     'TotalMaterial': str(nuevo_material.TotalMaterial),
                     'DescripcionMaterial': nuevo_material.DescripcionMaterial,
@@ -2454,6 +2454,8 @@ def crear_material(request):
                     'UbicacionMaterial': nuevo_material.UbicacionMaterial,
                     'FotoMaterial': nuevo_material.FotoMaterial.url if nuevo_material.FotoMaterial else None,
                     'RegistroFacturaMaterial': nuevo_material.RegistroFacturaMaterial,
+                    'stock_usado': nuevo_material.stock_usado,  # Añadido
+                    'porcentaje_stock_disponible': nuevo_material.porcentaje_stock_disponible,  # Añadido
                     'Proveedor': {
                         'id': nuevo_material.Proveedor.id,
                         'NombreProveedor': nuevo_material.Proveedor.NombreProveedor,
@@ -2940,6 +2942,9 @@ def obtener_detalles_material(request, material_id):
                 'id': material.id,
                 'NombreMaterial': material.NombreMaterial,
                 'StockMaterial': material.StockMaterial,
+                'StockOriginal': material.StockOriginal,  # Añadido
+                'stock_usado': material.stock_usado,  # Añadido
+                'porcentaje_stock_disponible': material.porcentaje_stock_disponible,  # Añadido
                 'PrecioMaterial': str(material.PrecioMaterial),
                 'TotalMaterial': str(material.TotalMaterial),
                 'FechaCompraMaterial': material.FechaCompraMaterial.isoformat() if material.FechaCompraMaterial else None,
@@ -2953,12 +2958,24 @@ def obtener_detalles_material(request, material_id):
                 'FotoMaterial': material.FotoMaterial.url if material.FotoMaterial else None,
                 'RegistroFacturaMaterial': material.RegistroFacturaMaterial or "No",
                 'Envio': {
-                    'id': material.Envio.id if material.Envio else None
+                    'id': material.Envio.id if material.Envio else None,
+                    'NombreEnvio': material.Envio.NombreEnvio if material.Envio else None,  # Añadido
+                    'FechaCompraEnvio': material.Envio.FechaCompraEnvio.isoformat() if material.Envio else None  # Añadido
                 } if material.Envio else None,
                 'Proveedor': {
                     'id': material.Proveedor.id,
-                    'NombreProveedor': material.Proveedor.NombreProveedor
-                } if material.Proveedor else None
+                    'NombreProveedor': material.Proveedor.NombreProveedor,
+                    'RutProveedor': material.Proveedor.RutProveedor  # Añadido
+                } if material.Proveedor else None,
+                # Información de uso en productos
+                'productos_asociados': [
+                    {
+                        'id': pm.Producto.id,
+                        'NombreProducto': pm.Producto.NombreProducto,
+                        'CantidadUsada': pm.CantidadUsada,
+                        'DescripcionUso': pm.DescripcionUso or "Sin descripción"
+                    } for pm in material.productos_asociados.select_related('Producto').all()
+                ]  # Añadido
             }
 
             return JsonResponse({
