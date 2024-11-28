@@ -358,12 +358,18 @@ class Producto(models.Model):
         help_text="Cantidad inicial del producto"
     )
     StockProductoActual = models.PositiveIntegerField(
-        editable=False,  # Hace que el campo no sea editable en el admin
+        editable=False,  
         help_text="Cantidad actual disponible (se actualiza automáticamente)"
     )
     PrecioUnitarioProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     PrecioTotalProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
-    Categoria = models.ForeignKey('Categoria', on_delete=models.CASCADE, null=False, blank=False, related_name='productos')
+    Categoria = models.ForeignKey(
+        'Categoria', 
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='productos'
+    )
     
     # Campos de control de stock
     CantidadProductoVendido = models.PositiveIntegerField(default=0, editable=False)
@@ -385,20 +391,19 @@ class Producto(models.Model):
         ordering = ['-FechaProducto']
 
     def save(self, *args, **kwargs):
-        # Si es un nuevo producto, inicializar el stock actual
+        # Si es un nuevo producto, inicializar el stock actual y precio total
         if not self.pk:
             self.StockProductoActual = self.StockProductoInicial
             self.FechaProducto = date.today()
+            self.PrecioTotalProducto = self.StockProductoInicial * self.PrecioUnitarioProducto
         else:
-            # Actualizar el stock actual basado en ventas y desechos
+            # Actualizar el stock actual y precio total
             self.StockProductoActual = max(
-                0,  # Asegura que nunca sea negativo
+                0,
                 self.StockProductoInicial - (self.CantidadProductoVendido + self.CantidadProductoDesechado)
             )
+            self.PrecioTotalProducto = self.StockProductoActual * self.PrecioUnitarioProducto
 
-        # Calcular el precio total basado en el stock actual
-        self.PrecioTotalProducto = self.StockProductoActual * self.PrecioUnitarioProducto
-        
         # Actualizar días transcurridos
         self.DiasProducto = (date.today() - self.FechaProducto).days
             
@@ -408,15 +413,16 @@ class Producto(models.Model):
         # Guardar el producto
         super(Producto, self).save(*args, **kwargs)
         
-        # Actualizar el stock de la categoría
-        total_stock = Producto.objects.filter(
-            Categoria=self.Categoria
-        ).aggregate(
-            total=models.Sum('StockProductoActual')
-        )['total'] or 0
-        
-        self.Categoria.StockCategoria = total_stock
-        self.Categoria.save()
+        # Actualizar el stock de la categoría solo si tiene categoría
+        if self.Categoria:
+            total_stock = Producto.objects.filter(
+                Categoria=self.Categoria
+            ).aggregate(
+                total=models.Sum('StockProductoActual')
+            )['total'] or 0
+            
+            self.Categoria.StockCategoria = total_stock
+            self.Categoria.save()
 
     def desechar_cantidad(self, cantidad):
         """Método para desechar una cantidad de producto"""
@@ -443,6 +449,8 @@ class Producto(models.Model):
         if self.StockProductoInicial == 0:
             return 0
         return (self.StockProductoActual / self.StockProductoInicial) * 100
+
+
 class ProductoMaterial(models.Model):
     # Relaciones con Producto y Material
     Producto = models.ForeignKey('Producto',on_delete=models.CASCADE,related_name='materiales_usados',null=False,blank=False,help_text="Producto en el que se usó el material")

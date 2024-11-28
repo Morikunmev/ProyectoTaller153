@@ -74,23 +74,20 @@ urlpatterns = [
     path('api/herramientas/<int:herramienta_id>/detalles/', views.obtener_detalles_herramienta, name='obtener_detalles_herramienta'),
     
     
-    #-------------------RUTA PARA PRODUCTO-----------------
+#-------------------RUTA PARA PRODUCTO-----------------
     path('producto/', views.mod_producto, name='mod_producto'),  # Vista principal
-    # APIs de producto
+# APIs de producto
     path('api/producto/listar/', views.listar_productos, name='listar_productos'),
     path('api/producto/crear/', views.crear_producto, name='crear_producto'),
     path('api/producto/<int:producto_id>/eliminar/', views.eliminar_producto, name='eliminar_producto'),
     path('api/producto/<int:producto_id>/actualizar/', views.actualizar_producto, name='actualizar_producto'),
     path('api/productos/exportar-excel/', views.exportar_productos_excel, name='exportar_productos_excel'),
     path('api/productos/<int:producto_id>/detalles/', views.obtener_detalles_producto, name='obtener_detalles_producto'),
+    path('api/producto/<int:producto_id>/vender/', views.vender_producto, name='vender_producto'),
+    path('api/producto/<int:producto_id>/desechar/', views.desechar_producto, name='desechar_producto'),
     
-    # APIs para la relación ProductoMaterial
-    # path('api/producto/<int:producto_id>/materiales/', views.listar_materiales_producto,  name='listar_materiales_producto'),
-    # path('api/producto/<int:producto_id>/material/agregar/', views.agregar_material_producto, name='agregar_material_producto'),
-    # path('api/producto/<int:producto_id>/material/<int:material_id>/eliminar/', views.eliminar_material_producto, name='eliminar_material_producto'),
-    # path('api/producto/<int:producto_id>/material/<int:material_id>/actualizar/', views.actualizar_material_producto, name='actualizar_material_producto'),
+    path('api/categorias/listar/', views.listar_categorias, name='listar_categorias'),
 
-    
         
 
 

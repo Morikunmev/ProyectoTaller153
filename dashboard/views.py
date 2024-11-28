@@ -37,7 +37,7 @@ from django.http import JsonResponse
 
 
 # Local imports
-from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto, ProductoMaterial, Categoria
+from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto, ProductoMaterial, Categoria, Cliente, Ventas
 from login.models import Usuario
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -3835,29 +3835,28 @@ def crear_producto(request):
 @login_required(login_url='login')
 def listar_productos(request):
     try:
-        # Obtener todos los productos con sus categorías relacionadas
         productos = Producto.objects.select_related('Categoria').order_by('-FechaProducto')
         
-        # Lista para almacenar los datos formateados
         productos_data = []
         
         for producto in productos:
-            productos_data.append({
+            producto_data = {
                 'id': producto.id,
-                'FotoProducto': producto.FotoProducto.url if producto.FotoProducto else None,
                 'NombreProducto': producto.NombreProducto,
+                'StockProductoInicial': producto.StockProductoInicial,
                 'StockProductoActual': producto.StockProductoActual,
                 'PrecioUnitarioProducto': str(producto.PrecioUnitarioProducto),
                 'PrecioTotalProducto': str(producto.PrecioTotalProducto),
                 'Categoria': {
-                    'id': producto.Categoria.id,
-                    'NombreCategoria': producto.Categoria.NombreCategoria
+                    'id': producto.Categoria.id if producto.Categoria else None,
+                    'NombreCategoria': producto.Categoria.NombreCategoria if producto.Categoria else "Sin categoría"
                 },
                 'CantidadProductoVendido': producto.CantidadProductoVendido,
                 'CantidadProductoDesechado': producto.CantidadProductoDesechado,
-                'FechaProducto': producto.FechaProducto.strftime('%Y-%m-%d'),
-                'DiasProducto': producto.DiasProducto
-            })
+                'FechaProducto': producto.FechaProducto.isoformat(),
+                'FotoProducto': producto.FotoProducto.url if producto.FotoProducto else None,
+            }
+            productos_data.append(producto_data)
 
         return JsonResponse({
             'success': True,
@@ -3865,10 +3864,9 @@ def listar_productos(request):
         })
 
     except Exception as e:
-        logger.error(f"Error al listar productos: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': f'Error al obtener los productos: {str(e)}'
+            'error': str(e)
         }, status=500)
 @login_required(login_url='login')
 @ensure_csrf_cookie
@@ -4078,8 +4076,8 @@ def crear_producto(request):
         try:
             data = request.POST
             
-            # Validaciones de campos requeridos según el modelo
-            campos_requeridos = ['NombreProducto', 'StockProductoInicial', 'PrecioUnitarioProducto', 'Categoria']
+            # Solo validar campos realmente requeridos
+            campos_requeridos = ['NombreProducto', 'StockProductoInicial', 'PrecioUnitarioProducto']
             errores = {}
             
             for campo in campos_requeridos:
@@ -4089,15 +4087,15 @@ def crear_producto(request):
             if errores:
                 return JsonResponse({'success': False, 'errors': errores}, status=400)
             
-            # Validaciones numéricas y de otros campos
+            # Validaciones numéricas
             try:
                 stock_inicial = int(data.get('StockProductoInicial'))
-                if stock_inicial < 0:
-                    raise ValueError('El stock inicial no puede ser negativo')
+                if stock_inicial <= 0:
+                    raise ValueError('El stock inicial debe ser mayor a 0')
             except ValueError:
                 return JsonResponse({
                     'success': False,
-                    'errors': {'StockProductoInicial': 'El stock inicial debe ser un número entero no negativo'}
+                    'errors': {'StockProductoInicial': 'El stock inicial debe ser un número entero mayor a 0'}
                 }, status=400)
 
             try:
@@ -4110,15 +4108,17 @@ def crear_producto(request):
                     'errors': {'PrecioUnitarioProducto': 'El precio unitario debe ser un número positivo'}
                 }, status=400)
 
-            # Validación de categoría
-            try:
-                categoria = Categoria.objects.get(id=data.get('Categoria'))
-            except (Categoria.DoesNotExist, ValueError):
-                return JsonResponse({
-                    'success': False,
-                    'errors': {'Categoria': 'Categoría no válida'}
-                }, status=400)
-            
+            # Manejo de categoría
+            categoria = None
+            categoria_nombre = "Sin categoría"
+            if data.get('Categoria'):
+                try:
+                    categoria = Categoria.objects.get(id=data.get('Categoria'))
+                    categoria_nombre = categoria.NombreCategoria
+                except Categoria.DoesNotExist:
+                    # Si no existe la categoría, se mantiene como None
+                    pass
+
             nuevo_producto = Producto(
                 NombreProducto=data.get('NombreProducto'),
                 StockProductoInicial=stock_inicial,
@@ -4130,7 +4130,7 @@ def crear_producto(request):
                 FechaProducto=timezone.now().date()
             )
             
-            # Manejo de la foto
+            # Manejo de foto
             if 'FotoProducto' in request.FILES:
                 foto = request.FILES['FotoProducto']
                 if foto.content_type not in ALLOWED_FILE_TYPES:
@@ -4142,19 +4142,18 @@ def crear_producto(request):
                 if foto.size > 10 * 1024 * 1024:
                     return JsonResponse({
                         'success': False,
-                        'errors': {'FotoProducto': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'}
+                        'errors': {'FotoProducto': 'El archivo es demasiado grande. Máximo 10MB'}
                     }, status=400)
 
                 nuevo_producto.FotoProducto = foto
 
             try:
                 nuevo_producto.full_clean()
+                nuevo_producto.save()
             except ValidationError as e:
                 errores_formateados = {campo: errores[0] if errores else str(errores) 
                                      for campo, errores in e.message_dict.items()}
                 return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
-            
-            nuevo_producto.save()
             
             # Procesar materiales
             materiales_data = json.loads(data.get('materiales', '[]'))
@@ -4208,8 +4207,8 @@ def crear_producto(request):
                     'porcentaje_stock_disponible': nuevo_producto.porcentaje_stock_disponible,
                     'FotoProducto': nuevo_producto.FotoProducto.url if nuevo_producto.FotoProducto else None,
                     'Categoria': {
-                        'id': categoria.id,
-                        'NombreCategoria': categoria.NombreCategoria
+                        'id': categoria.id if categoria else None,
+                        'NombreCategoria': categoria_nombre
                     },
                     'materiales': materiales_creados,
                     'HoraCreacion': nuevo_producto.HoraCreacion.isoformat()
@@ -4519,3 +4518,91 @@ def obtener_detalles_producto(request, producto_id):
         'success': False, 
         'message': 'Método no permitido'
     }, status=405)
+@login_required(login_url='login')
+def vender_producto(request, producto_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            producto = get_object_or_404(Producto, id=producto_id)
+            
+            # Crear la venta
+            venta = Ventas.objects.create(
+                NombreVenta=data['NombreVenta'],
+                CantidadVenta=data['CantidadVenta'],
+                PrecioVenta=data['PrecioVenta'],
+                Producto=producto,
+                Cliente=Cliente.objects.get(id=data['Cliente']) if data.get('Cliente') else None,
+                Usuario=request.user
+            )
+            
+            # Actualizar el stock
+            producto.vender_cantidad(data['CantidadVenta'])
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Venta realizada con éxito'
+            })
+            
+        except ValidationError as e:
+            return JsonResponse({
+                'success': False,
+                'errors': str(e)
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': str(e)
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False,
+        'errors': 'Método no permitido'
+    }, status=405)
+
+@login_required(login_url='login')
+def desechar_producto(request, producto_id):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            producto = get_object_or_404(Producto, id=producto_id)
+            
+            producto.desechar_cantidad(data['cantidad'])
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Producto desechado con éxito'
+            })
+            
+        except ValidationError as e:
+            return JsonResponse({
+                'success': False,
+                'errors': str(e)
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': str(e)
+            }, status=500)
+            
+    return JsonResponse({
+        'success': False,
+        'errors': 'Método no permitido'
+    }, status=405)
+@login_required(login_url='login')
+def listar_categorias(request):
+    try:
+        categorias = Categoria.objects.all()
+        return JsonResponse({
+            'success': True,
+            'categorias': [
+                {
+                    'id': categoria.id,
+                    'NombreCategoria': categoria.NombreCategoria
+                } for categoria in categorias
+            ]
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
