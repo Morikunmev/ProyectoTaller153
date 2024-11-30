@@ -254,13 +254,16 @@ export const useMaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Solo validamos los campos requeridos según el modelo
     if (!formData.NombreMaterial) {
       newErrors.NombreMaterial = "El nombre del material es requerido";
     }
 
     if (!formData.StockMaterial || formData.StockMaterial < 0) {
-      newErrors.StockMaterial = "El stock no puede ser negativo";
+      newErrors.StockMaterial = "El stock inicial no puede ser negativo";
+    } else if (formData.StockMaterial > 9999) {
+      newErrors.StockMaterial = "El stock inicial no puede ser mayor a 9999";
+    } else if (!Number.isInteger(Number(formData.StockMaterial))) {
+      newErrors.StockMaterial = "El stock inicial debe ser un número entero";
     }
 
     if (!formData.PrecioMaterial || formData.PrecioMaterial <= 0) {

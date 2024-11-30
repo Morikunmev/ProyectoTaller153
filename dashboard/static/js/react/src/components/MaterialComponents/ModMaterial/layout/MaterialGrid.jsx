@@ -9,7 +9,13 @@ import {
   Info,
 } from "lucide-react";
 
-const MaterialGrid = ({ material, onEdit, onDelete, onShowDetails, isSelected }) => {
+const MaterialGrid = ({
+  material,
+  onEdit,
+  onDelete,
+  onShowDetails,
+  isSelected,
+}) => {
   const formatDate = (dateString) => {
     if (!dateString) return "Fecha no disponible";
     try {
@@ -41,8 +47,10 @@ const MaterialGrid = ({ material, onEdit, onDelete, onShowDetails, isSelected })
   };
 
   return (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200
-                    ${isSelected ? "ring-2 ring-blue-500" : ""}`}>
+    <div
+      className={`bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-200
+                    ${isSelected ? "ring-2 ring-blue-500" : ""}`}
+    >
       {/* Imagen/Preview */}
       <div className="w-full h-36 bg-gray-100 relative">
         {material.FotoMaterial ? (
@@ -66,7 +74,7 @@ const MaterialGrid = ({ material, onEdit, onDelete, onShowDetails, isSelected })
           <span
             className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStockStyle()}`}
           >
-            Stock: {material.StockMaterial}
+            Stock: {material.StockMaterial}/{material.StockOriginal}
           </span>
         </div>
       </div>
@@ -95,7 +103,10 @@ const MaterialGrid = ({ material, onEdit, onDelete, onShowDetails, isSelected })
         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-3">
           <div className="flex items-center gap-1">
             <PackageCheck className="w-3 h-3" />
-            <span>{material.StockMaterial} unidades</span>
+            <div className="flex flex-col">
+              <span>Stock Original: {material.StockOriginal}</span>
+              <span>Stock Actual: {material.StockMaterial}</span>
+            </div>
           </div>
           <div className="flex items-center gap-1">
             <DollarSign className="w-3 h-3" />

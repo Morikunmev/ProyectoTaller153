@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { X, FileText, XCircle, Trash2 } from "lucide-react";
 import { useProductoCreateModal } from "../hooks/useProductoCreateModal";
+
 const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const [materialSeleccionado, setMaterialSeleccionado] = useState("");
   const [cantidadMaterial, setCantidadMaterial] = useState("");
   const [descripcionMaterial, setDescripcionMaterial] = useState("");
   const [materialesAgregados, setMaterialesAgregados] = useState([]);
+
   const {
     formData,
     errors,
@@ -24,8 +26,15 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
     isOpen,
     onClose,
     onSubmit,
-    materialesAgregados, // Añadir esta línea
+    materialesAgregados,
   });
+  // Filtrar materiales con stock disponible
+  const materialesDisponibles =
+    materiales?.filter((m) => m.StockMaterial > 0) || [];
+  // Obtener información del material seleccionado
+  const materialSeleccionadoInfo = materiales?.find(
+    (m) => m.id === parseInt(materialSeleccionado)
+  );
 
   const handleModalClose = () => {
     setMaterialSeleccionado("");
@@ -45,7 +54,9 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
     const material = materiales.find(
       (m) => m.id === parseInt(materialSeleccionado)
     );
-    if (!material) return;
+
+    if (!material || parseInt(cantidadMaterial) > material.StockMaterial)
+      return;
 
     setMaterialesAgregados([
       ...materialesAgregados,
@@ -54,6 +65,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
         nombre: material.NombreMaterial,
         cantidad: cantidadMaterial,
         descripcion: descripcionMaterial,
+        stockDisponible: material.StockMaterial,
       },
     ]);
 
@@ -61,7 +73,6 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
     setCantidadMaterial("");
     setDescripcionMaterial("");
   };
-
   const handleRemoveMaterial = (index) => {
     setMaterialesAgregados(materialesAgregados.filter((_, i) => i !== index));
   };
@@ -71,9 +82,10 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
   return (
     <div
       className={`fixed top-16 right-0 bottom-0 w-[448px] bg-white shadow-xl z-40
-        transform transition-transform duration-300 ease-in-out flex flex-col
-        ${isAnimating ? "translate-x-0" : "translate-x-full"}`}
+      transform transition-transform duration-300 ease-in-out flex flex-col
+      ${isAnimating ? "translate-x-0" : "translate-x-full"}`}
     >
+      {/* Header */}
       <div className="flex-none border-b">
         <div className="p-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Nuevo Producto</h2>
@@ -86,6 +98,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
         </div>
       </div>
 
+      {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-4">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -236,13 +249,17 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     </label>
                     <select
                       value={materialSeleccionado}
-                      onChange={(e) => setMaterialSeleccionado(e.target.value)}
+                      onChange={(e) => {
+                        setMaterialSeleccionado(e.target.value);
+                        setCantidadMaterial(""); // Reset cantidad al cambiar material
+                      }}
                       className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     >
                       <option value="">Seleccionar material</option>
-                      {materiales?.map((material) => (
+                      {materialesDisponibles.map((material) => (
                         <option key={material.id} value={material.id}>
-                          {material.NombreMaterial}
+                          {material.NombreMaterial} (Stock:{" "}
+                          {material.StockMaterial})
                         </option>
                       ))}
                     </select>
@@ -254,10 +271,24 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     <input
                       type="number"
                       min="1"
+                      max={materialSeleccionadoInfo?.StockMaterial || 1}
                       value={cantidadMaterial}
                       onChange={(e) => setCantidadMaterial(e.target.value)}
                       className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     />
+                    {materialSeleccionadoInfo && (
+                      <p className="mt-1 text-xs text-blue-600">
+                        Stock disponible:{" "}
+                        {materialSeleccionadoInfo.StockMaterial} unidades
+                      </p>
+                    )}
+                    {materialSeleccionadoInfo &&
+                      parseInt(cantidadMaterial) >
+                        materialSeleccionadoInfo.StockMaterial && (
+                        <p className="mt-1 text-xs text-red-500">
+                          La cantidad excede el stock disponible
+                        </p>
+                      )}
                   </div>
                 </div>
 
@@ -273,10 +304,18 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   />
                 </div>
 
+                {/* Botón Agregar Material */}
                 <button
                   type="button"
                   onClick={handleAddMaterial}
-                  className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded font-medium"
+                  disabled={
+                    !materialSeleccionado ||
+                    !cantidadMaterial ||
+                    parseInt(cantidadMaterial) >
+                      (materialSeleccionadoInfo?.StockMaterial || 0)
+                  }
+                  className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded font-medium
+                          disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Agregar Material
                 </button>
@@ -291,7 +330,8 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                       <div>
                         <p className="font-medium">{mat.nombre}</p>
                         <p className="text-sm text-gray-600">
-                          Cantidad: {mat.cantidad}
+                          Cantidad: {mat.cantidad} / {mat.stockDisponible}{" "}
+                          disponibles
                         </p>
                         {mat.descripcion && (
                           <p className="text-sm text-gray-500">
@@ -371,7 +411,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
             onClick={handleModalClose}
             disabled={isSubmitting}
             className="px-4 py-2 text-sm border rounded font-medium hover:bg-gray-50
-    transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                     transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancelar
           </button>
@@ -379,7 +419,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
             onClick={handleSubmit}
             disabled={isSubmitting}
             className="px-4 py-2 text-sm bg-black text-white rounded font-medium hover:bg-gray-800
-              transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                     transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Creando..." : "Crear Producto"}
           </button>

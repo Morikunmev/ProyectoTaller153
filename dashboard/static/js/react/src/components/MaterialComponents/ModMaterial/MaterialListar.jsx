@@ -71,7 +71,8 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
           <th className="p-2 font-medium">ID</th>
           <th className="p-2 font-medium w-12">FOTO</th>
           <th className="p-2 font-medium">NOMBRE</th>
-          <th className="p-2 font-medium">STOCK</th>
+          <th className="p-2 font-medium">STOCK ORIGINAL</th>
+          <th className="p-2 font-medium">STOCK ACTUAL</th>
           <th className="p-2 font-medium">PRECIO</th>
           <th className="p-2 font-medium">TOTAL</th>
           <th className="p-2 font-medium">FECHA COMPRA</th>
@@ -83,13 +84,18 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
       <tbody>
         {currentMaterials.map((material) => {
           const isSelected = selectedMaterial?.id === material.id;
+          const stockStatus =
+            material.StockMaterial === 0
+              ? "bg-red-50 text-red-900"
+              : "hover:bg-gray-50";
+
           return (
             <React.Fragment key={material.id}>
               <tr
                 className={`border-b ${
                   isSelected ? "border-b-0" : "last:border-b-0"
-                } hover:bg-gray-50 
-                ${isSelected ? "bg-gray-50" : ""}`}
+                } ${stockStatus}
+         ${isSelected ? "bg-gray-50" : ""}`}
               >
                 <td className="p-2 font-medium text-gray-900">
                   #{material.id}
@@ -115,7 +121,12 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
                   </div>
                 </td>
                 <td className="p-2 font-medium">{material.NombreMaterial}</td>
-                <td className="p-2">{material.StockMaterial}</td>
+                <td className="p-2">{material.StockOriginal}</td>
+                <td className={`p-2 rounded-lg ${stockStatus}`}>
+                  <span className="px-2 py-1 rounded-lg">
+                    {material.StockMaterial}
+                  </span>
+                </td>
                 <td className="p-2">
                   ${material.PrecioMaterial.toLocaleString()}
                 </td>
@@ -131,7 +142,7 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
                 >
                   {material.DescripcionMaterial || "Sin descripción"}
                 </td>
-                <td className="p-2 text-gray-600">
+                <td className="p-2">
                   {material.Proveedor
                     ? material.Proveedor.NombreProveedor
                     : "Sin proveedor"}
@@ -142,12 +153,12 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
                       type="button"
                       onClick={() => handleShowDetails(material)}
                       className={`p-1 flex items-center gap-0.5 text-xs
-                               transition-all duration-200 ease-in-out hover:scale-105 active:scale-95
-                               ${
-                                 isSelected
-                                   ? "text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg"
-                                   : "text-gray-600 hover:text-gray-800"
-                               }`}
+                        transition-all duration-200 ease-in-out hover:scale-105 active:scale-95
+                        ${
+                          isSelected
+                            ? "text-blue-600 hover:text-blue-800 bg-blue-50 rounded-lg"
+                            : "text-gray-600 hover:text-gray-800"
+                        }`}
                       title={isSelected ? "Ocultar detalles" : "Ver detalles"}
                     >
                       <Info
@@ -161,7 +172,7 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
                       type="button"
                       onClick={() => handleUpdateModalOpen(material)}
                       className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
-                               transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
+                        transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
                       title="Editar material"
                     >
                       <Pencil className="w-3.5 h-3.5" />
@@ -171,8 +182,8 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
                       type="button"
                       onClick={() => handleDelete(material)}
                       className="p-1 text-red-600 hover:text-red-800 flex items-center gap-0.5 text-xs
-                               relative overflow-hidden group transition-all duration-200 ease-in-out 
-                               hover:scale-105 active:scale-95"
+                        relative overflow-hidden group transition-all duration-200 ease-in-out 
+                        hover:scale-105 active:scale-95"
                       title="Eliminar material"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -183,7 +194,7 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
               </tr>
               {isSelected && (
                 <tr>
-                  <td colSpan="10" className="p-0">
+                  <td colSpan="11" className="p-0">
                     <div className="animate-fadeIn border-t border-b">
                       <MaterialCard material={material} />
                     </div>
@@ -199,36 +210,47 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
   const renderGridView = () => (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-        {currentMaterials.map((material) => (
-          <div key={material.id} className="space-y-4">
-            <MaterialGrid
-              material={material}
-              onEdit={() => handleUpdateModalOpen(material)}
-              onDelete={() => handleDelete(material)}
-              onShowDetails={() => handleShowDetails(material)}
-              isSelected={selectedMaterial?.id === material.id}
-            />
-            {selectedMaterial?.id === material.id && (
-              <div className="animate-fadeIn bg-gray-50 rounded-lg border">
-                <div className="flex justify-between items-center p-3 border-b">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    Detalles del Material
-                  </h3>
-                  <button
-                    onClick={() => setSelectedMaterial(null)}
-                    className="text-gray-500 hover:text-gray-700 p-1 rounded-lg
-                             hover:bg-gray-200 transition-colors duration-200"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="p-4">
-                  <MaterialCard material={material} />
-                </div>
+        {currentMaterials.map((material) => {
+          const stockStatus =
+            material.StockMaterial === 0
+              ? "border-red-200 bg-red-50"
+              : "border-green-200 bg-green-50";
+
+          return (
+            <div key={material.id} className="space-y-4">
+              <div
+                className={`relative bg-white rounded-lg shadow-sm ${stockStatus}`}
+              >
+                <MaterialGrid
+                  material={material}
+                  onEdit={() => handleUpdateModalOpen(material)}
+                  onDelete={() => handleDelete(material)}
+                  onShowDetails={() => handleShowDetails(material)}
+                  isSelected={selectedMaterial?.id === material.id}
+                />
               </div>
-            )}
-          </div>
-        ))}
+              {selectedMaterial?.id === material.id && (
+                <div className="animate-fadeIn bg-gray-50 rounded-lg border">
+                  <div className="flex justify-between items-center p-3 border-b">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      Detalles del Material
+                    </h3>
+                    <button
+                      onClick={() => setSelectedMaterial(null)}
+                      className="text-gray-500 hover:text-gray-700 p-1 rounded-lg
+                               hover:bg-gray-200 transition-colors duration-200"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    <MaterialCard material={material} />
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

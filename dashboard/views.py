@@ -2752,6 +2752,7 @@ def listar_materiales(request):
                 'id',
                 'NombreMaterial',
                 'StockMaterial',
+                'StockOriginal',  # Añadido aquí
                 'PrecioMaterial',
                 'TotalMaterial',
                 'FechaCompraMaterial',
@@ -2763,7 +2764,6 @@ def listar_materiales(request):
 
             data = []
             for material in materiales:
-                # Preparar datos del proveedor de forma simplificada
                 proveedor_data = None
                 if material.Proveedor:
                     proveedor_data = {
@@ -2771,11 +2771,11 @@ def listar_materiales(request):
                         'NombreProveedor': material.Proveedor.NombreProveedor
                     }
 
-                # Solo incluimos los campos solicitados
                 data.append({
                     'id': material.id,
                     'NombreMaterial': material.NombreMaterial,
                     'StockMaterial': material.StockMaterial,
+                    'StockOriginal': material.StockOriginal,  # Añadido aquí
                     'PrecioMaterial': str(material.PrecioMaterial),
                     'TotalMaterial': str(material.TotalMaterial),
                     'DescripcionMaterial': material.DescripcionMaterial,
@@ -2788,7 +2788,7 @@ def listar_materiales(request):
                 'success': True,
                 'materials': data
             })
-            
+        
         except Exception as e:
             return JsonResponse({
                 'success': False,
@@ -3655,6 +3655,7 @@ def exportar_herramientas_excel(request):
     
     return response
 
+#-------------MODULO PARA PRODUCTO----------------------
 
 @login_required(login_url='login')
 def mod_producto(request):
@@ -3835,9 +3836,7 @@ def crear_producto(request):
 @login_required(login_url='login')
 def listar_productos(request):
     try:
-        productos = Producto.objects.select_related('Categoria').prefetch_related(
-            'materiales_usados__Material'  # Añadido para cargar materiales eficientemente
-        ).order_by('-FechaProducto')
+        productos = Producto.objects.select_related('Categoria').prefetch_related('materiales_usados__Material').order_by('-FechaProducto', '-HoraCreacion', '-id')
         
         productos_data = []
         
@@ -4501,74 +4500,7 @@ def exportar_productos_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
-@login_required(login_url='login')
-def obtener_detalles_producto(request, producto_id):
-    if request.method == 'GET':
-        try:
-            producto = Producto.objects.select_related('Categoria').get(id=producto_id)
-            
-            data = {
-                # Campos básicos
-                'id': producto.id,
-                'NombreProducto': producto.NombreProducto,
-                
-                # Campos de stock
-                'StockProductoInicial': producto.StockProductoInicial,
-                'StockProductoActual': producto.StockProductoActual,
-                'PrecioUnitarioProducto': str(producto.PrecioUnitarioProducto),
-                'PrecioTotalProducto': str(producto.PrecioTotalProducto),
-                'porcentaje_stock_disponible': producto.porcentaje_stock_disponible,
-                
-                # Campos de control de stock
-                'CantidadProductoVendido': producto.CantidadProductoVendido,
-                'CantidadProductoDesechado': producto.CantidadProductoDesechado,
-                
-                # Campos descriptivos
-                'DescripcionProducto': producto.DescripcionProducto or "Sin descripción",
-                'UbicacionProducto': producto.UbicacionProducto or "No especificada",
-                'EstadoProducto': producto.EstadoProducto or "No especificado",
-                
-                # Campos de tiempo
-                'FechaProducto': producto.FechaProducto.isoformat() if producto.FechaProducto else None,
-                'DiasProducto': producto.DiasProducto,
-                'HoraCreacion': producto.HoraCreacion.isoformat() if producto.HoraCreacion else None,
-                
-                # Estado de venta
-                'ProductoVendido': producto.ProductoVendido,
-                
-                # Campos multimedia
-                'FotoProducto': producto.FotoProducto.url if producto.FotoProducto else None,
-                
-                # Relaciones
-                'Categoria': {
-                    'id': producto.Categoria.id,
-                    'NombreCategoria': producto.Categoria.NombreCategoria,
-                    'DescripcionCategoria': producto.Categoria.DescripcionCategoria or "Sin descripción",
-                    'StockCategoria': producto.Categoria.StockCategoria
-                } if producto.Categoria else None
-            }
 
-            return JsonResponse({
-                'success': True,
-                'producto': data
-            })
-            
-        except Producto.DoesNotExist:
-            return JsonResponse({
-                'success': False,
-                'message': 'Producto no encontrado'
-            }, status=404)
-        except Exception as e:
-            logger.error(f"Error al obtener detalles del producto: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'message': str(e)
-            }, status=500)
-            
-    return JsonResponse({
-        'success': False, 
-        'message': 'Método no permitido'
-    }, status=405)
 @login_required(login_url='login')
 def vender_producto(request, producto_id):
     if request.method == 'POST':

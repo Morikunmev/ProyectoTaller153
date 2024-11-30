@@ -82,7 +82,7 @@ urlpatterns = [
     path('api/producto/<int:producto_id>/eliminar/', views.eliminar_producto, name='eliminar_producto'),
     path('api/producto/<int:producto_id>/actualizar/', views.actualizar_producto, name='actualizar_producto'),
     path('api/productos/exportar-excel/', views.exportar_productos_excel, name='exportar_productos_excel'),
-    path('api/productos/<int:producto_id>/detalles/', views.obtener_detalles_producto, name='obtener_detalles_producto'),
+
     path('api/producto/<int:producto_id>/vender/', views.vender_producto, name='vender_producto'),
     path('api/producto/<int:producto_id>/desechar/', views.desechar_producto, name='desechar_producto'),
     
