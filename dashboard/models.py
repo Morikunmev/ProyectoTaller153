@@ -440,7 +440,10 @@ related_name='productos')
 class ProductoMaterial(models.Model):
     # Relaciones con Producto y Material
     Producto = models.ForeignKey('Producto',on_delete=models.CASCADE,related_name='materiales_usados',null=False,blank=False,help_text="Producto en el que se usó el material")
-    Material = models.ForeignKey('Material',on_delete=models.PROTECT,related_name='productos_asociados',null=False,blank=False,help_text="Material utilizado en el producto")
+    Material = models.ForeignKey(
+    'Material',on_delete=models.CASCADE,related_name='productos_asociados',null=False,blank=False,
+    help_text="Material utilizado en el producto"
+)
     # Cantidad utilizada
     CantidadUsada = models.PositiveIntegerField(null=False,blank=False,help_text="Cantidad del material utilizada en este producto")
     # Campo de descripción

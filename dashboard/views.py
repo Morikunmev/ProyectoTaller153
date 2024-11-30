@@ -2492,8 +2492,8 @@ def actualizar_material(request, material_id):
             # Debug: Imprimir todos los datos recibidos
             print("Datos recibidos:", dict(data))
             
-            # Solo validamos los campos requeridos según el modelo
-            campos_requeridos = ['NombreMaterial', 'StockMaterial', 'PrecioMaterial']
+            # Validar campos requeridos
+            campos_requeridos = ['NombreMaterial', 'StockOriginal', 'PrecioMaterial']
             errores = {}
             
             for campo in campos_requeridos:
@@ -2505,13 +2505,21 @@ def actualizar_material(request, material_id):
 
             # Validación y conversión de campos numéricos
             try:
-                stock_material = int(data.get('StockMaterial'))
-                if stock_material < 0:  # PositiveIntegerField validation
-                    raise ValueError('El stock no puede ser negativo')
+                nuevo_stock_original = int(data.get('StockOriginal'))
+                if nuevo_stock_original < 0:
+                    raise ValueError('El stock original no puede ser negativo')
+                
+                # Calcular la proporción del stock actual respecto al original
+                if material.StockOriginal > 0:
+                    proporcion = material.StockMaterial / material.StockOriginal
+                    nuevo_stock_actual = int(round(nuevo_stock_original * proporcion))
+                else:
+                    nuevo_stock_actual = nuevo_stock_original
+
             except ValueError:
                 return JsonResponse({
                     'success': False,
-                    'errors': {'StockMaterial': 'El stock debe ser un número entero no negativo'}
+                    'errors': {'StockOriginal': 'El stock debe ser un número entero no negativo'}
                 }, status=400)
 
             try:
@@ -2618,9 +2626,10 @@ def actualizar_material(request, material_id):
 
             # Actualizar campos del material
             material.NombreMaterial = data.get('NombreMaterial')
-            material.StockMaterial = stock_material
+            material.StockOriginal = nuevo_stock_original
+            material.StockMaterial = nuevo_stock_actual
             material.PrecioMaterial = precio_material
-            material.TotalMaterial = stock_material * precio_material
+            material.TotalMaterial = nuevo_stock_actual * precio_material
             # Campos no requeridos según el modelo
             material.EstadoMaterial = data.get('EstadoMaterial', material.EstadoMaterial)
             material.UbicacionMaterial = data.get('UbicacionMaterial', material.UbicacionMaterial)
@@ -2647,6 +2656,7 @@ def actualizar_material(request, material_id):
                     'id': material.id,
                     'NombreMaterial': material.NombreMaterial,
                     'StockMaterial': material.StockMaterial,
+                    'StockOriginal': material.StockOriginal,  # Añadido
                     'PrecioMaterial': str(material.PrecioMaterial),
                     'TotalMaterial': str(material.TotalMaterial),
                     'EstadoMaterial': material.EstadoMaterial,
@@ -2680,8 +2690,9 @@ def actualizar_material(request, material_id):
         'success': False,
         'errors': {'general': 'Método no permitido'}
     }, status=405)
+
 @login_required(login_url='login')
-@ensure_csrf_cookie
+@ensure_csrf_cookie 
 def eliminar_material(request, material_id):
     if request.method == 'DELETE':
         try:
@@ -2696,23 +2707,18 @@ def eliminar_material(request, material_id):
             # Si existe una foto, eliminarla de Cloudinary
             if material.FotoMaterial:
                 try:
-                    # Obtener la URL de la imagen
                     url = material.FotoMaterial.url
-                    
-                    # Extraer el public_id
                     parts = url.split('/')
                     public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
                     
                     print(f"Intentando eliminar foto con public_id: {public_id}")
                     
-                    # Configurar Cloudinary
                     cloudinary.config(
                         cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
                         api_key=os.getenv('CLOUDINARY_API_KEY'),
                         api_secret=os.getenv('CLOUDINARY_API_SECRET')
                     )
                     
-                    # Eliminar la foto
                     result = cloudinary.uploader.destroy(
                         public_id,
                         resource_type="image",
@@ -2742,7 +2748,6 @@ def eliminar_material(request, material_id):
         'success': False,
         'message': 'Método no permitido'
     }, status=405)
-
 @login_required(login_url='login')
 def listar_materiales(request):
     if request.method == 'GET':

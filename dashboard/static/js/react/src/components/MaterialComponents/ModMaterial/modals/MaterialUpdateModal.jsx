@@ -89,27 +89,48 @@ const MaterialUpdateModal = ({
                     </p>
                   )}
                 </div>
-
-                <div>
-                  <label className="text-sm font-medium block mb-1">
-                    Stock*
-                  </label>
-                  <input
-                    type="number"
-                    name="StockMaterial"
-                    value={formData.StockMaterial}
-                    onChange={handleInputChange}
-                    min="0"
-                    className={`w-full px-3 py-1.5 border rounded
-                    focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200
-                    ${getInputBorderClass(formData.StockMaterial)}`}
-                  />
-                  {errors.StockMaterial && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.StockMaterial}
+                {/* Stock Original y Actual */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium block mb-1">
+                      Stock Original*
+                    </label>
+                    <input
+                      type="number"
+                      name="StockOriginal"
+                      value={formData.StockOriginal}
+                      onChange={handleInputChange}
+                      min="0"
+                      className={`w-full px-3 py-1.5 border rounded
+      focus:ring-1 focus:ring-blue-500 focus:outline-none
+      transition-colors duration-200
+      ${getInputBorderClass(formData.StockOriginal)}`}
+                    />
+                    {errors.StockOriginal && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.StockOriginal}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      El stock actual se ajustará proporcionalmente
                     </p>
-                  )}
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium block mb-1">
+                      Stock Actual
+                    </label>
+                    <input
+                      type="number"
+                      name="StockMaterial"
+                      value={formData.StockMaterial}
+                      disabled
+                      className="w-full px-3 py-1.5 border rounded bg-gray-50 text-gray-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Se actualiza automáticamente
+                    </p>
+                  </div>
                 </div>
 
                 <div>

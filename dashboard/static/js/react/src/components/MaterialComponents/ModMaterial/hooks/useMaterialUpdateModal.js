@@ -6,10 +6,10 @@ export const useMaterialUpdateModal = ({
   material,
   onMaterialUpdated,
 }) => {
-  // Estados del formulario y modal
   const [formData, setFormData] = useState({
     NombreMaterial: "",
     StockMaterial: "",
+    StockOriginal: "",
     PrecioMaterial: "",
     TotalMaterial: "0",
     EstadoMaterial: "",
@@ -37,7 +37,6 @@ export const useMaterialUpdateModal = ({
   });
   const [searchEnvio, setSearchEnvio] = useState("");
 
-  // Efecto para animaciones de apertura/cierre
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
@@ -48,23 +47,21 @@ export const useMaterialUpdateModal = ({
     }
   }, [isOpen]);
 
-  // Efecto para cargar proveedores y envíos
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Cargar proveedores
-        const provResponse = await fetch("/api/proveedor/listar/");
-        const provData = await provResponse.json();
-        if (provData.success) {
-          setProveedores(provData.proveedores);
-        }
+        const [provResponse, envioResponse] = await Promise.all([
+          fetch("/api/proveedor/listar/"),
+          fetch("/api/envio/listar/"),
+        ]);
 
-        // Cargar envíos
-        const envioResponse = await fetch("/api/envio/listar/");
-        const envioData = await envioResponse.json();
-        if (envioData.success) {
-          setEnvios(envioData.envios);
-        }
+        const [provData, envioData] = await Promise.all([
+          provResponse.json(),
+          envioResponse.json(),
+        ]);
+
+        if (provData.success) setProveedores(provData.proveedores);
+        if (envioData.success) setEnvios(envioData.envios);
       } catch (error) {
         console.error("Error al cargar datos:", error);
         setErrors((prev) => ({
@@ -74,17 +71,15 @@ export const useMaterialUpdateModal = ({
       }
     };
 
-    if (isOpen) {
-      fetchData();
-    }
+    if (isOpen) fetchData();
   }, [isOpen]);
 
-  // Efecto para cargar los datos del material cuando se abre el modal
   useEffect(() => {
     if (material && isOpen) {
       setFormData({
         NombreMaterial: material.NombreMaterial || "",
         StockMaterial: material.StockMaterial || "",
+        StockOriginal: material.StockOriginal || "",
         PrecioMaterial: material.PrecioMaterial || "",
         TotalMaterial: material.TotalMaterial || "0",
         EstadoMaterial: material.EstadoMaterial || "",
@@ -104,10 +99,11 @@ export const useMaterialUpdateModal = ({
     }
   }, [material, isOpen]);
 
-  // Efecto para calcular el total
   useEffect(() => {
     if (formData.StockMaterial && formData.PrecioMaterial) {
-      const total = formData.StockMaterial * formData.PrecioMaterial;
+      const total =
+        parseFloat(formData.StockMaterial) *
+        parseFloat(formData.PrecioMaterial);
       setFormData((prev) => ({
         ...prev,
         TotalMaterial: total.toString(),
@@ -115,59 +111,8 @@ export const useMaterialUpdateModal = ({
     }
   }, [formData.StockMaterial, formData.PrecioMaterial]);
 
-  // Manejador de cambios en los inputs
-  const handleInputChange = useCallback(
-    (e) => {
-      const { name, value } = e.target;
-  
-      // Lógica especial para cuando se selecciona un envío
-      if (name === "Envio") {
-        if (value) {
-          // Si se selecciona un envío, encuentra el envío en la lista
-          const envioSeleccionado = envios.find(
-            (envio) => envio.id.toString() === value
-          );
-          if (envioSeleccionado) {
-            // Actualiza tanto el envío como el proveedor
-            setFormData((prev) => ({
-              ...prev,
-              [name]: value,
-              // Actualiza automáticamente el proveedor al del envío
-              Proveedor: envioSeleccionado.Proveedor.id.toString(),
-            }));
-            return;
-          }
-        } else {
-          // Si se deselecciona el envío, limpia también el proveedor
-          setFormData((prev) => ({
-            ...prev,
-            [name]: "",
-            Proveedor: "",
-          }));
-          return;
-        }
-      }
-  
-      // Para el resto de los campos, manejo normal
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-  
-      if (errors[name]) {
-        setErrors((prev) => ({
-          ...prev,
-          [name]: null,
-        }));
-      }
-    },
-    [errors, envios]
-  );
-
-  // Función de validación de archivos
   const validateFile = useCallback((file) => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
-
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return "El archivo es demasiado grande. El tamaño máximo permitido es 10MB";
     }
@@ -189,8 +134,84 @@ export const useMaterialUpdateModal = ({
 
     return null;
   }, []);
+  const handleInputChange = useCallback(
+    (e) => {
+      const { name, value } = e.target;
 
-  // Manejador de cambios en la foto
+      if (name === "StockOriginal") {
+        const nuevoStockOriginal = parseInt(value) || 0;
+        const stockOriginalAnterior = parseInt(formData.StockOriginal) || 0;
+        const stockActualAnterior = parseInt(formData.StockMaterial) || 0;
+
+        // Calcular la cantidad usada del stock original
+        const cantidadUsada = stockOriginalAnterior - stockActualAnterior;
+
+        // El nuevo stock actual será el nuevo stock original menos la misma cantidad usada
+        const nuevoStockActual = nuevoStockOriginal - cantidadUsada;
+
+        console.log("Valores de cálculo:", {
+          nuevoStockOriginal,
+          stockOriginalAnterior,
+          stockActualAnterior,
+          cantidadUsada,
+          nuevoStockActual,
+        });
+
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+          StockMaterial: nuevoStockActual.toString(),
+        }));
+
+        console.log("Nuevo formData:", {
+          StockOriginal: value,
+          StockMaterial: nuevoStockActual.toString(),
+        });
+
+        if (errors[name]) {
+          setErrors((prev) => ({ ...prev, [name]: null }));
+        }
+        return;
+      }
+
+      if (name === "Envio") {
+        if (value) {
+          const envioSeleccionado = envios.find(
+            (envio) => envio.id.toString() === value
+          );
+          if (envioSeleccionado) {
+            setFormData((prev) => ({
+              ...prev,
+              [name]: value,
+              Proveedor: envioSeleccionado.Proveedor.id.toString(),
+            }));
+            return;
+          }
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            [name]: "",
+            Proveedor: "",
+          }));
+          return;
+        }
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+
+      if (errors[name]) {
+        setErrors((prev) => ({
+          ...prev,
+          [name]: null,
+        }));
+      }
+    },
+    [errors, envios, formData]
+  );
+
   const handleFotoChange = useCallback(
     (e) => {
       const file = e.target.files?.[0];
@@ -219,7 +240,6 @@ export const useMaterialUpdateModal = ({
     [errors, validateFile]
   );
 
-  // Manejador para eliminar la foto
   const handleRemoveFoto = useCallback(() => {
     setFormData((prev) => ({ ...prev, FotoMaterial: null }));
     setPreviewUrl("");
@@ -228,7 +248,6 @@ export const useMaterialUpdateModal = ({
     if (fileInput) fileInput.value = "";
   }, []);
 
-  // Manejador de cierre del modal
   const handleClose = useCallback(() => {
     setIsAnimating(false);
     setTimeout(() => {
@@ -237,24 +256,26 @@ export const useMaterialUpdateModal = ({
     }, 150);
   }, [onClose]);
 
-  // Manejador de envío del formulario
   const handleSubmit = useCallback(
     async (e) => {
       if (e) e.preventDefault();
-
       setIsSubmitting(true);
+
       try {
         const newErrors = {};
-        // Solo validamos los campos requeridos según el modelo
+
         if (!formData.NombreMaterial) {
           newErrors.NombreMaterial = "El nombre del material es requerido";
         }
-        if (!formData.StockMaterial && formData.StockMaterial !== 0) {
-          newErrors.StockMaterial = "El stock es requerido";
-        } else if (formData.StockMaterial < 0) {
-          newErrors.StockMaterial = "El stock no puede ser negativo";
+        if (!formData.StockOriginal) {
+          newErrors.StockOriginal = "El stock original es requerido";
+        } else if (parseInt(formData.StockOriginal) < 0) {
+          newErrors.StockOriginal = "El stock original no puede ser negativo";
         }
-        if (!formData.PrecioMaterial || formData.PrecioMaterial <= 0) {
+        if (
+          !formData.PrecioMaterial ||
+          parseFloat(formData.PrecioMaterial) <= 0
+        ) {
           newErrors.PrecioMaterial = "El precio debe ser mayor a 0";
         }
 
@@ -268,44 +289,35 @@ export const useMaterialUpdateModal = ({
 
         // Campos requeridos
         submitData.append("NombreMaterial", formData.NombreMaterial);
+        submitData.append("StockOriginal", formData.StockOriginal);
         submitData.append("StockMaterial", formData.StockMaterial);
         submitData.append("PrecioMaterial", formData.PrecioMaterial);
         submitData.append("TotalMaterial", formData.TotalMaterial);
 
         // Campos opcionales
-        if (formData.EstadoMaterial) {
+        if (formData.EstadoMaterial)
           submitData.append("EstadoMaterial", formData.EstadoMaterial);
-        }
-        if (formData.UbicacionMaterial) {
+        if (formData.UbicacionMaterial)
           submitData.append("UbicacionMaterial", formData.UbicacionMaterial);
-        }
-        if (formData.ColorMaterial) {
+        if (formData.ColorMaterial)
           submitData.append("ColorMaterial", formData.ColorMaterial);
-        }
-        if (formData.PesoMaterial) {
+        if (formData.PesoMaterial)
           submitData.append("PesoMaterial", formData.PesoMaterial);
-        }
-        if (formData.DimensionesMaterial) {
+        if (formData.DimensionesMaterial)
           submitData.append(
             "DimensionesMaterial",
             formData.DimensionesMaterial
           );
-        }
-        if (formData.DetalleMaterial) {
+        if (formData.DetalleMaterial)
           submitData.append("DetalleMaterial", formData.DetalleMaterial);
-        }
-        if (formData.DescripcionMaterial) {
+        if (formData.DescripcionMaterial)
           submitData.append(
             "DescripcionMaterial",
             formData.DescripcionMaterial
           );
-        }
-        if (formData.Proveedor) {
+        if (formData.Proveedor)
           submitData.append("Proveedor", formData.Proveedor);
-        }
-        if (formData.Envio) {
-          submitData.append("Envio", formData.Envio);
-        }
+        if (formData.Envio) submitData.append("Envio", formData.Envio);
 
         submitData.append(
           "eliminar_FotoMaterial",
@@ -341,7 +353,6 @@ export const useMaterialUpdateModal = ({
         }
 
         handleClose();
-
         if (onMaterialUpdated) {
           await onMaterialUpdated(data.material);
         }
