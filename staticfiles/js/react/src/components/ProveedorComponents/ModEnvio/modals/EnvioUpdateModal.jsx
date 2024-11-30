@@ -3,6 +3,7 @@ import { X, XCircle, Search } from "lucide-react";
 import { useEnvioUpdateModal } from "../hooks/useEnvioUpdateModal";
 
 const EnvioUpdateModal = ({ isOpen, onClose, envio, onEnvioUpdated }) => {
+  console.log("Modal props:", { isOpen, envio });
   const {
     formData,
     errors,
