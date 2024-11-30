@@ -3835,11 +3835,26 @@ def crear_producto(request):
 @login_required(login_url='login')
 def listar_productos(request):
     try:
-        productos = Producto.objects.select_related('Categoria').order_by('-FechaProducto')
+        productos = Producto.objects.select_related('Categoria').prefetch_related(
+            'materiales_usados__Material'  # Añadido para cargar materiales eficientemente
+        ).order_by('-FechaProducto')
         
         productos_data = []
         
         for producto in productos:
+            dias_transcurridos = (timezone.now().date() - producto.FechaProducto).days
+            
+            # Obtener los materiales del producto
+            materiales = [{
+                'id': pm.id,
+                'material': {
+                    'id': pm.Material.id,
+                    'nombre': pm.Material.NombreMaterial
+                },
+                'cantidad': pm.CantidadUsada,
+                'descripcion': pm.DescripcionUso
+            } for pm in producto.materiales_usados.all()]
+            
             producto_data = {
                 'id': producto.id,
                 'NombreProducto': producto.NombreProducto,
@@ -3853,8 +3868,16 @@ def listar_productos(request):
                 },
                 'CantidadProductoVendido': producto.CantidadProductoVendido,
                 'CantidadProductoDesechado': producto.CantidadProductoDesechado,
+                'DiasProducto': dias_transcurridos,
                 'FechaProducto': producto.FechaProducto.isoformat(),
                 'FotoProducto': producto.FotoProducto.url if producto.FotoProducto else None,
+                'materiales': materiales,  # Añadido
+                'DescripcionProducto': producto.DescripcionProducto,
+                'UbicacionProducto': producto.UbicacionProducto,
+                'EstadoProducto': producto.EstadoProducto,
+                'ProductoAgotado': producto.ProductoAgotado,
+                'porcentaje_stock_disponible': producto.porcentaje_stock_disponible,
+                'HoraCreacion': producto.HoraCreacion.isoformat()
             }
             productos_data.append(producto_data)
 
@@ -3871,204 +3894,232 @@ def listar_productos(request):
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def actualizar_producto(request, producto_id):
-    if request.method in ['PUT', 'POST']:
+    if request.method not in ['PUT', 'POST']:
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': 'Método no permitido'}
+        }, status=405)
+
+    try:
+        producto = get_object_or_404(Producto, id=producto_id)
+        data = request.POST
+        print("Datos recibidos:", dict(data))
+
+        # Validación de campos requeridos
+        campos_requeridos = {
+            'NombreProducto': 'Nombre del producto',
+            'StockProductoInicial': 'Stock inicial',
+            'PrecioUnitarioProducto': 'Precio unitario',
+            'Categoria': 'Categoría'
+        }
+        
+        errores = {campo: f'El campo {nombre} es requerido' 
+                  for campo, nombre in campos_requeridos.items() 
+                  if not data.get(campo)}
+        
+        if errores:
+            return JsonResponse({'success': False, 'errors': errores}, status=400)
+
+        # Validación de campos numéricos
         try:
-            producto = get_object_or_404(Producto, id=producto_id)
-            data = request.POST
-            
-            # Debug: Imprimir todos los datos recibidos
-            print("Datos recibidos:", dict(data))
-            
-            # Validar campos requeridos
-            campos_requeridos = ['NombreProducto', 'StockProductoInicial', 'PrecioUnitarioProducto', 'Categoria']
-            errores = {}
-            
-            for campo in campos_requeridos:
-                if not data.get(campo):
-                    errores[campo] = f'El campo {campo} es requerido'
-            
-            if errores:
-                return JsonResponse({'success': False, 'errors': errores}, status=400)
+            stock_inicial = int(data.get('StockProductoInicial'))
+            if stock_inicial < 0:
+                errores['StockProductoInicial'] = 'El stock inicial no puede ser negativo'
+        except ValueError:
+            errores['StockProductoInicial'] = 'El stock inicial debe ser un número entero no negativo'
 
-            # Validación de campos numéricos
+        try:
+            precio_unitario = Decimal(data.get('PrecioUnitarioProducto'))
+            if precio_unitario <= 0:
+                errores['PrecioUnitarioProducto'] = 'El precio unitario debe ser mayor a 0'
+        except DecimalException:
+            errores['PrecioUnitarioProducto'] = 'El precio unitario debe ser un número positivo'
+
+        # Validación de valores numéricos adicionales
+        campos_numericos = {
+            'CantidadProductoVendido': 'Cantidad vendida',
+            'CantidadProductoDesechado': 'Cantidad desechada',
+            'DiasProducto': 'Días de producto'
+        }
+
+        for campo, nombre in campos_numericos.items():
+            if data.get(campo):
+                try:
+                    valor = int(data.get(campo))
+                    if valor < 0:
+                        errores[campo] = f'El campo {nombre} no puede ser negativo'
+                except ValueError:
+                    errores[campo] = f'El campo {nombre} debe ser un número entero'
+
+        # Validación de categoría
+        try:
+            categoria = Categoria.objects.get(id=data.get('Categoria'))
+        except (Categoria.DoesNotExist, ValueError):
+            errores['Categoria'] = 'Categoría no válida'
+
+        if errores:
+            return JsonResponse({'success': False, 'errors': errores}, status=400)
+
+        # Manejo de la foto del producto
+        if data.get('eliminar_FotoProducto', '').lower() == 'true' and producto.FotoProducto:
             try:
-                stock_inicial = int(data.get('StockProductoInicial'))
-                if stock_inicial < 0:
-                    raise ValueError('El stock inicial no puede ser negativo')
-            except ValueError:
+                url = producto.FotoProducto.url
+                parts = url.split('/')
+                public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                
+                cloudinary.config(
+                    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                    api_key=os.getenv('CLOUDINARY_API_KEY'),
+                    api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                )
+                
+                cloudinary.uploader.destroy(
+                    public_id,
+                    resource_type="image",
+                    type="upload",
+                    invalidate=True
+                )
+                producto.FotoProducto = None
+                
+            except Exception as e:
+                print(f"Error al eliminar foto: {str(e)}")
                 return JsonResponse({
                     'success': False,
-                    'errors': {'StockProductoInicial': 'El stock inicial debe ser un número entero no negativo'}
+                    'errors': {'FotoProducto': f'Error al eliminar la foto: {str(e)}'}
                 }, status=400)
-
-            try:
-                precio_unitario = Decimal(data.get('PrecioUnitarioProducto'))
-                if precio_unitario <= 0:
-                    raise ValueError('El precio unitario debe ser mayor a 0')
-            except (ValueError, DecimalException):
+        
+        elif 'FotoProducto' in request.FILES:
+            foto = request.FILES['FotoProducto']
+            
+            if foto.size > 10 * 1024 * 1024:
                 return JsonResponse({
                     'success': False,
-                    'errors': {'PrecioUnitarioProducto': 'El precio unitario debe ser un número positivo'}
+                    'errors': {'FotoProducto': 'El archivo es demasiado grande. Máximo 10MB'}
                 }, status=400)
-
-            # Validación de categoría
-            try:
-                categoria = Categoria.objects.get(id=data.get('Categoria'))
-            except (Categoria.DoesNotExist, ValueError):
+            
+            if foto.content_type not in ALLOWED_FILE_TYPES:
                 return JsonResponse({
                     'success': False,
-                    'errors': {'Categoria': 'Categoría no válida'}
+                    'errors': {'FotoProducto': 'Formato no válido. Use: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG'}
                 }, status=400)
-
-            # Manejar la foto
-            if data.get('eliminar_FotoProducto', '').lower() == 'true' and producto.FotoProducto:
+            
+            if producto.FotoProducto:
                 try:
                     url = producto.FotoProducto.url
                     parts = url.split('/')
                     public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
-                    
-                    cloudinary.config(
-                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
-                        api_key=os.getenv('CLOUDINARY_API_KEY'),
-                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
-                    )
-                    
-                    result = cloudinary.uploader.destroy(
-                        public_id,
-                        resource_type="image",
-                        type="upload",
-                        invalidate=True
-                    )
-                    print(f"Resultado de eliminación foto: {result}")
-                    
-                    producto.FotoProducto = None
-                    
+                    cloudinary.uploader.destroy(public_id)
                 except Exception as e:
-                    print(f"Error al eliminar foto: {str(e)}")
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {'FotoProducto': f'Error al eliminar la foto: {str(e)}'}
-                    }, status=400)
+                    print(f"Error al eliminar foto anterior: {str(e)}")
             
-            elif 'FotoProducto' in request.FILES:
-                foto = request.FILES['FotoProducto']
-                
-                if foto.size > 10 * 1024 * 1024:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {'FotoProducto': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'}
-                    }, status=400)
-                
-                if foto.content_type not in ALLOWED_FILE_TYPES:
-                    return JsonResponse({
-                        'success': False,
-                        'errors': {'FotoProducto': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG'}
-                    }, status=400)
-                
-                if producto.FotoProducto:
-                    try:
-                        url = producto.FotoProducto.url
-                        parts = url.split('/')
-                        public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
-                        cloudinary.uploader.destroy(public_id)
-                    except Exception as e:
-                        print(f"Error al eliminar foto anterior: {str(e)}")
-                
-                producto.FotoProducto = foto
+            producto.FotoProducto = foto
 
-            # Actualizar campos del producto
-            producto.NombreProducto = data.get('NombreProducto')
-            producto.StockProductoInicial = stock_inicial
-            producto.PrecioUnitarioProducto = precio_unitario
-            producto.Categoria = categoria
-            producto.DescripcionProducto = data.get('DescripcionProducto', '')
-            producto.UbicacionProducto = data.get('UbicacionProducto', '')
-            producto.EstadoProducto = data.get('EstadoProducto', '')
+        # Actualización de campos del producto
+        producto.NombreProducto = data.get('NombreProducto')
+        producto.StockProductoInicial = stock_inicial
+        producto.PrecioUnitarioProducto = precio_unitario
+        producto.Categoria = categoria
+        producto.DescripcionProducto = data.get('DescripcionProducto', '')
+        producto.UbicacionProducto = data.get('UbicacionProducto', '')
+        producto.EstadoProducto = data.get('EstadoProducto', '')
 
-            # Actualizar materiales
-            if data.get('materiales'):
+        # Campos adicionales si están presentes en la petición
+        if data.get('CantidadProductoVendido'):
+            producto.CantidadProductoVendido = int(data.get('CantidadProductoVendido'))
+        
+        if data.get('CantidadProductoDesechado'):
+            producto.CantidadProductoDesechado = int(data.get('CantidadProductoDesechado'))
+        
+        if data.get('DiasProducto'):
+            producto.DiasProducto = int(data.get('DiasProducto'))
+        
+        if data.get('ProductoVendido'):
+            producto.ProductoVendido = data.get('ProductoVendido').lower() == 'true'
+        
+        if data.get('FechaProducto'):
+            try:
+                producto.FechaProducto = datetime.fromisoformat(data.get('FechaProducto'))
+            except ValueError:
+                errores['FechaProducto'] = 'Formato de fecha inválido'
+
+        # Actualización de materiales
+        if data.get('materiales'):
+            try:
                 materiales_data = json.loads(data.get('materiales'))
-                # Eliminar materiales existentes
                 ProductoMaterial.objects.filter(Producto=producto).delete()
                 
                 for material_data in materiales_data:
-                    try:
-                        material = Material.objects.get(id=material_data['material_id'])
-                        producto_material = ProductoMaterial(
-                            Producto=producto,
-                            Material=material,
-                            CantidadUsada=material_data['cantidad'],
-                            DescripcionUso=material_data.get('descripcion', '')
-                        )
-                        producto_material.full_clean()
-                        producto_material.save()
-                    except Exception as e:
-                        return JsonResponse({
-                            'success': False,
-                            'errors': {'materiales': f'Error con el material: {str(e)}'}
-                        }, status=400)
+                    material = Material.objects.get(id=material_data['material_id'])
+                    producto_material = ProductoMaterial(
+                        Producto=producto,
+                        Material=material,
+                        CantidadUsada=material_data['cantidad'],
+                        DescripcionUso=material_data.get('descripcion', '')
+                    )
+                    producto_material.full_clean()
+                    producto_material.save()
+            except Exception as e:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'materiales': f'Error con los materiales: {str(e)}'}
+                }, status=400)
 
-            try:
-                producto.full_clean()
-                producto.save()
-            except ValidationError as e:
-                errores_formateados = {campo: errores[0] if errores else str(errores) 
-                                     for campo, errores in e.message_dict.items()}
-                return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
+        # Validación final y guardado
+        try:
+            producto.full_clean()
+            producto.save()
+        except ValidationError as e:
+            errores_formateados = {
+                campo: errores[0] if isinstance(errores, list) else str(errores)
+                for campo, errores in e.message_dict.items()
+            }
+            return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
 
-            # Obtener materiales actualizados
-            materiales_actualizados = [
-                {
-                    'id': pm.id,
-                    'material': {
-                        'id': pm.Material.id,
-                        'nombre': pm.Material.NombreMaterial
-                    },
-                    'cantidad': pm.CantidadUsada,
-                    'descripcion': pm.DescripcionUso
-                }
-                for pm in producto.materiales_usados.select_related('Material').all()
-            ]
+        # Preparar respuesta con datos actualizados
+        materiales_actualizados = [{
+            'id': pm.id,
+            'material': {
+                'id': pm.Material.id,
+                'nombre': pm.Material.NombreMaterial
+            },
+            'cantidad': pm.CantidadUsada,
+            'descripcion': pm.DescripcionUso
+        } for pm in producto.materiales_usados.select_related('Material').all()]
 
-            return JsonResponse({
-                'success': True,
-                'message': 'Producto actualizado exitosamente',
-                'producto': {
-                    'id': producto.id,
-                    'NombreProducto': producto.NombreProducto,
-                    'StockProductoInicial': producto.StockProductoInicial,
-                    'StockProductoActual': producto.StockProductoActual,
-                    'PrecioUnitarioProducto': str(producto.PrecioUnitarioProducto),
-                    'PrecioTotalProducto': str(producto.PrecioTotalProducto),
-                    'DescripcionProducto': producto.DescripcionProducto,
-                    'UbicacionProducto': producto.UbicacionProducto,
-                    'EstadoProducto': producto.EstadoProducto,
-                    'FechaProducto': producto.FechaProducto.isoformat(),
-                    'DiasProducto': producto.DiasProducto,
-                    'ProductoVendido': producto.ProductoVendido,
-                    'CantidadProductoVendido': producto.CantidadProductoVendido,
-                    'CantidadProductoDesechado': producto.CantidadProductoDesechado,
-                    'porcentaje_stock_disponible': producto.porcentaje_stock_disponible,
-                    'FotoProducto': producto.FotoProducto.url if producto.FotoProducto else None,
-                    'Categoria': {
-                        'id': categoria.id,
-                        'NombreCategoria': categoria.NombreCategoria
-                    },
-                    'materiales': materiales_actualizados
-                }
-            })
-            
-        except Exception as e:
-            print(f"Error general: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'errors': {'general': f'Error al actualizar el producto: {str(e)}'}
-            }, status=400)
+        return JsonResponse({
+            'success': True,
+            'message': 'Producto actualizado exitosamente',
+            'producto': {
+                'id': producto.id,
+                'NombreProducto': producto.NombreProducto,
+                'StockProductoInicial': producto.StockProductoInicial,
+                'StockProductoActual': producto.StockProductoActual,
+                'PrecioUnitarioProducto': str(producto.PrecioUnitarioProducto),
+                'PrecioTotalProducto': str(producto.PrecioTotalProducto),
+                'DescripcionProducto': producto.DescripcionProducto,
+                'UbicacionProducto': producto.UbicacionProducto,
+                'EstadoProducto': producto.EstadoProducto,
+                'FechaProducto': producto.FechaProducto.isoformat(),
+                'DiasProducto': producto.DiasProducto,
+                'ProductoVendido': producto.ProductoVendido,
+                'CantidadProductoVendido': producto.CantidadProductoVendido,
+                'CantidadProductoDesechado': producto.CantidadProductoDesechado,
+                'porcentaje_stock_disponible': producto.porcentaje_stock_disponible,
+                'FotoProducto': producto.FotoProducto.url if producto.FotoProducto else None,
+                'Categoria': {
+                    'id': categoria.id,
+                    'NombreCategoria': categoria.NombreCategoria
+                },
+                'materiales': materiales_actualizados
+            }
+        })
 
-    return JsonResponse({
-        'success': False,
-        'errors': {'general': 'Método no permitido'}
-    }, status=405)
+    except Exception as e:
+        print(f"Error general: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': f'Error al actualizar el producto: {str(e)}'}
+        }, status=400)
 @login_required(login_url='login')
 @ensure_csrf_cookie 
 def crear_producto(request):
@@ -4201,7 +4252,7 @@ def crear_producto(request):
                     'EstadoProducto': nuevo_producto.EstadoProducto,
                     'FechaProducto': nuevo_producto.FechaProducto.isoformat(),
                     'DiasProducto': nuevo_producto.DiasProducto,
-                    'ProductoVendido': nuevo_producto.ProductoVendido,
+                    'ProductoAgotado': nuevo_producto.ProductoAgotado,  # Cambiado aquí
                     'CantidadProductoVendido': nuevo_producto.CantidadProductoVendido,
                     'CantidadProductoDesechado': nuevo_producto.CantidadProductoDesechado,
                     'porcentaje_stock_disponible': nuevo_producto.porcentaje_stock_disponible,
@@ -4600,6 +4651,27 @@ def listar_categorias(request):
                     'NombreCategoria': categoria.NombreCategoria
                 } for categoria in categorias
             ]
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+        
+@login_required(login_url='login')
+def listar_materiales_producto(request):
+    try:
+        materiales = Material.objects.all()
+        materiales_data = [
+            {
+                'id': material.id,
+                'NombreMaterial': material.NombreMaterial,
+                'StockMaterial': material.StockMaterial
+            } for material in materiales
+        ]
+        return JsonResponse({
+            'success': True,
+            'materiales': materiales_data
         })
     except Exception as e:
         return JsonResponse({

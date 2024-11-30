@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 
-export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
+export const useProductoCreateModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  materialesAgregados,
+}) => {
   const [formData, setFormData] = useState({
     NombreProducto: "",
     StockProductoInicial: "",
@@ -18,12 +23,14 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [categorias, setCategorias] = useState([]);
+  const [materiales, setMateriales] = useState([]);
 
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
       setTimeout(() => setIsAnimating(true), 10);
       fetchCategorias();
+      fetchMateriales();
     } else {
       setIsAnimating(false);
       setTimeout(() => setIsVisible(false), 300);
@@ -41,6 +48,19 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
       const data = await response.json();
       if (data.success) {
         setCategorias(data.categorias);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  const fetchMateriales = async () => {
+    try {
+      const response = await fetch("/api/materiales/producto/");
+      if (!response.ok) throw new Error("Error al cargar materiales");
+      const data = await response.json();
+      if (data.success) {
+        setMateriales(data.materiales);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -81,6 +101,7 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
     }));
     setPreviewUrl(null);
   };
+
   const validateForm = () => {
     const newErrors = {};
     if (!formData.NombreProducto)
@@ -89,21 +110,19 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
       newErrors.StockProductoInicial = "El stock inicial es requerido";
     if (!formData.PrecioUnitarioProducto)
       newErrors.PrecioUnitarioProducto = "El precio unitario es requerido";
-    // Validación numérica del stock inicial
+
     if (formData.StockProductoInicial <= 0) {
       newErrors.StockProductoInicial = "El stock inicial debe ser mayor a 0";
     } else if (!Number.isInteger(Number(formData.StockProductoInicial))) {
       newErrors.StockProductoInicial = "El stock debe ser un número entero";
     }
 
-    // Validación de precio unitario
     const precioUnitario = Number(formData.PrecioUnitarioProducto);
     if (isNaN(precioUnitario) || precioUnitario <= 0) {
       newErrors.PrecioUnitarioProducto =
         "El precio debe ser un número mayor a 0";
     }
 
-    // Validación de límites
     if (formData.StockProductoInicial > 9999) {
       newErrors.StockProductoInicial = "El stock no puede ser mayor a 9999";
     }
@@ -115,8 +134,15 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
 
     return newErrors;
   };
+
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -126,6 +152,20 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
           formDataToSend.append(key, formData[key]);
         }
       });
+
+      // Agregar materiales al FormData
+      if (materialesAgregados?.length > 0) {
+        formDataToSend.append(
+          "materiales",
+          JSON.stringify(
+            materialesAgregados.map((m) => ({
+              material_id: m.id,
+              cantidad: m.cantidad,
+              descripcion: m.descripcion,
+            }))
+          )
+        );
+      }
 
       const response = await fetch("/api/producto/crear/", {
         method: "POST",
@@ -143,7 +183,7 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
       }
 
       if (data.success) {
-        await onSubmit(data.producto); // Esperar a que termine
+        await onSubmit(data.producto);
         handleClose();
       } else {
         setErrors(data.errors || { general: "Error al crear el producto" });
@@ -154,6 +194,7 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
       setIsSubmitting(false);
     }
   };
+
   const handleClose = () => {
     setFormData({
       NombreProducto: "",
@@ -179,6 +220,7 @@ export const useProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
     isVisible,
     previewUrl,
     categorias,
+    materiales,
     handleClose,
     handleSubmit,
     handleInputChange,

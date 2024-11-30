@@ -352,22 +352,15 @@ class Categoria(models.Model):
 class Producto(models.Model):
     # Campos obligatorios
     NombreProducto = models.CharField(max_length=100, null=False, blank=False)
-    StockProductoInicial = models.PositiveIntegerField(
-        null=False, 
-        blank=False,
-        help_text="Cantidad inicial del producto"
-    )
-    StockProductoActual = models.PositiveIntegerField(
-        editable=False,  
-        help_text="Cantidad actual disponible (se actualiza automáticamente)"
-    )
+    StockProductoInicial = models.PositiveIntegerField(null=False, blank=False,help_text="Cantidad inicial del producto")
+    StockProductoActual = models.PositiveIntegerField(editable=False,help_text="Cantidad actual disponible (se actualiza automáticamente)")
     PrecioUnitarioProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     PrecioTotalProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
-    Categoria = models.ForeignKey(
-        'Categoria', 
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
+    Categoria = models.ForeignKey('Categoria', on_delete=models.CASCADE,null=True,blank=True,
+related_name='productos')
+    Materiales = models.ManyToManyField(
+        'Material',
+        through='ProductoMaterial',
         related_name='productos'
     )
     
@@ -381,7 +374,7 @@ class Producto(models.Model):
     EstadoProducto = models.CharField(max_length=50, null=True, blank=True)
     FechaProducto = models.DateField(auto_now_add=True)
     DiasProducto = models.IntegerField(default=0, editable=False)
-    ProductoVendido = models.BooleanField(default=False, editable=False)
+    ProductoAgotado = models.BooleanField(default=False, editable=False)
     HoraCreacion = models.DateTimeField(default=timezone.now)
     FotoProducto = CloudinaryField('imagen', folder='productos/', null=True, blank=True)
 
@@ -391,29 +384,22 @@ class Producto(models.Model):
         ordering = ['-FechaProducto']
 
     def save(self, *args, **kwargs):
-        # Si es un nuevo producto, inicializar el stock actual y precio total
         if not self.pk:
             self.StockProductoActual = self.StockProductoInicial
             self.FechaProducto = date.today()
             self.PrecioTotalProducto = self.StockProductoInicial * self.PrecioUnitarioProducto
         else:
-            # Actualizar el stock actual y precio total
             self.StockProductoActual = max(
                 0,
                 self.StockProductoInicial - (self.CantidadProductoVendido + self.CantidadProductoDesechado)
             )
             self.PrecioTotalProducto = self.StockProductoActual * self.PrecioUnitarioProducto
 
-        # Actualizar días transcurridos
         self.DiasProducto = (date.today() - self.FechaProducto).days
-            
-        # Actualizar estado de venta
-        self.ProductoVendido = self.StockProductoActual == 0
+        self.ProductoAgotado = self.StockProductoActual == 0
         
-        # Guardar el producto
         super(Producto, self).save(*args, **kwargs)
         
-        # Actualizar el stock de la categoría solo si tiene categoría
         if self.Categoria:
             total_stock = Producto.objects.filter(
                 Categoria=self.Categoria

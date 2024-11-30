@@ -1,8 +1,19 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { X, FileText, XCircle } from "lucide-react";
 import { useProductoUpdateModal } from "../hooks/useProductoUpdateModal";
 
-const ProductoUpdateModal = ({ isOpen, onClose, producto, onProductoUpdated }) => {
+const ProductoUpdateModal = ({
+  isOpen,
+  onClose,
+  producto,
+  onProductoUpdated,
+}) => {
+  console.log("Modal props received:", { isOpen, producto });
+
+  useEffect(() => {
+    console.log("Modal props changed:", { isOpen, producto });
+  }, [isOpen, producto]);
+
   const {
     formData,
     errors,
@@ -30,16 +41,21 @@ const ProductoUpdateModal = ({ isOpen, onClose, producto, onProductoUpdated }) =
     return "border-gray-300";
   };
 
-  if (!isVisible) return null;
+  if (!isOpen || !producto) return null;
 
   return (
-    <div className={`fixed top-16 right-0 bottom-0 w-[448px] bg-white shadow-xl z-40
+    <div
+      className={`fixed top-16 right-0 bottom-0 w-[448px] bg-white shadow-xl z-40
       transform transition-transform duration-300 ease-in-out flex flex-col
-      ${isAnimating ? "translate-x-0" : "translate-x-full"}`}>
+      ${isAnimating ? "translate-x-0" : "translate-x-full"}`}
+    >
       <div className="flex-none border-b">
         <div className="p-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Editar Producto</h2>
-          <button onClick={handleClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-150">
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-150"
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -47,66 +63,46 @@ const ProductoUpdateModal = ({ isOpen, onClose, producto, onProductoUpdated }) =
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Información Principal */}
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-gray-900">Información Principal</h3>
+              <h3 className="text-sm font-medium text-gray-900">
+                Información Principal
+              </h3>
 
               <div>
-                <label className="text-sm font-medium block mb-1">Nombre*</label>
+                <label className="text-sm font-medium block mb-1">
+                  Nombre*
+                </label>
                 <input
                   type="text"
                   name="NombreProducto"
                   value={formData.NombreProducto}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200 ${getInputBorderClass(formData.NombreProducto)}`}
+                    transition-colors duration-200 ${getInputBorderClass(
+                      formData.NombreProducto
+                    )}`}
                 />
                 {errors.NombreProducto && (
-                  <p className="text-xs text-red-500 mt-1">{errors.NombreProducto}</p>
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.NombreProducto}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label className="text-sm font-medium block mb-1">Stock Inicial*</label>
-                <input
-                  type="number"
-                  name="StockProductoInicial"
-                  value={formData.StockProductoInicial}
-                  onChange={handleInputChange}
-                  min="0"
-                  className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200 ${getInputBorderClass(formData.StockProductoInicial)}`}
-                />
-                {errors.StockProductoInicial && (
-                  <p className="text-xs text-red-500 mt-1">{errors.StockProductoInicial}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-sm font-medium block mb-1">Precio Unitario*</label>
-                <input
-                  type="number"
-                  name="PrecioUnitarioProducto"
-                  value={formData.PrecioUnitarioProducto}
-                  onChange={handleInputChange}
-                  min="0"
-                  step="0.01"
-                  className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200 ${getInputBorderClass(formData.PrecioUnitarioProducto)}`}
-                />
-                {errors.PrecioUnitarioProducto && (
-                  <p className="text-xs text-red-500 mt-1">{errors.PrecioUnitarioProducto}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="text-sm font-medium block mb-1">Categoría*</label>
+                <label className="text-sm font-medium block mb-1">
+                  Categoría*
+                </label>
                 <select
                   name="Categoria"
                   value={formData.Categoria}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200 ${getInputBorderClass(formData.Categoria)}`}
+                    transition-colors duration-200 ${getInputBorderClass(
+                      formData.Categoria
+                    )}`}
                 >
                   <option value="">Seleccione una categoría</option>
                   {categorias.map((categoria) => (
@@ -116,12 +112,16 @@ const ProductoUpdateModal = ({ isOpen, onClose, producto, onProductoUpdated }) =
                   ))}
                 </select>
                 {errors.Categoria && (
-                  <p className="text-xs text-red-500 mt-1">{errors.Categoria}</p>
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.Categoria}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label className="text-sm font-medium block mb-1">Descripción</label>
+                <label className="text-sm font-medium block mb-1">
+                  Descripción
+                </label>
                 <textarea
                   name="DescripcionProducto"
                   value={formData.DescripcionProducto}
@@ -130,20 +130,185 @@ const ProductoUpdateModal = ({ isOpen, onClose, producto, onProductoUpdated }) =
                   rows="3"
                 />
               </div>
+            </div>
 
-              <div>
-                <label className="text-sm font-medium block mb-1">Ubicación</label>
-                <input
-                  type="text"
-                  name="UbicacionProducto"
-                  value={formData.UbicacionProducto}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                />
+            {/* Información de Stock y Precios */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-900">
+                Stock y Precios
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Stock Inicial*
+                  </label>
+                  <input
+                    type="number"
+                    name="StockProductoInicial"
+                    value={formData.StockProductoInicial}
+                    onChange={handleInputChange}
+                    min="0"
+                    className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
+                      transition-colors duration-200 ${getInputBorderClass(
+                        formData.StockProductoInicial
+                      )}`}
+                  />
+                  {errors.StockProductoInicial && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.StockProductoInicial}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Precio Unitario*
+                  </label>
+                  <input
+                    type="number"
+                    name="PrecioUnitarioProducto"
+                    value={formData.PrecioUnitarioProducto}
+                    onChange={handleInputChange}
+                    min="0"
+                    step="0.01"
+                    className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
+                      transition-colors duration-200 ${getInputBorderClass(
+                        formData.PrecioUnitarioProducto
+                      )}`}
+                  />
+                  {errors.PrecioUnitarioProducto && (
+                    <p className="text-xs text-red-500 mt-1">
+                      {errors.PrecioUnitarioProducto}
+                    </p>
+                  )}
+                </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Cantidad Vendida
+                  </label>
+                  <input
+                    type="number"
+                    name="CantidadProductoVendido"
+                    value={formData.CantidadProductoVendido}
+                    onChange={handleInputChange}
+                    min="0"
+                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Cantidad Desechada
+                  </label>
+                  <input
+                    type="number"
+                    name="CantidadProductoDesechado"
+                    value={formData.CantidadProductoDesechado}
+                    onChange={handleInputChange}
+                    min="0"
+                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Estado y Ubicación */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-900">
+                Estado y Ubicación
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Estado
+                  </label>
+                  <select
+                    name="EstadoProducto"
+                    value={formData.EstadoProducto}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  >
+                    <option value="">Seleccione un estado</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                    <option value="Agotado">Agotado</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Ubicación
+                  </label>
+                  <input
+                    type="text"
+                    name="UbicacionProducto"
+                    value={formData.UbicacionProducto}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Días de Producto
+                  </label>
+                  <input
+                    type="number"
+                    name="DiasProducto"
+                    value={formData.DiasProducto}
+                    onChange={handleInputChange}
+                    min="0"
+                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Fecha de Producto
+                  </label>
+                  <input
+                    type="date"
+                    name="FechaProducto"
+                    value={formData.FechaProducto}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="ProductoVendido"
+                  checked={formData.ProductoVendido}
+                  onChange={(e) =>
+                    handleInputChange({
+                      target: {
+                        name: "ProductoVendido",
+                        value: e.target.checked,
+                      },
+                    })
+                  }
+                  className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                />
+                <label className="text-sm font-medium">Producto Vendido</label>
+              </div>
+            </div>
+
+            {/* Foto del Producto */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-medium text-gray-900">
+                Foto del Producto
+              </h3>
+
               <div>
-                <label className="text-sm font-medium block mb-1">Foto del Producto</label>
                 <div className="mt-1 flex items-center space-x-4">
                   <input
                     type="file"
@@ -185,7 +350,9 @@ const ProductoUpdateModal = ({ isOpen, onClose, producto, onProductoUpdated }) =
                   )}
                 </div>
                 {errors.FotoProducto && (
-                  <p className="text-xs text-red-500 mt-1">{errors.FotoProducto}</p>
+                  <p className="text-xs text-red-500 mt-1">
+                    {errors.FotoProducto}
+                  </p>
                 )}
               </div>
             </div>

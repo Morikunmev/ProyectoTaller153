@@ -1,8 +1,11 @@
-import React from "react";
-import { X, FileText, XCircle } from "lucide-react";
+import React, { useState } from "react";
+import { X, FileText, XCircle, Trash2 } from "lucide-react";
 import { useProductoCreateModal } from "../hooks/useProductoCreateModal";
-
 const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
+  const [materialSeleccionado, setMaterialSeleccionado] = useState("");
+  const [cantidadMaterial, setCantidadMaterial] = useState("");
+  const [descripcionMaterial, setDescripcionMaterial] = useState("");
+  const [materialesAgregados, setMaterialesAgregados] = useState([]);
   const {
     formData,
     errors,
@@ -11,16 +14,56 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
     isVisible,
     previewUrl,
     categorias,
+    materiales,
     handleClose,
     handleSubmit,
     handleInputChange,
     handleFotoChange,
     handleRemoveFoto,
-  } = useProductoCreateModal({ isOpen, onClose, onSubmit });
+  } = useProductoCreateModal({
+    isOpen,
+    onClose,
+    onSubmit,
+    materialesAgregados, // Añadir esta línea
+  });
+
+  const handleModalClose = () => {
+    setMaterialSeleccionado("");
+    setCantidadMaterial("");
+    setDescripcionMaterial("");
+    setMaterialesAgregados([]);
+    handleClose();
+  };
 
   const getInputBorderClass = (value) => {
     if (value && value.toString().trim() !== "") return "border-green-400";
     return "border-gray-300";
+  };
+  const handleAddMaterial = () => {
+    if (!materialSeleccionado || !cantidadMaterial) return;
+
+    const material = materiales.find(
+      (m) => m.id === parseInt(materialSeleccionado)
+    );
+    if (!material) return;
+
+    setMaterialesAgregados([
+      ...materialesAgregados,
+      {
+        id: material.id,
+        nombre: material.NombreMaterial,
+        cantidad: cantidadMaterial,
+        descripcion: descripcionMaterial,
+      },
+    ]);
+
+    setMaterialSeleccionado("");
+    setCantidadMaterial("");
+    setDescripcionMaterial("");
+  };
+
+  const handleRemoveMaterial = (index) => {
+    setMaterialesAgregados(materialesAgregados.filter((_, i) => i !== index));
   };
 
   if (!isVisible) return null;
@@ -35,7 +78,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
         <div className="p-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Nuevo Producto</h2>
           <button
-            onClick={handleClose}
+            onClick={handleModalClose}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-150"
           >
             <X className="h-5 w-5" />
@@ -116,6 +159,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   </p>
                 )}
               </div>
+
               <div>
                 <label className="text-sm font-medium block mb-1">
                   Categoría
@@ -124,10 +168,10 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   name="Categoria"
                   value={formData.Categoria || ""}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-1.5 border rounded
-      focus:ring-1 focus:ring-blue-500 focus:outline-none
-      transition-colors duration-200
-      ${getInputBorderClass(formData.Categoria)}`}
+                  className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
+                    transition-colors duration-200 ${getInputBorderClass(
+                      formData.Categoria
+                    )}`}
                 >
                   <option value="">Sin categoría</option>
                   {categorias.map((categoria) => (
@@ -168,8 +212,105 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
-            </div>
 
+              <div>
+                <label className="text-sm font-medium block mb-1">
+                  Estado del Producto
+                </label>
+                <input
+                  type="text"
+                  name="EstadoProducto"
+                  value={formData.EstadoProducto}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-lg">
+                <h3 className="text-sm font-medium text-blue-900">
+                  Materiales Utilizados
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-sm font-medium block mb-1">
+                      Material
+                    </label>
+                    <select
+                      value={materialSeleccionado}
+                      onChange={(e) => setMaterialSeleccionado(e.target.value)}
+                      className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    >
+                      <option value="">Seleccionar material</option>
+                      {materiales?.map((material) => (
+                        <option key={material.id} value={material.id}>
+                          {material.NombreMaterial}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">
+                      Cantidad
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={cantidadMaterial}
+                      onChange={(e) => setCantidadMaterial(e.target.value)}
+                      className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Descripción del uso
+                  </label>
+                  <textarea
+                    value={descripcionMaterial}
+                    onChange={(e) => setDescripcionMaterial(e.target.value)}
+                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    rows="2"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddMaterial}
+                  className="w-full px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded font-medium"
+                >
+                  Agregar Material
+                </button>
+
+                {/* Lista de materiales agregados */}
+                <div className="space-y-2">
+                  {materialesAgregados.map((mat, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                    >
+                      <div>
+                        <p className="font-medium">{mat.nombre}</p>
+                        <p className="text-sm text-gray-600">
+                          Cantidad: {mat.cantidad}
+                        </p>
+                        {mat.descripcion && (
+                          <p className="text-sm text-gray-500">
+                            {mat.descripcion}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMaterial(index)}
+                        className="p-1 text-gray-400 hover:text-red-500"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
             <div>
               <label className="text-sm font-medium block mb-1">
                 Foto del Producto
@@ -185,7 +326,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                 <label
                   htmlFor="foto-producto"
                   className="px-3 py-1.5 bg-gray-100 rounded cursor-pointer hover:bg-gray-200 
-                  transition-colors duration-150 text-sm"
+                    transition-colors duration-150 text-sm"
                 >
                   Seleccionar imagen
                 </label>
@@ -200,7 +341,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                       type="button"
                       onClick={handleRemoveFoto}
                       className="absolute -top-1 -right-1 bg-white rounded-full shadow-md 
-                      hover:bg-gray-100 p-0.5 transition-colors duration-150"
+                        hover:bg-gray-100 p-0.5 transition-colors duration-150"
                     >
                       <XCircle className="w-4 h-4 text-gray-500" />
                     </button>
@@ -227,10 +368,10 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
         <div className="flex justify-end space-x-2">
           <button
             type="button"
-            onClick={handleClose}
+            onClick={handleModalClose}
             disabled={isSubmitting}
             className="px-4 py-2 text-sm border rounded font-medium hover:bg-gray-50
-                   transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+    transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancelar
           </button>
@@ -238,7 +379,7 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
             onClick={handleSubmit}
             disabled={isSubmitting}
             className="px-4 py-2 text-sm bg-black text-white rounded font-medium hover:bg-gray-800
-                   transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? "Creando..." : "Crear Producto"}
           </button>

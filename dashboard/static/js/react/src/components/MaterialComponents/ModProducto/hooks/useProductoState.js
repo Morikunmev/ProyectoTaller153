@@ -62,9 +62,7 @@ export const useProductoState = () => {
   const handleDelete = useCallback((producto) => {
     if (!producto) return;
     setProductoToDelete(producto);
-    setTimeout(() => {
-      setDeleteModalOpen(true);
-    }, 0);
+    setDeleteModalOpen(true);
   }, []);
 
   const handleConfirmDelete = async () => {
@@ -134,6 +132,50 @@ export const useProductoState = () => {
     }
   };
 
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setIsSearching(true);
+    setCurrentPage(1);
+    setTimeout(() => setIsSearching(false), 300);
+  };
+
+  const handleViewChange = (isGrid) => {
+    setIsChangingView(true);
+    setTimeout(() => {
+      setIsGridView(isGrid);
+      setIsChangingView(false);
+    }, 300);
+  };
+
+  const handlePreviousPage = () =>
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  const handleNextPage = () => {
+    const totalPages = Math.ceil(filteredProductos.length / itemsPerPage);
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  // Handlers modales
+  const handleUpdateModalOpen = useCallback((producto) => {
+    console.log("Estado antes de actualizar:", { producto });
+    if (!producto) {
+      console.log("No hay producto para editar");
+      return;
+    }
+    setProductoToUpdate(producto);
+    console.log("Abriendo modal con producto:", producto);
+    setUpdateModalOpen(true);
+  }, []);
+
+  const handleUpdateModalClose = useCallback(() => {
+    setUpdateModalOpen(false);
+    setTimeout(() => {
+      setProductoToUpdate(null);
+    }, 300);
+  }, []);
+
   // Manejadores de venta y desecho
   const handleVender = async (productoId, ventaData) => {
     try {
@@ -177,31 +219,27 @@ export const useProductoState = () => {
     }
   };
 
-  // Manejadores UI
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
+  const handleVenderOpen = useCallback((producto) => {
+    if (!producto) return;
+    setProductoToVender(producto);
+    setVenderModalOpen(true);
+  }, []);
 
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    setIsSearching(true);
-    setCurrentPage(1);
-    setTimeout(() => setIsSearching(false), 300);
-  };
+  const handleVenderClose = useCallback(() => {
+    setVenderModalOpen(false);
+    setProductoToVender(null);
+  }, []);
 
-  const handleViewChange = (isGrid) => {
-    setIsChangingView(true);
-    setTimeout(() => {
-      setIsGridView(isGrid);
-      setIsChangingView(false);
-    }, 300);
-  };
+  const handleDesecharOpen = useCallback((producto) => {
+    if (!producto) return;
+    setProductoToDesechar(producto);
+    setDesecharModalOpen(true);
+  }, []);
 
-  const handlePreviousPage = () =>
-    setCurrentPage((prev) => Math.max(prev - 1, 1));
-  const handleNextPage = () => {
-    const totalPages = Math.ceil(filteredProductos.length / itemsPerPage);
-    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-  };
+  const handleDesecharClose = useCallback(() => {
+    setDesecharModalOpen(false);
+    setProductoToDesechar(null);
+  }, []);
 
   // Filtrado y paginación
   const filteredProductos = productos.filter(
@@ -259,29 +297,11 @@ export const useProductoState = () => {
     handleDesechar,
     setDeleteModalOpen,
     setProductoToDelete,
-    handleUpdateModalOpen: (producto) => {
-      setProductoToUpdate(producto);
-      setUpdateModalOpen(true);
-    },
-    handleUpdateModalClose: () => {
-      setUpdateModalOpen(false);
-      setProductoToUpdate(null);
-    },
-    handleVenderOpen: (producto) => {
-      setProductoToVender(producto);
-      setVenderModalOpen(true);
-    },
-    handleVenderClose: () => {
-      setVenderModalOpen(false);
-      setProductoToVender(null);
-    },
-    handleDesecharOpen: (producto) => {
-      setProductoToDesechar(producto);
-      setDesecharModalOpen(true);
-    },
-    handleDesecharClose: () => {
-      setDesecharModalOpen(false);
-      setProductoToDesechar(null);
-    },
+    handleUpdateModalOpen,
+    handleUpdateModalClose,
+    handleVenderOpen,
+    handleVenderClose,
+    handleDesecharOpen,
+    handleDesecharClose,
   };
 };
