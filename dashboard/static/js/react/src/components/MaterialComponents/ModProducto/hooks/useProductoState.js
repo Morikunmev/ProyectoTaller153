@@ -27,6 +27,8 @@ export const useProductoState = () => {
   const [productoToDesechar, setProductoToDesechar] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const itemsPerPage = 10;
 
   // Fetch productos
@@ -39,10 +41,12 @@ export const useProductoState = () => {
       const data = await response.json();
       if (data.success) {
         setProductos(data.productos);
+        console.log("Productos actualizados:", data.productos); // Para debug
       } else {
         throw new Error(data.message || "Error al cargar los productos");
       }
     } catch (error) {
+      console.error("Error en fetchProductos:", error); // Para debug
       setError("No se pudieron cargar los productos");
     } finally {
       setLoading(false);
@@ -177,48 +181,74 @@ export const useProductoState = () => {
   }, []);
 
   // Manejadores de venta y desecho
-  const handleVender = async (productoId, ventaData) => {
+  const handleVender = async (productoId, data) => {
+    if (isSubmitting) return; // Prevenir múltiples envíos
+
     try {
-      const response = await fetch(`/api/producto/${productoId}/vender/`, {
+      setIsSubmitting(true);
+      const response = await fetch(`/api/producto/${productoId}/venta/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
             .value,
         },
-        body: JSON.stringify(ventaData),
+        body: JSON.stringify(data),
       });
 
-      if (!response.ok) throw new Error("Error al vender producto");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.errors || "Error al vender producto");
+      }
+
       await fetchProductos();
       setVenderModalOpen(false);
       setProductoToVender(null);
     } catch (error) {
+      console.error("Error completo:", error);
       setError("Error al vender: " + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
+  const handleDesechar = async (productoId, data) => {
+    if (isSubmitting) return;
 
-  const handleDesechar = async (productoId, cantidad) => {
     try {
-      const response = await fetch(`/api/producto/${productoId}/desechar/`, {
+      setIsSubmitting(true);
+      console.log("Datos a enviar:", data); // Para depuración
+
+      const response = await fetch(`/api/producto/${productoId}/perdida/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
             .value,
         },
-        body: JSON.stringify({ cantidad }),
+        body: JSON.stringify({
+          nombre_perdida: data.NombrePerdida,
+          cantidad: parseInt(data.CantidadPerdida),
+          valor_unitario: parseFloat(data.ValorUnitarioPerdida),
+          motivo: data.MotivoPerdida,
+          descripcion: data.DescripcionPerdida,
+        }),
       });
 
-      if (!response.ok) throw new Error("Error al desechar producto");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.errors || "Error al registrar pérdida");
+      }
+
       await fetchProductos();
       setDesecharModalOpen(false);
       setProductoToDesechar(null);
     } catch (error) {
-      setError("Error al desechar: " + error.message);
+      console.error("Error completo:", error);
+      setError("Error al registrar pérdida: " + error.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
-
   const handleVenderOpen = useCallback((producto) => {
     if (!producto) return;
     setProductoToVender(producto);
@@ -292,6 +322,7 @@ export const useProductoState = () => {
     handlePreviousPage,
     handleNextPage,
     handleDelete,
+    isSubmitting,
     handleConfirmDelete,
     handleVender,
     handleDesechar,

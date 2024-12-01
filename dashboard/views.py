@@ -34,10 +34,11 @@ from django.views import View
 # Excel imports
 import xlsxwriter
 from django.http import JsonResponse
+from decimal import Decimal, InvalidOperation
 
 
 # Local imports
-from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto, ProductoMaterial, Categoria, Cliente, Ventas
+from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto,ProductoMaterial, Categoria, Cliente, Ventas, Perdidas
 from login.models import Usuario
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -4528,28 +4529,54 @@ def exportar_productos_excel(request):
     return response
 
 @login_required(login_url='login')
-def vender_producto(request, producto_id):
+@ensure_csrf_cookie
+def registrar_venta(request, producto_id):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             producto = get_object_or_404(Producto, id=producto_id)
             
-            # Crear la venta
+            # Validar que hay suficiente stock
+            cantidad = int(data.get('CantidadVenta'))
+            if not cantidad or cantidad > producto.StockProductoActual:
+                return JsonResponse({
+                    'success': False,
+                    'errors': f'Stock insuficiente. Disponible: {producto.StockProductoActual}'
+                }, status=400)
+
+            # Convertir precio a decimal de manera segura
+            try:
+                precio_venta = Decimal(str(data.get('PrecioVenta')))
+            except (TypeError, InvalidOperation):
+                return JsonResponse({
+                    'success': False,
+                    'errors': 'Precio inválido'
+                }, status=400)
+
+            # Actualizar el stock del producto primero
+            producto.vender_cantidad(cantidad)
+
+            # Luego crear la venta
             venta = Ventas.objects.create(
-                NombreVenta=data['NombreVenta'],
-                CantidadVenta=data['CantidadVenta'],
-                PrecioVenta=data['PrecioVenta'],
+                NombreVenta=data.get('NombreVenta'),
+                CantidadVenta=cantidad,
+                PrecioVenta=precio_venta,
+                PrecioTotalVenta=precio_venta * cantidad,
                 Producto=producto,
-                Cliente=Cliente.objects.get(id=data['Cliente']) if data.get('Cliente') else None,
                 Usuario=request.user
             )
             
-            # Actualizar el stock
-            producto.vender_cantidad(data['CantidadVenta'])
-            
             return JsonResponse({
                 'success': True,
-                'message': 'Venta realizada con éxito'
+                'message': 'Venta registrada exitosamente',
+                'data': {
+                    'id': venta.id,
+                    'nombre': venta.NombreVenta,
+                    'cantidad': venta.CantidadVenta,
+                    'precio_total': float(venta.PrecioTotalVenta),
+                    'producto': producto.NombreProducto,
+                    'stock_restante': producto.StockProductoActual
+                }
             })
             
         except ValidationError as e:
@@ -4558,6 +4585,7 @@ def vender_producto(request, producto_id):
                 'errors': str(e)
             }, status=400)
         except Exception as e:
+            logger.error(f"Error al registrar venta: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'errors': str(e)
@@ -4569,17 +4597,48 @@ def vender_producto(request, producto_id):
     }, status=405)
 
 @login_required(login_url='login')
-def desechar_producto(request, producto_id):
+@ensure_csrf_cookie
+def registrar_perdida(request, producto_id):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             producto = get_object_or_404(Producto, id=producto_id)
             
-            producto.desechar_cantidad(data['cantidad'])
+            # Validar que hay suficiente stock
+            cantidad = int(data.get('cantidad', 0))
+            if cantidad <= 0:
+                return JsonResponse({
+                    'success': False,
+                    'errors': 'La cantidad debe ser mayor a 0'
+                }, status=400)
+
+            # Actualizar el producto primero
+            producto.desechar_cantidad(cantidad)
+
+            # Luego crear el registro de pérdida
+            perdida = Perdidas.objects.create(
+                NombrePerdida=data.get('nombre_perdida'),
+                CantidadPerdida=cantidad,
+                ValorUnitarioPerdida=data.get('valor_unitario'),
+                ValorTotalPerdida=float(data.get('valor_unitario', 0)) * float(cantidad),
+                MotivoPerdida=data.get('motivo'),
+                DescripcionPerdida=data.get('descripcion', ''),
+                Producto=producto,
+                Usuario=request.user
+            )
             
             return JsonResponse({
                 'success': True,
-                'message': 'Producto desechado con éxito'
+                'message': 'Pérdida registrada exitosamente',
+                'data': {
+                    'id': perdida.id,
+                    'nombre': perdida.NombrePerdida,
+                    'cantidad': perdida.CantidadPerdida,
+                    'valor_total': float(perdida.ValorTotalPerdida),
+                    'motivo': perdida.get_MotivoPerdida_display(),
+                    'producto': producto.NombreProducto,
+                    'stock_restante': producto.StockProductoActual
+                }
             })
             
         except ValidationError as e:
@@ -4588,6 +4647,7 @@ def desechar_producto(request, producto_id):
                 'errors': str(e)
             }, status=400)
         except Exception as e:
+            logger.error(f"Error al registrar pérdida: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'errors': str(e)
@@ -4597,6 +4657,9 @@ def desechar_producto(request, producto_id):
         'success': False,
         'errors': 'Método no permitido'
     }, status=405)
+
+
+
 @login_required(login_url='login')
 def listar_categorias(request):
     try:

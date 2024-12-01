@@ -352,12 +352,11 @@ class Categoria(models.Model):
 class Producto(models.Model):
     # Campos obligatorios
     NombreProducto = models.CharField(max_length=100, null=False, blank=False)
-    StockProductoInicial = models.PositiveIntegerField(null=False, blank=False,help_text="Cantidad inicial del producto")
-    StockProductoActual = models.PositiveIntegerField(editable=False,help_text="Cantidad actual disponible (se actualiza automáticamente)")
+    StockProductoInicial = models.PositiveIntegerField(null=False, blank=False, help_text="Cantidad inicial del producto")
+    StockProductoActual = models.PositiveIntegerField(editable=False, help_text="Cantidad actual disponible (se actualiza automáticamente)")
     PrecioUnitarioProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     PrecioTotalProducto = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
-    Categoria = models.ForeignKey('Categoria', on_delete=models.CASCADE,null=True,blank=True,
-related_name='productos')
+    Categoria = models.ForeignKey('Categoria', on_delete=models.CASCADE, null=True, blank=True, related_name='productos')
     Materiales = models.ManyToManyField(
         'Material',
         through='ProductoMaterial',
@@ -384,47 +383,83 @@ related_name='productos')
         ordering = ['-FechaProducto']
 
     def save(self, *args, **kwargs):
+        # Inicialización para nuevo producto
         if not self.pk:
             self.StockProductoActual = self.StockProductoInicial
             self.FechaProducto = date.today()
             self.PrecioTotalProducto = self.StockProductoInicial * self.PrecioUnitarioProducto
-        else:
-            self.StockProductoActual = max(
-                0,
-                self.StockProductoInicial - (self.CantidadProductoVendido + self.CantidadProductoDesechado)
-            )
-            self.PrecioTotalProducto = self.StockProductoActual * self.PrecioUnitarioProducto
-
-        self.DiasProducto = (date.today() - self.FechaProducto).days
-        self.ProductoAgotado = self.StockProductoActual == 0
         
+        # Actualizar días del producto
+        self.DiasProducto = (date.today() - self.FechaProducto).days
+        
+        # Guardar el producto
         super(Producto, self).save(*args, **kwargs)
         
+        # Actualizar el stock de la categoría si existe
         if self.Categoria:
-            total_stock = Producto.objects.filter(
-                Categoria=self.Categoria
-            ).aggregate(
-                total=models.Sum('StockProductoActual')
-            )['total'] or 0
-            
-            self.Categoria.StockCategoria = total_stock
-            self.Categoria.save()
-
-    def desechar_cantidad(self, cantidad):
-        """Método para desechar una cantidad de producto"""
-        if cantidad > self.StockProductoActual:
-            raise ValidationError(f"No hay suficiente stock. Disponible: {self.StockProductoActual}")
-        
-        self.CantidadProductoDesechado += cantidad
-        self.save()
+            try:
+                total_stock = Producto.objects.filter(
+                    Categoria=self.Categoria
+                ).aggregate(
+                    total=models.Sum('StockProductoActual')
+                ).get('total', 0) or 0
+                
+                self.Categoria.StockCategoria = total_stock
+                self.Categoria.save()
+            except Exception as e:
+                print(f"Error al actualizar stock de categoría: {e}")
 
     def vender_cantidad(self, cantidad):
         """Método para vender una cantidad de producto"""
+        cantidad = int(cantidad)  # Asegurarnos que es un entero
+        
+        # Refrescar el objeto desde la base de datos
+        self.refresh_from_db()
+        
+        # Verificar contra StockProductoActual
         if cantidad > self.StockProductoActual:
             raise ValidationError(f"No hay suficiente stock. Disponible: {self.StockProductoActual}")
         
-        self.CantidadProductoVendido += cantidad
-        self.save()
+        # Actualizar la cantidad vendida
+        nuevo_vendido = self.CantidadProductoVendido + cantidad
+        nuevo_stock = self.StockProductoInicial - (nuevo_vendido + self.CantidadProductoDesechado)
+        
+        # Actualizamos usando update para evitar condiciones de carrera
+        Producto.objects.filter(pk=self.pk).update(
+            CantidadProductoVendido=nuevo_vendido,
+            StockProductoActual=nuevo_stock,
+            PrecioTotalProducto=nuevo_stock * self.PrecioUnitarioProducto,
+            ProductoAgotado=nuevo_stock == 0
+        )
+        
+        # Refrescar el objeto para reflejar los cambios
+        self.refresh_from_db()
+
+    def desechar_cantidad(self, cantidad):
+        """Método para desechar una cantidad de producto"""
+        cantidad = int(cantidad)  # Asegurarnos que es un entero
+        
+        # Refrescar el objeto desde la base de datos
+        self.refresh_from_db()
+        
+        # Verificar contra StockProductoActual
+        if cantidad > self.StockProductoActual:
+            raise ValidationError(f"No hay suficiente stock. Disponible: {self.StockProductoActual}")
+        
+        # Actualizar la cantidad desechada
+        nuevo_desechado = self.CantidadProductoDesechado + cantidad
+        nuevo_stock = self.StockProductoInicial - (self.CantidadProductoVendido + nuevo_desechado)
+        
+        # Actualizamos usando update para evitar condiciones de carrera
+        Producto.objects.filter(pk=self.pk).update(
+            CantidadProductoDesechado=nuevo_desechado,
+            StockProductoActual=nuevo_stock,
+            PrecioTotalProducto=nuevo_stock * self.PrecioUnitarioProducto,
+            ProductoAgotado=nuevo_stock == 0
+        )
+        
+        # Refrescar el objeto para reflejar los cambios
+        self.refresh_from_db()
 
     def __str__(self):
         return f"{self.NombreProducto} - Stock: {self.StockProductoActual}/{self.StockProductoInicial}"
@@ -435,8 +470,6 @@ related_name='productos')
         if self.StockProductoInicial == 0:
             return 0
         return (self.StockProductoActual / self.StockProductoInicial) * 100
-
-
 class ProductoMaterial(models.Model):
     # Relaciones con Producto y Material
     Producto = models.ForeignKey('Producto',on_delete=models.CASCADE,related_name='materiales_usados',null=False,blank=False,help_text="Producto en el que se usó el material")
@@ -515,8 +548,119 @@ class ProductoMaterial(models.Model):
             'stock_actual': self.Material.StockMaterial,
             'nombre_material': self.Material.NombreMaterial
         }
-
+        
+class Perdidas(models.Model):
+    # Campos obligatorios
+    NombrePerdida = models.CharField(max_length=100, null=False, blank=False)
+    CantidadPerdida = models.PositiveIntegerField(null=False, blank=False)
+    ValorUnitarioPerdida = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
+    ValorTotalPerdida = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    FechaPerdida = models.DateField(auto_now_add=True)
     
+    MOTIVO_CHOICES = [
+        ('caducidad', 'Caducidad'),
+        ('daño', 'Daño'),
+        ('robo', 'Robo'),
+        ('error_inventario', 'Error de Inventario'),
+        ('otros', 'Otros')
+    ]
+    MotivoPerdida = models.CharField(
+        max_length=20, 
+        choices=MOTIVO_CHOICES, 
+        default='otros'
+    )
+    
+    # Relaciones
+    Producto = models.ForeignKey('Producto', on_delete=models.CASCADE, related_name='perdidas')
+    
+    # Campos opcionales
+    DescripcionPerdida = models.TextField(null=True, blank=True)
+    Usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        help_text="Usuario que registró la pérdida"
+    )
+    FechaRegistro = models.DateTimeField(auto_now_add=True)
+    UltimaModificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Pérdida"
+        verbose_name_plural = "Pérdidas"
+        ordering = ['-FechaPerdida']
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.ValorTotalPerdida = self.CantidadPerdida * self.ValorUnitarioPerdida
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        if self.pk:
+            # Obtener una copia fresca del producto
+            producto = Producto.objects.get(pk=self.Producto.pk)
+            # Actualizar la cantidad desechada
+            producto.CantidadProductoDesechado -= self.CantidadPerdida
+            # Recalcular el stock actual
+            producto.StockProductoActual = producto.StockProductoInicial - (producto.CantidadProductoVendido + producto.CantidadProductoDesechado)
+            producto.save()
+        super().delete(*args, **kwargs)
+
+    def __str__(self):
+        return f"Pérdida de {self.Producto.NombreProducto} - {self.CantidadPerdida} unidades"
+
+    @property
+    def impacto_financiero(self):
+        """Calcula el impacto financiero de la pérdida"""
+        return {
+            'valor_total': self.ValorTotalPerdida,
+            'porcentaje_stock': (self.CantidadPerdida / self.Producto.StockProductoInicial) * 100 if self.Producto.StockProductoInicial > 0 else 0,
+            'motivo': self.get_MotivoPerdida_display()
+        }
+    
+class Ventas(models.Model):
+    # Campos obligatorios
+    NombreVenta = models.CharField(max_length=100, null=False, blank=False)
+    CantidadVenta = models.PositiveIntegerField(null=False, blank=False)
+    PrecioVenta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
+    PrecioTotalVenta = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    FechaVenta = models.DateField(auto_now_add=True)
+    # Relaciones
+    Producto = models.ForeignKey(
+        'Producto', 
+        on_delete=models.CASCADE,  # Cambiar de PROTECT a CASCADE
+        related_name='ventas'
+    )
+    # Campo de auditoría
+    Usuario = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,help_text="Usuario que registró la venta"
+    )
+    FechaRegistro = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        verbose_name = "Venta"
+        verbose_name_plural = "Ventas"
+        ordering = ['-FechaVenta']
+
+    def clean(self):
+        if self.CantidadVenta > self.Producto.StockProductoActual:
+            raise ValidationError(
+                f"No hay suficiente stock. Disponible: {self.Producto.StockProductoActual}"
+            )
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.PrecioTotalVenta = self.CantidadVenta * self.PrecioVenta
+        super().save(*args, **kwargs)
+
+        def delete(self, *args, **kwargs):
+            if self.pk:
+                self.Producto.CantidadProductoVendido -= self.CantidadVenta
+                self.Producto.save()
+            super().delete(*args, **kwargs)
+
+    def __str__(self):
+        cliente = self.cliente_set.first()
+        cliente_str = str(cliente) if cliente else "Cliente no especificado"
+        return f"Venta {self.id} - {self.Producto.NombreProducto} a {cliente_str}"
+
 class Cliente(models.Model):
     TIPO_CHOICES = [
         ('particular', 'Particular'),
@@ -525,7 +669,7 @@ class Cliente(models.Model):
     # Campos obligatorios
     NombreCliente = models.CharField(max_length=100, null=False, blank=False)
     ApellidoCliente = models.CharField(max_length=100, null=False, blank=False)
-    RutCliente = models.CharField(max_length=12, unique=True,null=False, blank=False,
+    RutCliente = models.CharField(max_length=12, unique=True, null=False, blank=False,
         validators=[
             RegexValidator(
                 regex=r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$',
@@ -533,12 +677,23 @@ class Cliente(models.Model):
             )
         ]
     )
-    TipoCliente = models.CharField(max_length=20,choices=TIPO_CHOICES,default='particular')
+    TipoCliente = models.CharField(max_length=20, choices=TIPO_CHOICES, default='particular')
+    
+    # Nueva relación con Ventas
+    Venta = models.ForeignKey(
+        'Ventas',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Venta asociada al cliente"
+    )
+    
     # Campos opcionales
     NombreCompañia = models.CharField(max_length=100, null=True, blank=True)
     ComentarioCliente = models.TextField(null=True, blank=True)
     TelefonoCliente = models.CharField(max_length=15, null=True, blank=True)
     FechaCliente = models.DateField(auto_now_add=True)
+    
     # Campos de auditoría
     Usuario = models.ForeignKey(
         User, 
@@ -559,87 +714,3 @@ class Cliente(models.Model):
         if self.TipoCliente == 'empresa':
             return f"{self.NombreCompañia} - {self.RutCliente}"
         return f"{self.NombreCliente} {self.ApellidoCliente} - {self.RutCliente}"
-
-class Ventas(models.Model):
-    # Campos obligatorios
-    NombreVenta = models.CharField(max_length=100, null=False, blank=False)
-    CantidadVenta = models.PositiveIntegerField(null=False, blank=False)
-    PrecioVenta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
-    PrecioTotalVenta = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
-    FechaVenta = models.DateField(auto_now_add=True)
-    
-    # Relaciones
-    Producto = models.ForeignKey(
-        'Producto', 
-        on_delete=models.PROTECT,
-        related_name='ventas'
-    )
-    Cliente = models.ForeignKey(
-        'Cliente', 
-        on_delete=models.SET_DEFAULT,
-        related_name='compras',
-        null=True, 
-        blank=True,
-        default=None,
-        help_text="Cliente que realizó la compra"
-    )
-    
-    # Campo de auditoría
-    Usuario = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL,
-        null=True,
-        help_text="Usuario que registró la venta"
-    )
-    FechaRegistro = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Venta"
-        verbose_name_plural = "Ventas"
-        ordering = ['-FechaVenta']
-
-    def clean(self):
-        # Verificar stock disponible usando el StockProductoActual
-        if self.CantidadVenta > self.Producto.StockProductoActual:
-            raise ValidationError(
-                f"No hay suficiente stock. Disponible: {self.Producto.StockProductoActual}"
-            )
-
-    def save(self, *args, **kwargs):
-        if not self.pk:  # Solo para nuevas ventas
-            # Validar stock disponible
-            self.clean()
-            
-            # Calcular precio total
-            self.PrecioTotalVenta = self.CantidadVenta * self.PrecioVenta
-            
-            # Guardar la venta
-            super().save(*args, **kwargs)
-            
-            # Actualizar el stock del producto usando el método vender_cantidad
-            try:
-                self.Producto.vender_cantidad(self.CantidadVenta)
-            except ValidationError as e:
-                # Si hay un error al actualizar el stock, revertir la venta
-                self.delete()
-                raise e
-        else:
-            # Para actualizaciones de ventas existentes, solo guardar los cambios
-            # sin modificar el stock
-            super().save(*args, **kwargs)
-
-    def delete(self, *args, **kwargs):
-        # Al eliminar una venta, restaurar el stock vendido
-        if self.pk:
-            self.Producto.CantidadProductoVendido -= self.CantidadVenta
-            self.Producto.save()
-        super().delete(*args, **kwargs)
-
-    def __str__(self):
-        cliente = "Cliente no especificado" if self.Cliente is None else str(self.Cliente)
-        return f"Venta {self.id} - {self.Producto.NombreProducto} a {cliente}"
-
-    @property
-    def nombre_cliente(self):
-        """Retorna el nombre del cliente o 'Cliente no especificado'"""
-        return str(self.Cliente) if self.Cliente else "Cliente no especificado"

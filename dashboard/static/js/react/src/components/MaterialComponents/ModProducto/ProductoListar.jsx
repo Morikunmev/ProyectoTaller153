@@ -16,9 +16,9 @@ import { useProductoState } from "./hooks/useProductoState";
 import ProductoDeleteModal from "./modals/ProductoDeleteModal";
 import ProductoUpdateModal from "./modals/ProductoUpdateModal";
 import ProductoVenderModal from "./modals/ProductoVenderModal";
-import ProductoDesecharModal from "./modals/ProductoDesecharModal";
-import ProductoGrid from "./layout/ProductoGrid";
+import ProductoPerdidaModal from "./modals/ProductoPerdidaModal"; // Cambia esta líneaimport ProductoGrid from "./layout/ProductoGrid";
 import { exportToExcel } from "./utils/ProductoExport";
+import ProductoGrid from "./layout/ProductoGrid";
 import ProductoDetalle from "./ProductoDetalle";
 
 const ProductoListar = () => {
@@ -228,16 +228,40 @@ const ProductoListar = () => {
     <div>
       <div
         className={`transition-all duration-300 ease-in-out mt-16
-    ${isModalOpen || updateModalOpen || detalleModalOpen ? "pr-[448px]" : ""}`}
+    ${
+      isModalOpen ||
+      updateModalOpen ||
+      detalleModalOpen ||
+      desecharModalOpen ||
+      venderModalOpen
+        ? "pr-[448px]"
+        : ""
+    }`}
       >
         <div className="max-w-7xl mx-auto p-6">
           <div className="flex items-center gap-4 mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
               Módulo Producto
             </h1>
-            <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-              {filteredProductos.length} Productos
-            </span>
+            <div className="flex gap-2">
+              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                {filteredProductos.length} Total
+              </span>
+              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                {
+                  filteredProductos.filter((p) => p.StockProductoActual > 0)
+                    .length
+                }{" "}
+                Con Stock
+              </span>
+              <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
+                {
+                  filteredProductos.filter((p) => p.StockProductoActual === 0)
+                    .length
+                }{" "}
+                Sin Stock
+              </span>
+            </div>
           </div>
 
           <div className="flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4">
@@ -411,10 +435,10 @@ const ProductoListar = () => {
         onVender={handleVender}
         producto={productoToVender}
       />
-      <ProductoDesecharModal
+      <ProductoPerdidaModal
         isOpen={desecharModalOpen}
         onClose={handleDesecharClose}
-        onDesechar={handleDesechar}
+        onSubmit={handleDesechar} // Nota: cambiamos onDesechar por onSubmit para mantener consistencia
         producto={productoToDesechar}
       />
       <ProductoDetalle

@@ -1,33 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
-const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
+const ProductoPerdidaModal = ({ isOpen, onClose, onSubmit, producto }) => {
   const [formData, setFormData] = useState({
-    NombreVenta: "",
-    CantidadVenta: 1,
-    PrecioVenta: "",
-    Cliente: "",
+    NombrePerdida: "",
+    CantidadPerdida: "",
+    ValorUnitarioPerdida: "",
+    MotivoPerdida: "otros",
+    DescripcionPerdida: "",
   });
 
+  const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [errors, setErrors] = useState({});
+
+  // Inicializar valor unitario con el precio del producto
+  useEffect(() => {
+    if (producto && isOpen) {
+      setFormData((prev) => ({
+        ...prev,
+        ValorUnitarioPerdida: producto.PrecioUnitarioProducto,
+      }));
+    }
+  }, [producto, isOpen]);
+
+  // Calcular valor total
+  const valorTotal =
+    formData.CantidadPerdida && formData.ValorUnitarioPerdida
+      ? parseFloat(formData.CantidadPerdida) *
+        parseFloat(formData.ValorUnitarioPerdida)
+      : 0;
 
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
       setTimeout(() => setIsAnimating(true), 10);
-      // Inicializar el precio de venta con el precio del producto
-      setFormData((prev) => ({
-        ...prev,
-        PrecioVenta: producto?.PrecioUnitarioProducto || 0,
-      }));
     } else {
       setIsAnimating(false);
       setTimeout(() => setIsVisible(false), 300);
     }
-  }, [isOpen, producto]);
+  }, [isOpen]);
 
   const handleClose = () => {
     setIsAnimating(false);
@@ -35,10 +48,11 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
       setIsVisible(false);
       onClose();
       setFormData({
-        NombreVenta: "",
-        CantidadVenta: 1,
-        PrecioVenta: producto?.PrecioUnitarioProducto || 0,
-        Cliente: "",
+        NombrePerdida: "",
+        CantidadPerdida: "",
+        ValorUnitarioPerdida: producto?.PrecioUnitarioProducto || "",
+        MotivoPerdida: "otros",
+        DescripcionPerdida: "",
       });
       setErrors({});
     }, 300);
@@ -60,22 +74,22 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.NombreVenta) newErrors.NombreVenta = "El nombre es requerido";
-    if (!formData.CantidadVenta) {
-      newErrors.CantidadVenta = "La cantidad es requerida";
+    if (!formData.NombrePerdida)
+      newErrors.NombrePerdida = "El nombre es requerido";
+    if (!formData.CantidadPerdida) {
+      newErrors.CantidadPerdida = "La cantidad es requerida";
     } else if (
-      parseInt(formData.CantidadVenta) > producto?.StockProductoActual
+      parseInt(formData.CantidadPerdida) > producto?.StockProductoActual
     ) {
-      newErrors.CantidadVenta = `La cantidad no puede ser mayor al stock actual (${producto?.StockProductoActual})`;
+      newErrors.CantidadPerdida = `La cantidad no puede ser mayor al stock actual (${producto?.StockProductoActual})`;
     }
-    if (!formData.PrecioVenta) newErrors.PrecioVenta = "El precio es requerido";
+    if (!formData.ValorUnitarioPerdida)
+      newErrors.ValorUnitarioPerdida = "El valor unitario es requerido";
     return newErrors;
   };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (isSubmitting) return; // Prevenir múltiples envíos
+    if (isSubmitting) return;
 
     const newErrors = validateForm();
     if (Object.keys(newErrors).length > 0) {
@@ -85,25 +99,17 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
 
     setIsSubmitting(true);
     try {
-      // Enviar solo los datos necesarios
-      const ventaData = {
-        NombreVenta: formData.NombreVenta,
-        CantidadVenta: parseInt(formData.CantidadVenta),
-        PrecioVenta: parseFloat(formData.PrecioVenta),
-      };
-
-      await onVender(producto.id, ventaData);
+      await onSubmit(producto.id, formData);
       handleClose();
     } catch (error) {
-      console.error("Error en venta:", error);
       setErrors({
-        general: "Error al registrar la venta. Por favor, intente nuevamente.",
+        general:
+          "Error al registrar la pérdida. Por favor, intente nuevamente.",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-
   const getInputBorderClass = (value) => {
     if (value && value.toString().trim() !== "") return "border-green-400";
     return "border-gray-300";
@@ -120,7 +126,7 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
       {/* Header */}
       <div className="flex-none border-b">
         <div className="p-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Registrar Venta</h2>
+          <h2 className="text-lg font-semibold">Registrar Pérdida</h2>
           <button
             onClick={handleClose}
             className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-150"
@@ -136,21 +142,21 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-sm font-medium block mb-1">
-                Nombre de la Venta*
+                Nombre de la Pérdida*
               </label>
               <input
                 type="text"
-                name="NombreVenta"
-                value={formData.NombreVenta}
+                name="NombrePerdida"
+                value={formData.NombrePerdida}
                 onChange={handleInputChange}
                 className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none 
                   transition-colors duration-200 ${getInputBorderClass(
-                    formData.NombreVenta
+                    formData.NombrePerdida
                   )}`}
               />
-              {errors.NombreVenta && (
+              {errors.NombrePerdida && (
                 <p className="text-xs text-red-500 mt-1">
-                  {errors.NombreVenta}
+                  {errors.NombrePerdida}
                 </p>
               )}
             </div>
@@ -161,72 +167,79 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
               </label>
               <input
                 type="number"
-                name="CantidadVenta"
-                value={formData.CantidadVenta}
+                name="CantidadPerdida"
+                value={formData.CantidadPerdida}
                 onChange={handleInputChange}
                 min="1"
                 max={producto?.StockProductoActual}
                 className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none 
                   transition-colors duration-200 ${getInputBorderClass(
-                    formData.CantidadVenta
+                    formData.CantidadPerdida
                   )}`}
               />
-              {errors.CantidadVenta && (
+              {errors.CantidadPerdida && (
                 <p className="text-xs text-red-500 mt-1">
-                  {errors.CantidadVenta}
+                  {errors.CantidadPerdida}
                 </p>
               )}
             </div>
 
             <div>
               <label className="text-sm font-medium block mb-1">
-                Precio Unitario*
+                Valor Unitario*
               </label>
               <input
                 type="number"
-                name="PrecioVenta"
-                value={formData.PrecioVenta}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-                className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none 
-                  transition-colors duration-200 ${getInputBorderClass(
-                    formData.PrecioVenta
-                  )}`}
+                name="ValorUnitarioPerdida"
+                value={formData.ValorUnitarioPerdida}
+                readOnly
+                className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none bg-gray-100"
               />
-              {errors.PrecioVenta && (
-                <p className="text-xs text-red-500 mt-1">
-                  {errors.PrecioVenta}
-                </p>
-              )}
             </div>
 
-            {/* Mostrar Total Calculado */}
+            {/* Mostrar valor total calculado */}
             <div>
               <label className="text-sm font-medium block mb-1">
                 Valor Total
               </label>
               <input
                 type="text"
-                value={`$${(
-                  formData.CantidadVenta * formData.PrecioVenta
-                ).toFixed(2)}`}
+                value={`$${valorTotal.toLocaleString()}`}
                 readOnly
                 className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none bg-gray-100"
               />
             </div>
 
             <div>
-              <label className="text-sm font-medium block mb-1">Cliente</label>
+              <label className="text-sm font-medium block mb-1">
+                Motivo de la Pérdida*
+              </label>
               <select
-                name="Cliente"
-                value={formData.Cliente}
+                name="MotivoPerdida"
+                value={formData.MotivoPerdida}
                 onChange={handleInputChange}
                 className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
               >
-                <option value="">Seleccionar cliente</option>
-                {/* Opciones de clientes */}
+                <option value="caducidad">Caducidad</option>
+                <option value="daño">Daño</option>
+                <option value="robo">Robo</option>
+                <option value="error_inventario">Error de Inventario</option>
+                <option value="otros">Otros</option>
               </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium block mb-1">
+                Descripción
+              </label>
+              <textarea
+                name="DescripcionPerdida"
+                value={formData.DescripcionPerdida}
+                onChange={handleInputChange}
+                className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                rows="3"
+                placeholder="Describe los detalles de la pérdida..."
+              />
             </div>
 
             {errors.general && (
@@ -253,10 +266,10 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm bg-green-600 text-white rounded font-medium hover:bg-green-700
+            className="px-4 py-2 text-sm bg-red-600 text-white rounded font-medium hover:bg-red-700
                      transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? "Registrando..." : "Registrar Venta"}
+            {isSubmitting ? "Registrando..." : "Registrar Pérdida"}
           </button>
         </div>
       </div>
@@ -264,4 +277,4 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
   );
 };
 
-export default ProductoVenderModal;
+export default ProductoPerdidaModal;
