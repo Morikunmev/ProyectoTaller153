@@ -172,19 +172,18 @@ const ProductoCreateModal = ({ isOpen, onClose, onSubmit }) => {
                   </p>
                 )}
               </div>
-
               <div>
                 <label className="text-sm font-medium block mb-1">
-                  Categoría
+                  Categoría*
                 </label>
                 <select
                   name="Categoria"
-                  value={formData.Categoria || ""}
+                  value={formData.Categoria}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200 ${getInputBorderClass(
-                      formData.Categoria
-                    )}`}
+      transition-colors duration-200 ${getInputBorderClass(
+        formData.Categoria
+      )}`}
                 >
                   <option value="">Sin categoría</option>
                   {categorias.map((categoria) => (

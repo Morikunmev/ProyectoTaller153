@@ -3913,8 +3913,7 @@ def actualizar_producto(request, producto_id):
         campos_requeridos = {
             'NombreProducto': 'Nombre del producto',
             'StockProductoInicial': 'Stock inicial',
-            'PrecioUnitarioProducto': 'Precio unitario',
-            'Categoria': 'Categoría'
+            'PrecioUnitarioProducto': 'Precio unitario'
         }
         
         errores = {campo: f'El campo {nombre} es requerido' 
@@ -3924,45 +3923,67 @@ def actualizar_producto(request, producto_id):
         if errores:
             return JsonResponse({'success': False, 'errors': errores}, status=400)
 
-        # Validación de campos numéricos
+        # Validación y conversión de campos numéricos
         try:
-            stock_inicial = int(data.get('StockProductoInicial'))
-            if stock_inicial < 0:
-                errores['StockProductoInicial'] = 'El stock inicial no puede ser negativo'
+            nuevo_stock_inicial = int(data.get('StockProductoInicial'))
+            if nuevo_stock_inicial < 0:
+                raise ValueError('El stock inicial no puede ser negativo')
+            
+            # Calcular la proporción del stock actual respecto al inicial
+            if producto.StockProductoInicial > 0:
+                proporcion = producto.StockProductoActual / producto.StockProductoInicial
+                nuevo_stock_actual = int(round(nuevo_stock_inicial * proporcion))
+            else:
+                nuevo_stock_actual = nuevo_stock_inicial
+
         except ValueError:
-            errores['StockProductoInicial'] = 'El stock inicial debe ser un número entero no negativo'
+            return JsonResponse({
+                'success': False,
+                'errors': {'StockProductoInicial': 'El stock inicial debe ser un número entero no negativo'}
+            }, status=400)
 
         try:
             precio_unitario = Decimal(data.get('PrecioUnitarioProducto'))
             if precio_unitario <= 0:
-                errores['PrecioUnitarioProducto'] = 'El precio unitario debe ser mayor a 0'
-        except DecimalException:
-            errores['PrecioUnitarioProducto'] = 'El precio unitario debe ser un número positivo'
+                raise ValueError('El precio debe ser mayor a 0')
+        except (ValueError, DecimalException):
+            return JsonResponse({
+                'success': False,
+                'errors': {'PrecioUnitarioProducto': 'El precio unitario debe ser un número positivo'}
+            }, status=400)
 
-        # Validación de valores numéricos adicionales
-        campos_numericos = {
-            'CantidadProductoVendido': 'Cantidad vendida',
-            'CantidadProductoDesechado': 'Cantidad desechada',
-            'DiasProducto': 'Días de producto'
-        }
-
-        for campo, nombre in campos_numericos.items():
-            if data.get(campo):
-                try:
-                    valor = int(data.get(campo))
-                    if valor < 0:
-                        errores[campo] = f'El campo {nombre} no puede ser negativo'
-                except ValueError:
-                    errores[campo] = f'El campo {nombre} debe ser un número entero'
+        # Manejar producto agotado y distribución de stock
+        producto_agotado = data.get('ProductoAgotado', '').lower() == 'true'
+        if producto_agotado and nuevo_stock_actual > 0:
+            try:
+                porcentaje_vendido = int(data.get('PorcentajeVendido', 80))
+                if porcentaje_vendido < 0 or porcentaje_vendido > 100:
+                    raise ValueError('El porcentaje debe estar entre 0 y 100')
+                
+                cantidad_vendida = int(round((nuevo_stock_actual * porcentaje_vendido) / 100))
+                cantidad_desechada = nuevo_stock_actual - cantidad_vendida
+                
+                producto.CantidadProductoVendido = cantidad_vendida
+                producto.CantidadProductoDesechado = cantidad_desechada
+                producto.StockProductoActual = 0
+                nuevo_stock_actual = 0
+            except ValueError:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'PorcentajeVendido': 'El porcentaje debe ser un número entre 0 y 100'}
+                }, status=400)
 
         # Validación de categoría
-        try:
-            categoria = Categoria.objects.get(id=data.get('Categoria'))
-        except (Categoria.DoesNotExist, ValueError):
-            errores['Categoria'] = 'Categoría no válida'
-
-        if errores:
-            return JsonResponse({'success': False, 'errors': errores}, status=400)
+        if data.get('Categoria'):
+            try:
+                categoria = Categoria.objects.get(id=data.get('Categoria'))
+            except (Categoria.DoesNotExist, ValueError):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'Categoria': 'Categoría no válida'}
+                }, status=400)
+        else:
+            categoria = None
 
         # Manejo de la foto del producto
         if data.get('eliminar_FotoProducto', '').lower() == 'true' and producto.FotoProducto:
@@ -4020,25 +4041,24 @@ def actualizar_producto(request, producto_id):
 
         # Actualización de campos del producto
         producto.NombreProducto = data.get('NombreProducto')
-        producto.StockProductoInicial = stock_inicial
+        producto.StockProductoInicial = nuevo_stock_inicial
+        producto.StockProductoActual = nuevo_stock_actual
         producto.PrecioUnitarioProducto = precio_unitario
+        producto.PrecioTotalProducto = nuevo_stock_actual * precio_unitario
         producto.Categoria = categoria
         producto.DescripcionProducto = data.get('DescripcionProducto', '')
         producto.UbicacionProducto = data.get('UbicacionProducto', '')
         producto.EstadoProducto = data.get('EstadoProducto', '')
-
-        # Campos adicionales si están presentes en la petición
-        if data.get('CantidadProductoVendido'):
-            producto.CantidadProductoVendido = int(data.get('CantidadProductoVendido'))
-        
-        if data.get('CantidadProductoDesechado'):
-            producto.CantidadProductoDesechado = int(data.get('CantidadProductoDesechado'))
         
         if data.get('DiasProducto'):
-            producto.DiasProducto = int(data.get('DiasProducto'))
+            try:
+                dias_producto = int(data.get('DiasProducto'))
+                if dias_producto >= 0:
+                    producto.DiasProducto = dias_producto
+            except ValueError:
+                pass
         
-        if data.get('ProductoVendido'):
-            producto.ProductoVendido = data.get('ProductoVendido').lower() == 'true'
+        producto.ProductoAgotado = producto_agotado
         
         if data.get('FechaProducto'):
             try:
@@ -4105,7 +4125,7 @@ def actualizar_producto(request, producto_id):
                 'EstadoProducto': producto.EstadoProducto,
                 'FechaProducto': producto.FechaProducto.isoformat(),
                 'DiasProducto': producto.DiasProducto,
-                'ProductoVendido': producto.ProductoVendido,
+                'ProductoAgotado': producto.ProductoAgotado,
                 'CantidadProductoVendido': producto.CantidadProductoVendido,
                 'CantidadProductoDesechado': producto.CantidadProductoDesechado,
                 'porcentaje_stock_disponible': producto.porcentaje_stock_disponible,
@@ -4113,7 +4133,7 @@ def actualizar_producto(request, producto_id):
                 'Categoria': {
                     'id': categoria.id,
                     'NombreCategoria': categoria.NombreCategoria
-                },
+                } if categoria else None,
                 'materiales': materiales_actualizados
             }
         })
@@ -4124,6 +4144,7 @@ def actualizar_producto(request, producto_id):
             'success': False,
             'errors': {'general': f'Error al actualizar el producto: {str(e)}'}
         }, status=400)
+
 @login_required(login_url='login')
 @ensure_csrf_cookie 
 def crear_producto(request):

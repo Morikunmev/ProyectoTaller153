@@ -106,7 +106,12 @@ const ProductoListar = () => {
           {currentProductos.map((producto) => (
             <tr
               key={producto.id}
-              className="border-b last:border-b-0 hover:bg-gray-50 text-xs"
+              className={`border-b last:border-b-0 hover:bg-gray-50 text-xs
+    ${
+      producto.StockProductoActual === 0
+        ? "bg-red-50 hover:bg-red-100"
+        : "bg-green-50 hover:bg-green-100"
+    }`}
             >
               <td className="px-2 py-1.5">#{producto.id}</td>
               <td className="px-2 py-1.5">{producto.NombreProducto}</td>
