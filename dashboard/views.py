@@ -2510,17 +2510,20 @@ def actualizar_material(request, material_id):
                 if nuevo_stock_original < 0:
                     raise ValueError('El stock original no puede ser negativo')
                 
-                # Calcular la proporción del stock actual respecto al original
-                if material.StockOriginal > 0:
-                    proporcion = material.StockMaterial / material.StockOriginal
-                    nuevo_stock_actual = int(round(nuevo_stock_original * proporcion))
-                else:
-                    nuevo_stock_actual = nuevo_stock_original
+                # Calcular cuánto material se ha usado
+                material_usado = material.StockOriginal - material.StockMaterial
+                
+                # El nuevo stock actual será el nuevo stock original menos el material ya usado
+                nuevo_stock_actual = nuevo_stock_original - material_usado
+                
+                # Verificar que el nuevo stock actual no sea negativo
+                if nuevo_stock_actual < 0:
+                    raise ValueError('El nuevo stock original debe ser mayor o igual al material ya usado')
 
-            except ValueError:
+            except ValueError as e:
                 return JsonResponse({
                     'success': False,
-                    'errors': {'StockOriginal': 'El stock debe ser un número entero no negativo'}
+                    'errors': {'StockOriginal': str(e)}
                 }, status=400)
 
             try:
@@ -3842,7 +3845,20 @@ def crear_producto(request):
 @login_required(login_url='login')
 def listar_productos(request):
     try:
-        productos = Producto.objects.select_related('Categoria').prefetch_related('materiales_usados__Material').order_by('-FechaProducto', '-HoraCreacion', '-id')
+        productos = Producto.objects.select_related('Categoria').prefetch_related(
+            'materiales_usados__Material'
+        ).annotate(
+            tiene_stock=models.Case(
+                models.When(StockProductoActual__gt=0, then=1),
+                default=0,
+                output_field=models.IntegerField(),
+            )
+        ).order_by(
+            '-tiene_stock',      # Primero los que tienen stock
+            '-FechaProducto',    # Luego por fecha más reciente
+            '-HoraCreacion',     # Después por hora de creación
+            '-id'                # Finalmente por ID
+        )
         
         productos_data = []
         
@@ -3876,7 +3892,7 @@ def listar_productos(request):
                 'DiasProducto': dias_transcurridos,
                 'FechaProducto': producto.FechaProducto.isoformat(),
                 'FotoProducto': producto.FotoProducto.url if producto.FotoProducto else None,
-                'materiales': materiales,  # Añadido
+                'materiales': materiales,
                 'DescripcionProducto': producto.DescripcionProducto,
                 'UbicacionProducto': producto.UbicacionProducto,
                 'EstadoProducto': producto.EstadoProducto,
@@ -3892,6 +3908,7 @@ def listar_productos(request):
         })
 
     except Exception as e:
+        logger.error(f"Error al listar productos: {str(e)}")  # Agregado logging
         return JsonResponse({
             'success': False,
             'error': str(e)
@@ -4573,7 +4590,7 @@ def registrar_venta(request, producto_id):
             data = json.loads(request.body)
             producto = get_object_or_404(Producto, id=producto_id)
             
-            # Validar que hay suficiente stock
+            # Validar stock
             cantidad = int(data.get('CantidadVenta'))
             if not cantidad or cantidad > producto.StockProductoActual:
                 return JsonResponse({
@@ -4581,27 +4598,43 @@ def registrar_venta(request, producto_id):
                     'errors': f'Stock insuficiente. Disponible: {producto.StockProductoActual}'
                 }, status=400)
 
-            # Convertir precio a decimal de manera segura
-            try:
-                precio_venta = Decimal(str(data.get('PrecioVenta')))
-            except (TypeError, InvalidOperation):
-                return JsonResponse({
-                    'success': False,
-                    'errors': 'Precio inválido'
-                }, status=400)
+            # Manejar cliente
+            cliente = None
+            cliente_data = data.get('cliente', {})
+            
+            if cliente_data.get('tipo') == 'existente':
+                cliente = get_object_or_404(Cliente, id=cliente_data.get('id'))
+            elif cliente_data.get('tipo') == 'nuevo':
+                cliente = Cliente.objects.create(
+                    NombreCliente=cliente_data.get('NombreCliente'),
+                    ApellidoCliente=cliente_data.get('ApellidoCliente'),
+                    RutCliente=cliente_data.get('RutCliente'),
+                    TipoCliente=cliente_data.get('TipoCliente', 'particular'),
+                    NombreCompañia=cliente_data.get('NombreCompañia'),
+                    TelefonoCliente=cliente_data.get('TelefonoCliente'),
+                    Usuario=request.user
+                )
 
-            # Actualizar el stock del producto primero
-            producto.vender_cantidad(cantidad)
-
-            # Luego crear la venta
+            # Crear la venta
             venta = Ventas.objects.create(
                 NombreVenta=data.get('NombreVenta'),
                 CantidadVenta=cantidad,
-                PrecioVenta=precio_venta,
-                PrecioTotalVenta=precio_venta * cantidad,
+                PrecioVenta=Decimal(str(data.get('PrecioVenta'))),
                 Producto=producto,
-                Usuario=request.user
+                Usuario=request.user,
+                cliente=cliente
             )
+            
+            # Actualizar stock
+            producto.vender_cantidad(cantidad)
+
+            # Actualizar totales de la categoría si existe
+            if producto.Categoria:
+                producto.Categoria.actualizar_totales()
+
+            # Actualizar totales del cliente si existe
+            if cliente:
+                cliente.actualizar_totales()
             
             return JsonResponse({
                 'success': True,
@@ -4612,27 +4645,21 @@ def registrar_venta(request, producto_id):
                     'cantidad': venta.CantidadVenta,
                     'precio_total': float(venta.PrecioTotalVenta),
                     'producto': producto.NombreProducto,
-                    'stock_restante': producto.StockProductoActual
+                    'stock_restante': producto.StockProductoActual,
+                    'cliente': {
+                        'nombre': str(cliente),
+                        'cantidad_compras': cliente.CantidadTotalCompras if cliente else 0,
+                        'total_compras': float(cliente.TotalDineroCompras) if cliente else 0
+                    } if cliente else None
                 }
             })
             
         except ValidationError as e:
-            return JsonResponse({
-                'success': False,
-                'errors': str(e)
-            }, status=400)
+            return JsonResponse({'success': False, 'errors': str(e)}, status=400)
         except Exception as e:
-            logger.error(f"Error al registrar venta: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'errors': str(e)
-            }, status=500)
+            return JsonResponse({'success': False, 'errors': str(e)}, status=500)
             
-    return JsonResponse({
-        'success': False,
-        'errors': 'Método no permitido'
-    }, status=405)
-
+    return JsonResponse({'success': False, 'errors': 'Método no permitido'}, status=405)
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def registrar_perdida(request, producto_id):
@@ -4652,7 +4679,7 @@ def registrar_perdida(request, producto_id):
             # Actualizar el producto primero
             producto.desechar_cantidad(cantidad)
 
-            # Luego crear el registro de pérdida
+            # Crear el registro de pérdida
             perdida = Perdidas.objects.create(
                 NombrePerdida=data.get('nombre_perdida'),
                 CantidadPerdida=cantidad,
@@ -4663,6 +4690,10 @@ def registrar_perdida(request, producto_id):
                 Producto=producto,
                 Usuario=request.user
             )
+
+            # Actualizar totales de la categoría si existe
+            if producto.Categoria:
+                producto.Categoria.actualizar_totales()
             
             return JsonResponse({
                 'success': True,
@@ -4674,7 +4705,12 @@ def registrar_perdida(request, producto_id):
                     'valor_total': float(perdida.ValorTotalPerdida),
                     'motivo': perdida.get_MotivoPerdida_display(),
                     'producto': producto.NombreProducto,
-                    'stock_restante': producto.StockProductoActual
+                    'stock_restante': producto.StockProductoActual,
+                    'categoria': {
+                        'nombre': producto.Categoria.NombreCategoria,
+                        'cantidad_perdidas': producto.Categoria.CantidadCategoriaPerdida,
+                        'total_perdidas': float(producto.Categoria.DineroCategoriaPerdida)
+                    } if producto.Categoria else None
                 }
             })
             
@@ -4694,7 +4730,6 @@ def registrar_perdida(request, producto_id):
         'success': False,
         'errors': 'Método no permitido'
     }, status=405)
-
 
 
 @login_required(login_url='login')
@@ -4734,5 +4769,37 @@ def listar_materiales_producto(request):
     except Exception as e:
         return JsonResponse({
             'success': False,
+            'error': str(e)
+        }, status=500)
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def listar_clientes(request):
+    try:
+        clientes = Cliente.objects.all()
+        data = []
+
+        for cliente in clientes:
+            data.append({
+                'id': cliente.id,
+                'nombre': str(cliente),
+                'rut': cliente.RutCliente,
+                'tipo': cliente.TipoCliente,
+                'telefono': cliente.TelefonoCliente or '',  # Por si es null
+                'compañia': cliente.NombreCompañia or '',
+                'comentario': cliente.ComentarioCliente or '',
+                'fecha_registro': cliente.FechaCliente.strftime('%Y-%m-%d') if cliente.FechaCliente else '',
+                'usuario': cliente.Usuario.username if cliente.Usuario else ''
+            })
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Clientes obtenidos exitosamente',
+            'data': data
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': 'Error al obtener los clientes',
             'error': str(e)
         }, status=500)

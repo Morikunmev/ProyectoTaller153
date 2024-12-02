@@ -125,14 +125,19 @@ const ProductoPerdidaModal = ({ isOpen, onClose, onSubmit, producto }) => {
     >
       {/* Header */}
       <div className="flex-none border-b">
-        <div className="p-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Registrar Pérdida</h2>
-          <button
-            onClick={handleClose}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-150"
-          >
-            <X className="h-5 w-5" />
-          </button>
+        <div className="p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Registrar Pérdida</h2>
+            <button
+              onClick={handleClose}
+              className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-150"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 mt-1">
+            Producto: {producto?.NombreProducto}
+          </p>
         </div>
       </div>
 

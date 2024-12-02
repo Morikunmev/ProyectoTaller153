@@ -90,6 +90,12 @@ urlpatterns = [
     path('api/categorias/listar/', views.listar_categorias, name='listar_categorias'),
 
     path('api/materiales/producto/', views.listar_materiales_producto, name='listar_materiales_producto'),
+    
+    #-------------------RUTAS PARA VENTAS Y CLIENTES-----------------
+    path('api/clientes/listar/', views.listar_clientes, name='listar_clientes'),
+
+    
+
 
 
 

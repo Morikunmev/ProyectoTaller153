@@ -182,10 +182,38 @@ export const useProductoState = () => {
 
   // Manejadores de venta y desecho
   const handleVender = async (productoId, data) => {
-    if (isSubmitting) return; // Prevenir múltiples envíos
+    if (isSubmitting) return;
 
     try {
       setIsSubmitting(true);
+
+      // Preparar los datos según si hay cliente o no
+      const ventaData = {
+        NombreVenta: data.NombreVenta,
+        CantidadVenta: parseInt(data.CantidadVenta),
+        PrecioVenta: parseFloat(data.PrecioVenta),
+      };
+
+      // Si hay datos de cliente, añadirlos
+      if (data.cliente) {
+        if (data.cliente.tipo === "existente") {
+          ventaData.cliente = {
+            tipo: "existente",
+            id: data.cliente.id,
+          };
+        } else if (data.cliente.tipo === "nuevo") {
+          ventaData.cliente = {
+            tipo: "nuevo",
+            NombreCliente: data.cliente.NombreCliente,
+            ApellidoCliente: data.cliente.ApellidoCliente,
+            RutCliente: data.cliente.RutCliente,
+            TipoCliente: data.cliente.TipoCliente,
+            NombreCompañia: data.cliente.NombreCompañia,
+            TelefonoCliente: data.cliente.TelefonoCliente,
+          };
+        }
+      }
+
       const response = await fetch(`/api/producto/${productoId}/venta/`, {
         method: "POST",
         headers: {
@@ -193,7 +221,7 @@ export const useProductoState = () => {
           "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
             .value,
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(ventaData),
       });
 
       if (!response.ok) {

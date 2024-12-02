@@ -22,10 +22,12 @@ import ProductoGrid from "./layout/ProductoGrid";
 import ProductoDetalle from "./ProductoDetalle";
 
 const ProductoListar = () => {
+  const [stockFilter, setStockFilter] = useState("all"); // 'all', 'inStock', 'outOfStock'
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
   const [detalleModalOpen, setDetalleModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
   const {
     searchTerm,
     loading,
@@ -103,7 +105,7 @@ const ProductoListar = () => {
           </tr>
         </thead>
         <tbody>
-          {currentProductos.map((producto) => (
+          {displayedProductos.map((producto) => (
             <tr
               key={producto.id}
               className={`border-b last:border-b-0 hover:bg-gray-50 text-xs
@@ -223,6 +225,16 @@ const ProductoListar = () => {
     setSelectedProduct(producto);
     setDetalleModalOpen(true);
   };
+  const displayedProductos = filteredProductos.filter((producto) => {
+    switch (stockFilter) {
+      case "inStock":
+        return producto.StockProductoActual > 0;
+      case "outOfStock":
+        return producto.StockProductoActual === 0;
+      default:
+        return true;
+    }
+  });
 
   return (
     <div>
@@ -244,23 +256,44 @@ const ProductoListar = () => {
               Módulo Producto
             </h1>
             <div className="flex gap-2">
-              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+              <button
+                onClick={() => setStockFilter("all")}
+                className={`px-3 py-1 rounded-full transition-colors duration-200 ${
+                  stockFilter === "all"
+                    ? "bg-gray-200 text-gray-800"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
                 {filteredProductos.length} Total
-              </span>
-              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+              </button>
+              <button
+                onClick={() => setStockFilter("inStock")}
+                className={`px-3 py-1 rounded-full transition-colors duration-200 ${
+                  stockFilter === "inStock"
+                    ? "bg-green-200 text-green-800"
+                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
                 {
                   filteredProductos.filter((p) => p.StockProductoActual > 0)
                     .length
                 }{" "}
                 Con Stock
-              </span>
-              <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">
+              </button>
+              <button
+                onClick={() => setStockFilter("outOfStock")}
+                className={`px-3 py-1 rounded-full transition-colors duration-200 ${
+                  stockFilter === "outOfStock"
+                    ? "bg-red-200 text-red-800"
+                    : "bg-red-100 text-red-700 hover:bg-red-200"
+                }`}
+              >
                 {
                   filteredProductos.filter((p) => p.StockProductoActual === 0)
                     .length
                 }{" "}
                 Sin Stock
-              </span>
+              </button>
             </div>
           </div>
 
@@ -375,7 +408,7 @@ const ProductoListar = () => {
                   >
                     {isGridView ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-                        {currentProductos.map((producto) => (
+                        {displayedProductos.map((producto) => (
                           <ProductoGrid
                             key={producto.id}
                             producto={producto}
@@ -387,7 +420,7 @@ const ProductoListar = () => {
                         ))}
                       </div>
                     ) : (
-                      renderTableView()
+                      renderTableView(displayedProductos) // Asegúrate de pasar displayedProductos aquí también
                     )}
                   </div>
                 </div>
@@ -438,7 +471,7 @@ const ProductoListar = () => {
       <ProductoPerdidaModal
         isOpen={desecharModalOpen}
         onClose={handleDesecharClose}
-        onSubmit={handleDesechar} // Nota: cambiamos onDesechar por onSubmit para mantener consistencia
+        onSubmit={handleDesechar} 
         producto={productoToDesechar}
       />
       <ProductoDetalle

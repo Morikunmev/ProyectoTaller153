@@ -338,8 +338,44 @@ class Categoria(models.Model):
     NombreCategoria = models.CharField(max_length=100, unique=True, null=False, blank=False)
     # Campos opcionales
     DescripcionCategoria = models.TextField(null=True, blank=True)
-    StockCategoria = models.PositiveIntegerField(default=0, editable=False)  # Campo automático, no editable
+    StockCategoria = models.PositiveIntegerField(default=0, editable=False)
     FotoCategoria = CloudinaryField('imagen', folder='categorias/', null=True, blank=True)
+    # Nuevos campos de tracking
+    CantidadCategoriaPerdida = models.PositiveIntegerField(default=0,editable=False,help_text="Cantidad total de productos perdidos en esta categoría"
+    )
+    CantidadCategoriaVenta = models.PositiveIntegerField(
+        default=0,
+        editable=False,
+        help_text="Cantidad total de productos vendidos en esta categoría"
+    )
+    DineroCategoriaPerdida = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        editable=False,
+        help_text="Valor total en dinero de las pérdidas en esta categoría"
+    )
+    DineroCategoriaVenta = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        editable=False,
+        help_text="Valor total en dinero de las ventas en esta categoría"
+    )
+    TotalCategoriaVenta = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        editable=False,
+        help_text="Total acumulado de ventas en esta categoría"
+    )
+    TotalCategoriaPerdida = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        editable=False,
+        help_text="Total acumulado de pérdidas en esta categoría"
+    )
 
     class Meta:
         verbose_name = "Categoría"
@@ -348,6 +384,34 @@ class Categoria(models.Model):
 
     def __str__(self):
         return self.NombreCategoria
+
+    def actualizar_totales(self):
+        """Actualiza todos los totales de la categoría"""
+        productos = self.productos.all()
+        
+        # Actualizar cantidades
+        self.CantidadCategoriaPerdida = sum(p.CantidadProductoDesechado for p in productos)
+        self.CantidadCategoriaVenta = sum(p.CantidadProductoVendido for p in productos)
+        
+        # Actualizar dinero de ventas
+        self.DineroCategoriaVenta = sum(
+            v.PrecioTotalVenta 
+            for p in productos 
+            for v in p.ventas.all()
+        )
+        
+        # Actualizar dinero de pérdidas
+        self.DineroCategoriaPerdida = sum(
+            p.ValorTotalPerdida 
+            for p in productos 
+            for p in p.perdidas.all()
+        )
+        
+        # Actualizar totales
+        self.TotalCategoriaVenta += self.DineroCategoriaVenta
+        self.TotalCategoriaPerdida += self.DineroCategoriaPerdida
+        
+        self.save()
 
 class Producto(models.Model):
     # Campos obligatorios
@@ -630,6 +694,14 @@ class Ventas(models.Model):
         on_delete=models.CASCADE,  # Cambiar de PROTECT a CASCADE
         related_name='ventas'
     )
+    cliente = models.ForeignKey(
+    'Cliente', 
+    on_delete=models.SET_NULL,
+    null=True,
+    blank=True,
+    related_name='ventas',
+    help_text="Cliente asociado a la venta (opcional)"
+)
     # Campo de auditoría
     Usuario = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,help_text="Usuario que registró la venta"
     )
@@ -657,8 +729,7 @@ class Ventas(models.Model):
             super().delete(*args, **kwargs)
 
     def __str__(self):
-        cliente = self.cliente_set.first()
-        cliente_str = str(cliente) if cliente else "Cliente no especificado"
+        cliente_str = str(self.cliente) if self.cliente else "Cliente no especificado"
         return f"Venta {self.id} - {self.Producto.NombreProducto} a {cliente_str}"
 
 class Cliente(models.Model):
@@ -679,16 +750,21 @@ class Cliente(models.Model):
     )
     TipoCliente = models.CharField(max_length=20, choices=TIPO_CHOICES, default='particular')
     
-    # Nueva relación con Ventas
-    Venta = models.ForeignKey(
-        'Ventas',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        help_text="Venta asociada al cliente"
+    # Campos de tracking
+    CantidadTotalCompras = models.PositiveIntegerField(
+        default=0,
+        editable=False,
+        help_text="Cantidad total de productos comprados por el cliente"
+    )
+    TotalDineroCompras = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        editable=False,
+        help_text="Total en dinero de todas las compras del cliente"
     )
     
-    # Campos opcionales
+    # Campos opcionales existentes...
     NombreCompañia = models.CharField(max_length=100, null=True, blank=True)
     ComentarioCliente = models.TextField(null=True, blank=True)
     TelefonoCliente = models.CharField(max_length=15, null=True, blank=True)
@@ -709,6 +785,13 @@ class Cliente(models.Model):
         verbose_name = "Cliente"
         verbose_name_plural = "Clientes"
         ordering = ['NombreCliente']
+
+    def actualizar_totales(self):
+        """Actualiza los totales del cliente basado en sus ventas"""
+        ventas = self.ventas.all()
+        self.CantidadTotalCompras = sum(v.CantidadVenta for v in ventas)
+        self.TotalDineroCompras = sum(v.PrecioTotalVenta for v in ventas)
+        self.save()
 
     def __str__(self):
         if self.TipoCliente == 'empresa':
