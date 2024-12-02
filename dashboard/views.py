@@ -3966,16 +3966,28 @@ def actualizar_producto(request, producto_id):
                 cantidad_desechada = int(data.get('CantidadProductoDesechado', 0))
                 
                 print(f"Ventas previas: {ventas_previas}")  # Debug
+                print(f"Nueva cantidad a vender: {cantidad_vendida}")  # Debug
                 print(f"Nueva cantidad a desechar: {cantidad_desechada}")  # Debug
                 print(f"Stock actual: {nuevo_stock_actual}")  # Debug
                 
-                # Validar que la cantidad desechada sea igual al stock actual
-                if cantidad_desechada != nuevo_stock_actual:
+                # Validar que la suma de cantidades sea igual al stock actual
+                if (cantidad_vendida + cantidad_desechada) != nuevo_stock_actual:
                     return JsonResponse({
                         'success': False,
-                        'errors': {'stock': 'La cantidad desechada debe ser igual al stock actual'}
+                        'errors': {'stock': 'La suma de cantidades vendidas y desechadas debe ser igual al stock actual'}
                     }, status=400)
                 
+                # Crear registro de venta si hay cantidad vendida
+                if cantidad_vendida > 0:
+                    Ventas.objects.create(
+                        NombreVenta=f"Venta automática - {producto.NombreProducto}",
+                        CantidadVenta=cantidad_vendida,
+                        PrecioVenta=producto.PrecioUnitarioProducto,
+                        PrecioTotalVenta=producto.PrecioUnitarioProducto * cantidad_vendida,
+                        Producto=producto,
+                        Usuario=request.user
+                    )
+
                 # Crear registro de pérdida si hay cantidad desechada
                 if cantidad_desechada > 0:
                     Perdidas.objects.create(
@@ -3987,9 +3999,9 @@ def actualizar_producto(request, producto_id):
                         Usuario=request.user
                     )
                 
-                # Actualizar el producto manteniendo el historial de ventas
-                producto.CantidadProductoVendido = ventas_previas  # Mantener ventas previas
-                producto.CantidadProductoDesechado = perdidas_previas + cantidad_desechada  # Sumar nuevas pérdidas
+                # Actualizar el producto
+                producto.CantidadProductoVendido = ventas_previas + cantidad_vendida
+                producto.CantidadProductoDesechado = perdidas_previas + cantidad_desechada
                 producto.StockProductoActual = 0
                 nuevo_stock_actual = 0
                 
