@@ -3957,21 +3957,46 @@ def actualizar_producto(request, producto_id):
         producto_agotado = data.get('ProductoAgotado', '').lower() == 'true'
         if producto_agotado and nuevo_stock_actual > 0:
             try:
-                porcentaje_vendido = int(data.get('PorcentajeVendido', 80))
-                if porcentaje_vendido < 0 or porcentaje_vendido > 100:
-                    raise ValueError('El porcentaje debe estar entre 0 y 100')
+                # Mantener el historial de ventas previas
+                ventas_previas = producto.CantidadProductoVendido
+                perdidas_previas = producto.CantidadProductoDesechado
+
+                # Obtener y validar las nuevas cantidades
+                cantidad_vendida = int(data.get('CantidadProductoVendido', 0))
+                cantidad_desechada = int(data.get('CantidadProductoDesechado', 0))
                 
-                cantidad_vendida = int(round((nuevo_stock_actual * porcentaje_vendido) / 100))
-                cantidad_desechada = nuevo_stock_actual - cantidad_vendida
+                print(f"Ventas previas: {ventas_previas}")  # Debug
+                print(f"Nueva cantidad a desechar: {cantidad_desechada}")  # Debug
+                print(f"Stock actual: {nuevo_stock_actual}")  # Debug
                 
-                producto.CantidadProductoVendido = cantidad_vendida
-                producto.CantidadProductoDesechado = cantidad_desechada
+                # Validar que la cantidad desechada sea igual al stock actual
+                if cantidad_desechada != nuevo_stock_actual:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'stock': 'La cantidad desechada debe ser igual al stock actual'}
+                    }, status=400)
+                
+                # Crear registro de pérdida si hay cantidad desechada
+                if cantidad_desechada > 0:
+                    Perdidas.objects.create(
+                        NombrePerdida=f"Pérdida automática - {producto.NombreProducto}",
+                        CantidadPerdida=cantidad_desechada,
+                        ValorUnitarioPerdida=producto.PrecioUnitarioProducto,
+                        MotivoPerdida='otros',
+                        Producto=producto,
+                        Usuario=request.user
+                    )
+                
+                # Actualizar el producto manteniendo el historial de ventas
+                producto.CantidadProductoVendido = ventas_previas  # Mantener ventas previas
+                producto.CantidadProductoDesechado = perdidas_previas + cantidad_desechada  # Sumar nuevas pérdidas
                 producto.StockProductoActual = 0
                 nuevo_stock_actual = 0
-            except ValueError:
+                
+            except ValueError as e:
                 return JsonResponse({
                     'success': False,
-                    'errors': {'PorcentajeVendido': 'El porcentaje debe ser un número entre 0 y 100'}
+                    'errors': {'stock': str(e)}
                 }, status=400)
 
         # Validación de categoría
