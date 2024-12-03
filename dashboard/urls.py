@@ -110,7 +110,9 @@ urlpatterns = [
     path('api/categoria/confirmar-eliminacion/<str:token>/', 
          views.confirmar_eliminacion_categoria, 
          name='confirmar_eliminacion_categoria'),
-    
+
+    #-------------------RUTAS PARA USUARIOS-----------------
+    path('api/usuario/actualizar/', views.actualizar_usuario, name='actualizar_usuario'),
 
 
 

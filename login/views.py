@@ -18,6 +18,12 @@ from .models import Usuario  # Asegúrate de importar el modelo Usuario
 from datetime import timedelta
 import base64
 import json
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.core.exceptions import ValidationError
+from django.contrib.auth.models import User
+from .models import Usuario
+from cloudinary.uploader import upload
 
 
 def login(request):
@@ -188,3 +194,4 @@ def cambiar_contraseña(request, uidb64, token_payload):
         'message_type': message_type,
         'redirect_to_login': redirect_to_login,
     })
+    

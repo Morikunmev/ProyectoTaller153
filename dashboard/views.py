@@ -40,10 +40,15 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.urls import reverse
 
+from cloudinary.uploader import upload
+
+
 
 
 # Local imports
 from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto,ProductoMaterial, Categoria, Cliente, Ventas, Perdidas
+
+
 from login.models import Usuario
 from django.http import FileResponse, HttpResponse
 from django.shortcuts import get_object_or_404
@@ -5308,4 +5313,121 @@ def confirmar_eliminacion_categoria(request, token):
         return JsonResponse({
             'success': False,
             'error': str(e)
+        }, status=500)
+#------------RUTA PARA USUARIOS---------
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_usuario(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        user = request.user
+        
+        # Actualizar user primero
+        if user.is_superuser:
+            user.first_name = request.POST.get('first_name', user.first_name)
+            user.last_name = request.POST.get('last_name', user.last_name)
+            user.email = request.POST.get('email', user.email)
+            user.save()
+            
+            return JsonResponse({
+                'success': True,
+                'usuario': {
+                    'user': {
+                        'id': user.id,
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'email': user.email,
+                    },
+                    'TipoUsuario': 'Superadmin',
+                }
+            })
+        
+        # Si no es superuser, obtener o crear perfil
+        try:
+            usuario = Usuario.objects.get(user=user)
+        except Usuario.DoesNotExist:
+            usuario = Usuario.objects.create(
+                user=user,
+                RutUsuario=request.POST.get('RutUsuario', ''),
+                TipoUsuario='Administrador'
+            )
+        
+        # Actualizar campos del user
+        user.first_name = request.POST.get('first_name', user.first_name)
+        user.last_name = request.POST.get('last_name', user.last_name)
+        user.email = request.POST.get('email', user.email)
+        user.save()
+        
+        # Actualizar campos del usuario
+        if 'RutUsuario' in request.POST:
+            usuario.RutUsuario = request.POST['RutUsuario']
+        if 'EdadUsuario' in request.POST and request.POST['EdadUsuario']:
+            usuario.EdadUsuario = int(request.POST['EdadUsuario'])
+        if 'TelefonoUsuario' in request.POST:
+            usuario.TelefonoUsuario = request.POST['TelefonoUsuario']
+            
+        # Manejar foto
+        if 'FotoUsuario' in request.FILES:
+            foto = request.FILES['FotoUsuario']
+            try:
+                # Validar tamaño y tipo
+                if foto.size > 5 * 1024 * 1024:  # 5MB
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'La imagen no debe superar 5MB'
+                    }, status=400)
+                
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                if foto.content_type not in allowed_types:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Formato de imagen no permitido. Use JPG, PNG, GIF o WEBP'
+                    }, status=400)
+                
+                upload_result = upload(
+                    foto,
+                    folder='usuarios/',
+                    public_id=f'usuario_{user.id}',
+                    overwrite=True,
+                    resource_type='auto'
+                )
+                usuario.FotoUsuario = upload_result['secure_url']
+            except Exception as e:
+                print(f"Error al subir la imagen: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Error al subir la imagen'
+                }, status=500)
+        
+        usuario.save()
+        
+        return JsonResponse({
+            'success': True,
+            'usuario': {
+                'user': {
+                    'id': user.id,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'email': user.email,
+                },
+                'RutUsuario': usuario.RutUsuario,
+                'TipoUsuario': usuario.TipoUsuario,
+                'EdadUsuario': usuario.EdadUsuario,
+                'TelefonoUsuario': usuario.TelefonoUsuario,
+                'FotoUsuario': usuario.FotoUsuario.url if usuario.FotoUsuario else None,
+            }
+        })
+        
+    except ValidationError as e:
+        return JsonResponse({
+            'success': False,
+            'errors': e.message_dict if hasattr(e, 'message_dict') else {'error': str(e)}
+        }, status=400)
+    except Exception as e:
+        print(f"Error inesperado: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Error interno del servidor'
         }, status=500)
