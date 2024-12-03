@@ -93,7 +93,23 @@ urlpatterns = [
     
     #-------------------RUTAS PARA VENTAS Y CLIENTES-----------------
     path('api/clientes/listar/', views.listar_clientes, name='listar_clientes'),
-
+    
+    
+    #-------------------RUTAS PARA CATEGORIAS-----------------
+    path('categoria/', views.mod_categoria, name='mod_categoria'),  # Vista principal
+    path('api/categoria/listar-completo/', views.listar_categorias_completo, name='listar_categorias_completo'),
+    path('api/categoria/crear/', views.crear_categoria, name='crear_categoria'),
+    path('api/categoria/<int:categoria_id>/eliminar/', views.eliminar_categoria, name='eliminar_categoria'),
+    path('api/categoria/<int:categoria_id>/actualizar/', views.actualizar_categoria, name='actualizar_categoria'),
+    path('api/categorias/exportar-excel/', views.exportar_categorias_excel, name='exportar_categorias_excel'),
+    
+    path('api/categoria/<int:categoria_id>/solicitar-eliminacion/', 
+         views.solicitar_eliminacion_categoria, 
+         name='solicitar_eliminacion_categoria'),
+    
+    path('api/categoria/confirmar-eliminacion/<str:token>/', 
+         views.confirmar_eliminacion_categoria, 
+         name='confirmar_eliminacion_categoria'),
     
 
 

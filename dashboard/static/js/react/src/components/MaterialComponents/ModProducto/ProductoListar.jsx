@@ -38,8 +38,10 @@ const ProductoListar = () => {
     isModalOpen,
     currentProductos,
     totalPages,
+    categorySearchTerm, // Agregar esto
     currentPage,
     startIndex,
+    handleCategorySearch, // Agregar esto
     endIndex,
     filteredProductos,
     deleteModalOpen,
@@ -264,7 +266,17 @@ const ProductoListar = () => {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                {filteredProductos.length} Total
+                {filteredProductos.length} Total{" "}
+                <span className="text-xs ml-1">
+                  ($
+                  {filteredProductos
+                    .reduce(
+                      (sum, p) => sum + parseFloat(p.PrecioTotalProducto),
+                      0
+                    )
+                    .toLocaleString()}
+                  )
+                </span>
               </button>
               <button
                 onClick={() => setStockFilter("inStock")}
@@ -296,21 +308,37 @@ const ProductoListar = () => {
               </button>
             </div>
           </div>
-
           <div className="flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4">
-            <div className="relative w-[300px] max-[790px]:w-full">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar producto..."
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
-                         focus:outline-none focus:ring-1 focus:ring-blue-500
-                         transition-colors duration-200"
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
+            {/* Búsquedas */}
+            <div className="flex gap-4 max-[790px]:w-full">
+              <div className="relative w-[300px] max-[790px]:flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar producto..."
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
+                 focus:outline-none focus:ring-1 focus:ring-blue-500
+                 transition-colors duration-200"
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="relative w-[300px] max-[790px]:flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar categoría..."
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
+           focus:outline-none focus:ring-1 focus:ring-blue-500
+           transition-colors duration-200"
+                  value={categorySearchTerm}
+                  onChange={(e) => handleCategorySearch(e.target.value)} // Usar el handler del hook
+                />
+              </div>
             </div>
 
+            {/* Vista Lista/Grid */}
             <div className="max-[790px]:w-full flex justify-center">
               <div className="flex bg-white border rounded-lg overflow-hidden">
                 <button
@@ -338,14 +366,15 @@ const ProductoListar = () => {
               </div>
             </div>
 
+            {/* Botones de Acción */}
             <div className="flex items-center space-x-3 max-[790px]:w-full">
               <button
                 onClick={handleExportClick}
                 className="group relative bg-green-600 text-white px-4 py-2 rounded-lg 
-                         hover:bg-green-700 active:bg-green-800
-                         transition-all duration-200 ease-out 
-                         hover:shadow-lg active:shadow-none
-                         transform active:scale-95 max-[790px]:flex-1"
+               hover:bg-green-700 active:bg-green-800
+               transition-all duration-200 ease-out 
+               hover:shadow-lg active:shadow-none
+               transform active:scale-95 max-[790px]:flex-1"
               >
                 <span className="flex items-center max-[790px]:justify-center">
                   <svg
@@ -365,12 +394,12 @@ const ProductoListar = () => {
                 </span>
               </button>
               <button
-                onClick={handleOpenModal} // Asegurarse que este handler está siendo pasado correctamente
+                onClick={handleOpenModal}
                 className="group relative bg-black text-white px-4 py-2 rounded-lg 
-            hover:bg-gray-800 active:bg-gray-900
-            transition-all duration-200 ease-out 
-            hover:shadow-lg active:shadow-none
-            transform active:scale-95 max-[790px]:flex-1"
+              hover:bg-gray-800 active:bg-gray-900
+              transition-all duration-200 ease-out 
+              hover:shadow-lg active:shadow-none
+              transform active:scale-95 max-[790px]:flex-1"
               >
                 <span className="flex items-center max-[790px]:justify-center">
                   <span className="inline-block transform transition-transform duration-200 group-hover:translate-x-[-2px]">
@@ -471,7 +500,7 @@ const ProductoListar = () => {
       <ProductoPerdidaModal
         isOpen={desecharModalOpen}
         onClose={handleDesecharClose}
-        onSubmit={handleDesechar} 
+        onSubmit={handleDesechar}
         producto={productoToDesechar}
       />
       <ProductoDetalle

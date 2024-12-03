@@ -336,31 +336,22 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
 class Categoria(models.Model):
     # Campos obligatorios
     NombreCategoria = models.CharField(max_length=100, unique=True, null=False, blank=False)
+    
     # Campos opcionales
     DescripcionCategoria = models.TextField(null=True, blank=True)
     StockCategoria = models.PositiveIntegerField(default=0, editable=False)
     FotoCategoria = CloudinaryField('imagen', folder='categorias/', null=True, blank=True)
-    # Nuevos campos de tracking
-    CantidadCategoriaPerdida = models.PositiveIntegerField(default=0,editable=False,help_text="Cantidad total de productos perdidos en esta categoría"
+    
+    # Campos de tracking
+    CantidadCategoriaPerdida = models.PositiveIntegerField(
+        default=0,
+        editable=False,
+        help_text="Cantidad total de productos perdidos en esta categoría"
     )
     CantidadCategoriaVenta = models.PositiveIntegerField(
         default=0,
         editable=False,
         help_text="Cantidad total de productos vendidos en esta categoría"
-    )
-    DineroCategoriaPerdida = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        editable=False,
-        help_text="Valor total en dinero de las pérdidas en esta categoría"
-    )
-    DineroCategoriaVenta = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        editable=False,
-        help_text="Valor total en dinero de las ventas en esta categoría"
     )
     TotalCategoriaVenta = models.DecimalField(
         max_digits=12,
@@ -393,25 +384,21 @@ class Categoria(models.Model):
         self.CantidadCategoriaPerdida = sum(p.CantidadProductoDesechado for p in productos)
         self.CantidadCategoriaVenta = sum(p.CantidadProductoVendido for p in productos)
         
-        # Actualizar dinero de ventas
-        self.DineroCategoriaVenta = sum(
+        # Actualizar totales directamente
+        self.TotalCategoriaVenta = sum(
             v.PrecioTotalVenta 
             for p in productos 
             for v in p.ventas.all()
         )
         
-        # Actualizar dinero de pérdidas
-        self.DineroCategoriaPerdida = sum(
+        self.TotalCategoriaPerdida = sum(
             p.ValorTotalPerdida 
             for p in productos 
             for p in p.perdidas.all()
         )
         
-        # Actualizar totales
-        self.TotalCategoriaVenta += self.DineroCategoriaVenta
-        self.TotalCategoriaPerdida += self.DineroCategoriaPerdida
-        
         self.save()
+
 
 class Producto(models.Model):
     # Campos obligatorios

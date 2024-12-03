@@ -36,6 +36,11 @@ import xlsxwriter
 from django.http import JsonResponse
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
+from django.core.mail import send_mail
+from django.urls import reverse
+
+
 
 # Local imports
 from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto,ProductoMaterial, Categoria, Cliente, Ventas, Perdidas
@@ -4444,144 +4449,200 @@ def eliminar_producto(request, producto_id):
 @ensure_csrf_cookie
 def exportar_productos_excel(request):
     output = BytesIO()
-    
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    worksheet_data = workbook.add_worksheet('Productos')
-    worksheet_materiales = workbook.add_worksheet('Materiales Usados')
-    worksheet_charts = workbook.add_worksheet('Gráficos')
     
+    # Formatos
     header_format = workbook.add_format({
-        'bold': True,
-        'bg_color': '#000000',
-        'font_color': 'white',
-        'border': 1
+        'bold': True, 'bg_color': '#000000', 'font_color': 'white', 'border': 1
     })
+    date_format = workbook.add_format({'num_format': 'dd/mm/yyyy'})
+    money_format = workbook.add_format({'num_format': '$#,##0.00'})
+    percent_format = workbook.add_format({'num_format': '0.00%'})
     
-    date_format = workbook.add_format({
-        'num_format': 'dd/mm/yyyy',
-    })
+    # Hojas de trabajo
+    worksheet_productos = workbook.add_worksheet('Productos')
+    worksheet_ventas = workbook.add_worksheet('Ventas')
+    worksheet_perdidas = workbook.add_worksheet('Pérdidas')
+    worksheet_graficos = workbook.add_worksheet('Gráficos')
 
-    # Definir encabezados para la hoja de productos
-    headers = [
-        'ID',
-        'Nombre Producto',
-        'Stock Inicial',
-        'Stock Actual',
-        'Precio Unitario',
-        'Precio Total',
-        'Categoría',
-        'Cantidad Vendida',
-        'Cantidad Desechada',
-        'Fecha Creación',
-        'Días Transcurridos',
-        'Estado',
-        'Ubicación',
-        '% Stock Disponible'
+    # Hoja de Productos
+    headers_productos = [
+        'ID', 'Nombre', 'Stock Inicial', 'Stock Actual', 'Precio Unitario',
+        'Precio Total', 'Categoría', 'Vendidos', 'Desechados', 'Fecha Creación',
+        'Días', 'Estado', 'Ubicación', '% Stock'
     ]
-    
-    # Escribir encabezados en hoja de datos
-    for col, header in enumerate(headers):
-        worksheet_data.write(0, col, header, header_format)
-        worksheet_data.set_column(col, col, 15)
+    for col, header in enumerate(headers_productos):
+        worksheet_productos.write(0, col, header, header_format)
+        worksheet_productos.set_column(col, col, 15)
 
-    # Obtener datos de productos
-    productos = Producto.objects.all().select_related('Categoria').prefetch_related('materiales_usados__Material')
+    productos = Producto.objects.select_related('Categoria').prefetch_related(
+        'ventas', 'perdidas'
+    ).all()
 
-    # Escribir datos de productos
-    for row, producto in enumerate(productos, start=1):
-        worksheet_data.write(row, 0, producto.id)
-        worksheet_data.write(row, 1, producto.NombreProducto)
-        worksheet_data.write(row, 2, producto.StockProductoInicial)
-        worksheet_data.write(row, 3, producto.StockProductoActual)
-        worksheet_data.write(row, 4, float(producto.PrecioUnitarioProducto))
-        worksheet_data.write(row, 5, float(producto.PrecioTotalProducto))
-        worksheet_data.write(row, 6, producto.Categoria.NombreCategoria)
-        worksheet_data.write(row, 7, producto.CantidadProductoVendido)
-        worksheet_data.write(row, 8, producto.CantidadProductoDesechado)
-        worksheet_data.write_datetime(row, 9, producto.FechaProducto, date_format)
-        worksheet_data.write(row, 10, producto.DiasProducto)
-        worksheet_data.write(row, 11, producto.EstadoProducto or 'No especificado')
-        worksheet_data.write(row, 12, producto.UbicacionProducto or 'No especificada')
-        worksheet_data.write(row, 13, producto.porcentaje_stock_disponible)
+    for row, p in enumerate(productos, start=1):
+        worksheet_productos.write(row, 0, p.id)
+        worksheet_productos.write(row, 1, p.NombreProducto)
+        worksheet_productos.write(row, 2, p.StockProductoInicial)
+        worksheet_productos.write(row, 3, p.StockProductoActual)
+        worksheet_productos.write(row, 4, float(p.PrecioUnitarioProducto), money_format)
+        worksheet_productos.write(row, 5, float(p.PrecioTotalProducto), money_format)
+        worksheet_productos.write(row, 6, p.Categoria.NombreCategoria if p.Categoria else 'Sin categoría')
+        worksheet_productos.write(row, 7, p.CantidadProductoVendido)
+        worksheet_productos.write(row, 8, p.CantidadProductoDesechado)
+        worksheet_productos.write_datetime(row, 9, p.FechaProducto, date_format)
+        worksheet_productos.write(row, 10, p.DiasProducto)
+        worksheet_productos.write(row, 11, p.EstadoProducto or 'No especificado')
+        worksheet_productos.write(row, 12, p.UbicacionProducto or 'No especificada')
+        worksheet_productos.write(row, 13, p.porcentaje_stock_disponible/100, percent_format)
 
-    # Escribir datos de materiales usados
-    materiales_headers = ['ID Producto', 'Nombre Producto', 'Material', 'Cantidad Usada', 'Descripción Uso']
-    for col, header in enumerate(materiales_headers):
-        worksheet_materiales.write(0, col, header, header_format)
-        worksheet_materiales.set_column(col, col, 20)
+    # Hoja de Ventas
+    headers_ventas = [
+        'ID Venta', 'Producto', 'Cliente', 'Cantidad', 'Precio Unitario',
+        'Total', 'Fecha'
+    ]
+    for col, header in enumerate(headers_ventas):
+        worksheet_ventas.write(0, col, header, header_format)
+        worksheet_ventas.set_column(col, col, 15)
 
-    row_materiales = 1
-    for producto in productos:
-        for material in producto.materiales_usados.all():
-            worksheet_materiales.write(row_materiales, 0, producto.id)
-            worksheet_materiales.write(row_materiales, 1, producto.NombreProducto)
-            worksheet_materiales.write(row_materiales, 2, material.Material.NombreMaterial)
-            worksheet_materiales.write(row_materiales, 3, material.CantidadUsada)
-            worksheet_materiales.write(row_materiales, 4, material.DescripcionUso or '')
-            row_materiales += 1
+    ventas = Ventas.objects.select_related('Producto', 'cliente').all()
+    for row, v in enumerate(ventas, start=1):
+        worksheet_ventas.write(row, 0, v.id)
+        worksheet_ventas.write(row, 1, v.Producto.NombreProducto)
+        worksheet_ventas.write(row, 2, str(v.cliente) if v.cliente else 'Sin cliente')
+        worksheet_ventas.write(row, 3, v.CantidadVenta)
+        worksheet_ventas.write(row, 4, float(v.PrecioVenta), money_format)
+        worksheet_ventas.write(row, 5, float(v.PrecioTotalVenta), money_format)
+        worksheet_ventas.write_datetime(row, 6, v.FechaVenta, date_format)
 
-    # Preparar datos para los gráficos
-    categorias_dict = {}
-    estados_dict = {}
-    for producto in productos:
-        # Conteo por categoría
-        categoria = producto.Categoria.NombreCategoria
-        categorias_dict[categoria] = categorias_dict.get(categoria, 0) + 1
-        
-        # Conteo por estado
-        estado = producto.EstadoProducto or 'No especificado'
-        estados_dict[estado] = estados_dict.get(estado, 0) + 1
+    # Hoja de Pérdidas
+    headers_perdidas = [
+        'ID', 'Producto', 'Cantidad', 'Valor Unitario', 'Valor Total',
+        'Motivo', 'Fecha'
+    ]
+    for col, header in enumerate(headers_perdidas):
+        worksheet_perdidas.write(0, col, header, header_format)
+        worksheet_perdidas.set_column(col, col, 15)
 
-    # Escribir datos para gráficos
-    worksheet_charts.write_row('A1', ['Categoría', 'Cantidad'], header_format)
-    for i, (categoria, cantidad) in enumerate(categorias_dict.items(), start=2):
-        worksheet_charts.write(f'A{i}', categoria)
-        worksheet_charts.write(f'B{i}', cantidad)
+    perdidas = Perdidas.objects.select_related('Producto').all()
+    for row, p in enumerate(perdidas, start=1):
+        worksheet_perdidas.write(row, 0, p.id)
+        worksheet_perdidas.write(row, 1, p.Producto.NombreProducto)
+        worksheet_perdidas.write(row, 2, p.CantidadPerdida)
+        worksheet_perdidas.write(row, 3, float(p.ValorUnitarioPerdida), money_format)
+        worksheet_perdidas.write(row, 4, float(p.ValorTotalPerdida), money_format)
+        worksheet_perdidas.write(row, 5, p.get_MotivoPerdida_display())
+        worksheet_perdidas.write_datetime(row, 6, p.FechaPerdida, date_format)
 
-    worksheet_charts.write_row('D1', ['Estado', 'Cantidad'], header_format)
-    for i, (estado, cantidad) in enumerate(estados_dict.items(), start=2):
-        worksheet_charts.write(f'D{i}', estado)
-        worksheet_charts.write(f'E{i}', cantidad)
+    # Datos para gráficos
+    data_for_charts = {
+        'ventas_por_mes': {},
+        'perdidas_por_motivo': {},
+        'productos_por_categoria': {},
+        'stock_status': {'Con Stock': 0, 'Sin Stock': 0}
+    }
+
+    # Recopilar datos para gráficos
+    for v in ventas:
+        mes = v.FechaVenta.strftime('%Y-%m')
+        data_for_charts['ventas_por_mes'][mes] = data_for_charts['ventas_por_mes'].get(mes, 0) + float(v.PrecioTotalVenta)
+
+    for p in perdidas:
+        motivo = p.get_MotivoPerdida_display()
+        data_for_charts['perdidas_por_motivo'][motivo] = data_for_charts['perdidas_por_motivo'].get(motivo, 0) + p.CantidadPerdida
+
+    for p in productos:
+        if p.Categoria:
+            cat = p.Categoria.NombreCategoria
+            data_for_charts['productos_por_categoria'][cat] = data_for_charts['productos_por_categoria'].get(cat, 0) + 1
+        if p.StockProductoActual > 0:
+            data_for_charts['stock_status']['Con Stock'] += 1
+        else:
+            data_for_charts['stock_status']['Sin Stock'] += 1
 
     # Crear gráficos
-    # 1. Gráfico de columnas (Productos por Categoría)
-    column_chart = workbook.add_chart({'type': 'column'})
-    column_chart.add_series({
-        'name': 'Productos por Categoría',
-        'categories': f'=Gráficos!$A$2:$A${len(categorias_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(categorias_dict)+1}',
-        'data_labels': {'value': True},
+    chart_row = 1
+    
+    # 1. Ventas por mes (líneas)
+    ventas_chart = workbook.add_chart({'type': 'line'})
+    worksheet_graficos.write_column('A1', ['Mes'] + list(data_for_charts['ventas_por_mes'].keys()))
+    worksheet_graficos.write_column('B1', ['Total'] + list(data_for_charts['ventas_por_mes'].values()))
+    ventas_chart.add_series({
+        'name': 'Ventas Mensuales',
+        'categories': f'=Gráficos!$A$2:$A${len(data_for_charts["ventas_por_mes"])+1}',
+        'values': f'=Gráficos!$B$2:$B${len(data_for_charts["ventas_por_mes"])+1}',
     })
-    column_chart.set_title({'name': 'Distribución de Productos por Categoría'})
-    column_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('G2', column_chart)
+    ventas_chart.set_title({'name': 'Ventas por Mes'})
+    worksheet_graficos.insert_chart('D1', ventas_chart)
 
-    # 2. Gráfico de pie (Estados de Productos)
-    pie_chart = workbook.add_chart({'type': 'pie'})
-    pie_chart.add_series({
-        'name': 'Estados de Productos',
-        'categories': f'=Gráficos!$D$2:$D${len(estados_dict)+1}',
-        'values': f'=Gráficos!$E$2:$E${len(estados_dict)+1}',
-        'data_labels': {'percentage': True},
+    # 2. Pérdidas por motivo (pie)
+    perdidas_chart = workbook.add_chart({'type': 'pie'})
+    worksheet_graficos.write_column('E1', ['Motivo'] + list(data_for_charts['perdidas_por_motivo'].keys()))
+    worksheet_graficos.write_column('F1', ['Cantidad'] + list(data_for_charts['perdidas_por_motivo'].values()))
+    perdidas_chart.add_series({
+        'name': 'Pérdidas por Motivo',
+        'categories': f'=Gráficos!$E$2:$E${len(data_for_charts["perdidas_por_motivo"])+1}',
+        'values': f'=Gráficos!$F$2:$F${len(data_for_charts["perdidas_por_motivo"])+1}',
+        'data_labels': {'percentage': True}
     })
-    pie_chart.set_title({'name': 'Distribución por Estado (%)'})
-    pie_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('G18', pie_chart)
+    perdidas_chart.set_title({'name': 'Distribución de Pérdidas'})
+    worksheet_graficos.insert_chart('D15', perdidas_chart)
 
+    # 3. Stock Status (donut)
+    stock_chart = workbook.add_chart({'type': 'doughnut'})
+    worksheet_graficos.write_column('H1', ['Estado'] + list(data_for_charts['stock_status'].keys()))
+    worksheet_graficos.write_column('I1', ['Cantidad'] + list(data_for_charts['stock_status'].values()))
+    stock_chart.add_series({
+        'name': 'Estado del Stock',
+        'categories': f'=Gráficos!$H$2:$H${len(data_for_charts["stock_status"])+1}',
+        'values': f'=Gráficos!$I$2:$I${len(data_for_charts["stock_status"])+1}',
+        'data_labels': {'percentage': True}
+    })
+    stock_chart.set_title({'name': 'Estado del Stock'})
+    worksheet_graficos.insert_chart('K1', stock_chart)
+
+    # 4. Añadir gráfico de ventas vs pérdidas
+    ventas_perdidas_chart = workbook.add_chart({'type': 'pie'})
+    
+    # Calcular totales
+    total_ventas = sum(v.PrecioTotalVenta for v in ventas)
+    total_perdidas = sum(p.ValorTotalPerdida for p in perdidas)
+    
+    worksheet_graficos.write_column('K1', ['Tipo', 'Ventas', 'Pérdidas'])
+    worksheet_graficos.write_column('L1', ['Cantidad', float(total_ventas), float(total_perdidas)])
+
+    ventas_perdidas_chart.add_series({
+        'name': 'Ventas vs Pérdidas',
+        'categories': '=Gráficos!$K$2:$K$3',
+        'values': '=Gráficos!$L$2:$L$3',
+        'data_labels': {
+            'percentage': True,
+            'value': True,
+            'category': True
+        }
+    })
+    ventas_perdidas_chart.set_title({'name': 'Distribución Ventas vs Pérdidas'})
+    worksheet_graficos.insert_chart('K15', ventas_perdidas_chart)
+
+    # Añadir totales en la hoja
+    bold_format = workbook.add_format({'bold': True})
+    worksheet_graficos.write('K30', 'Total Ventas:', bold_format)
+    worksheet_graficos.write('L30', float(total_ventas), money_format)
+    worksheet_graficos.write('K31', 'Total Pérdidas:', bold_format)
+    worksheet_graficos.write('L31', float(total_perdidas), money_format)
+    worksheet_graficos.write('K32', 'Total General:', bold_format)
+    worksheet_graficos.write('L32', float(total_ventas + total_perdidas), money_format)
+
+    # Ahora sí cerramos el workbook
     workbook.close()
-
-    # Preparar la respuesta
     output.seek(0)
-    filename = f'Productos_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response['Content-Disposition'] = f'attachment; filename="Reporte_Productos_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx"'
     
     return response
-
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def registrar_venta(request, producto_id):
@@ -4801,5 +4862,450 @@ def listar_clientes(request):
         return JsonResponse({
             'success': False,
             'message': 'Error al obtener los clientes',
+            'error': str(e)
+        }, status=500)
+        
+#-------------MODULO PARA CATEGORIA----------------------
+@login_required(login_url='login')
+def mod_categoria(request):
+    return render(request, 'material/categoria.html')
+@login_required(login_url='login')
+def listar_categorias_completo(request):
+    try:
+        categorias = Categoria.objects.all()
+        return JsonResponse({
+            'success': True,
+            'categorias': [
+                {
+                    'id': categoria.id,
+                    'NombreCategoria': categoria.NombreCategoria,
+                    'DescripcionCategoria': categoria.DescripcionCategoria,
+                    'StockCategoria': categoria.StockCategoria,
+                    'FotoCategoria': str(categoria.FotoCategoria.url) if categoria.FotoCategoria else None,
+                    'CantidadCategoriaPerdida': categoria.CantidadCategoriaPerdida,
+                    'CantidadCategoriaVenta': categoria.CantidadCategoriaVenta,
+                    'TotalCategoriaVenta': str(categoria.TotalCategoriaVenta),
+                    'TotalCategoriaPerdida': str(categoria.TotalCategoriaPerdida)
+                } for categoria in categorias
+            ]
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def crear_categoria(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        # Log para debugging
+        print("Datos recibidos:", request.POST)
+        print("Archivos recibidos:", request.FILES)
+        
+        data = request.POST
+        
+        # Validar campos requeridos
+        if not data.get('NombreCategoria'):
+            return JsonResponse({
+                'success': False,
+                'errors': {'NombreCategoria': 'El nombre de la categoría es requerido'}
+            }, status=400)
+        
+        # Crear la categoría con los campos exactos del modelo
+        nueva_categoria = Categoria(
+            NombreCategoria=data.get('NombreCategoria'),
+            DescripcionCategoria=data.get('DescripcionCategoria', '')
+            # Los demás campos tienen valores por defecto en el modelo
+        )
+        
+        # Manejar la foto si existe
+        if 'FotoCategoria' in request.FILES:
+            foto = request.FILES['FotoCategoria']
+            
+            # Validar tipo de archivo
+            ALLOWED_FILE_TYPES = [
+                'image/jpeg', 'image/png', 'image/gif',
+                'image/bmp', 'image/webp', 'image/tiff', 'image/svg+xml'
+            ]
+            
+            if foto.content_type not in ALLOWED_FILE_TYPES:
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'FotoCategoria': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG'}
+                }, status=400)
+
+            if foto.size > 10 * 1024 * 1024:  # 10MB
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'FotoCategoria': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'}
+                }, status=400)
+
+            nueva_categoria.FotoCategoria = foto
+
+        try:
+            nueva_categoria.full_clean()
+            nueva_categoria.save()
+        except ValidationError as e:
+            print("Errores de validación:", e.message_dict)
+            errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                 for campo, errores in e.message_dict.items()}
+            return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
+        except IntegrityError as e:
+            if 'unique constraint' in str(e).lower():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'NombreCategoria': 'Ya existe una categoría con este nombre'}
+                }, status=400)
+            raise
+        
+        # Devolver la respuesta con los campos exactos del modelo
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Categoría creada exitosamente',
+            'categoria': {
+                'id': nueva_categoria.id,
+                'NombreCategoria': nueva_categoria.NombreCategoria,
+                'DescripcionCategoria': nueva_categoria.DescripcionCategoria or '',
+                'StockCategoria': nueva_categoria.StockCategoria,
+                'CantidadCategoriaPerdida': nueva_categoria.CantidadCategoriaPerdida,
+                'CantidadCategoriaVenta': nueva_categoria.CantidadCategoriaVenta,
+                'TotalCategoriaVenta': str(nueva_categoria.TotalCategoriaVenta),
+                'TotalCategoriaPerdida': str(nueva_categoria.TotalCategoriaPerdida),
+                'FotoCategoria': nueva_categoria.FotoCategoria.url if nueva_categoria.FotoCategoria else None
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        print("Error al crear categoría:", str(e))
+        print(traceback.format_exc())
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_categoria(request, categoria_id):
+    if request.method in ['PUT', 'POST']:  # Permitimos ambos métodos
+        try:
+            categoria = get_object_or_404(Categoria, id=categoria_id)
+            data = request.POST
+            
+            # Campos requeridos
+            campos_requeridos = ['NombreCategoria']
+            errores = {}
+            
+            for campo in campos_requeridos:
+                if not data.get(campo):
+                    errores[campo] = f'El campo {campo} es requerido'
+            
+            if errores:
+                return JsonResponse({'success': False, 'errors': errores}, status=400)
+
+            # Manejar la foto
+            if data.get('eliminar_FotoCategoria', '').lower() == 'true' and categoria.FotoCategoria:
+                try:
+                    url = categoria.FotoCategoria.url
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                    
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+                    
+                    result = cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload",
+                        invalidate=True
+                    )
+                    print(f"Resultado de eliminación foto: {result}")
+                    
+                    categoria.FotoCategoria = None
+                    
+                except Exception as e:
+                    print(f"Error al eliminar foto: {str(e)}")
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoCategoria': f'Error al eliminar la foto: {str(e)}'}
+                    }, status=400)
+            
+            elif 'FotoCategoria' in request.FILES:
+                foto = request.FILES['FotoCategoria']
+                
+                if foto.size > 10 * 1024 * 1024:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoCategoria': 'El archivo es demasiado grande. El tamaño máximo permitido es 10MB'}
+                    }, status=400)
+                
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoCategoria': 'Formato no válido. Formatos permitidos: JPG, PNG, GIF, BMP, WEBP, TIFF, SVG'}
+                    }, status=400)
+                
+                if categoria.FotoCategoria:
+                    try:
+                        url = categoria.FotoCategoria.url
+                        parts = url.split('/')
+                        public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                        
+                        cloudinary.config(
+                            cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                            api_key=os.getenv('CLOUDINARY_API_KEY'),
+                            api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                        )
+                        
+                        cloudinary.uploader.destroy(
+                            public_id,
+                            resource_type="image",
+                            type="upload",
+                            invalidate=True
+                        )
+                    except Exception as e:
+                        print(f"Error al eliminar foto anterior: {str(e)}")
+                
+                categoria.FotoCategoria = foto
+
+            # Actualizar campos de la categoría
+            categoria.NombreCategoria = data.get('NombreCategoria', categoria.NombreCategoria)
+            categoria.DescripcionCategoria = data.get('DescripcionCategoria', categoria.DescripcionCategoria)
+            
+            try:
+                categoria.full_clean()
+                categoria.save()
+            except ValidationError as e:
+                errores_formateados = {campo: errores[0] if errores else str(errores) 
+                                     for campo, errores in e.message_dict.items()}
+                return JsonResponse({'success': False, 'errors': errores_formateados}, status=400)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Categoría actualizada exitosamente',
+                'categoria': {
+                    'id': categoria.id,
+                    'NombreCategoria': categoria.NombreCategoria,
+                    'DescripcionCategoria': categoria.DescripcionCategoria,
+                    'StockCategoria': categoria.StockCategoria,
+                    'CantidadCategoriaPerdida': categoria.CantidadCategoriaPerdida,
+                    'CantidadCategoriaVenta': categoria.CantidadCategoriaVenta,
+                    'TotalCategoriaVenta': str(categoria.TotalCategoriaVenta),
+                    'TotalCategoriaPerdida': str(categoria.TotalCategoriaPerdida),
+                    'FotoCategoria': categoria.FotoCategoria.url if categoria.FotoCategoria else None
+                }
+            })
+            
+        except Exception as e:
+            print(f"Error general: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': {'general': f'Error al actualizar la categoría: {str(e)}'}
+            }, status=400)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {'general': 'Método no permitido'}
+    }, status=405)
+@login_required(login_url='login')
+def eliminar_categoria(request, categoria_id):
+    if request.method != 'DELETE':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        categoria = Categoria.objects.get(id=categoria_id)
+        categoria.delete()
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Categoría eliminada exitosamente'
+        })
+    except Categoria.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Categoría no encontrada'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required(login_url='login')
+def exportar_categorias_excel(request):
+    try:
+        output = BytesIO()
+        workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+        
+        # Formatos
+        header_format = workbook.add_format({
+            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 'border': 1
+        })
+        money_format = workbook.add_format({'num_format': '$#,##0'})
+        
+        # Hoja principal de categorías
+        worksheet = workbook.add_worksheet('Categorías')
+        
+        # Headers
+        headers = [
+            'ID', 'Nombre', 'Descripción', 'Stock', 
+            'Productos Perdidos', 'Productos Vendidos',
+            'Total Ventas', 'Total Pérdidas'
+        ]
+        
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header, header_format)
+            worksheet.set_column(col, col, 15)
+        
+        # Datos
+        categorias = Categoria.objects.all()
+        for row, categoria in enumerate(categorias, start=1):
+            worksheet.write(row, 0, categoria.id)
+            worksheet.write(row, 1, categoria.NombreCategoria)
+            worksheet.write(row, 2, categoria.DescripcionCategoria or 'Sin descripción')
+            worksheet.write(row, 3, categoria.StockCategoria)
+            worksheet.write(row, 4, categoria.CantidadCategoriaPerdida)
+            worksheet.write(row, 5, categoria.CantidadCategoriaVenta)
+            worksheet.write(row, 6, float(categoria.TotalCategoriaVenta), money_format)
+            worksheet.write(row, 7, float(categoria.TotalCategoriaPerdida), money_format)
+        
+        workbook.close()
+        output.seek(0)
+        
+        response = HttpResponse(
+            output.read(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="Categorias_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx"'
+        
+        return response
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required(login_url='login')
+def solicitar_eliminacion_categoria(request, categoria_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        categoria = Categoria.objects.get(id=categoria_id)
+        
+        # Crear token con información de la categoría y timestamp
+        payload = {
+            'categoria_id': categoria_id,
+            'timestamp': timezone.now().timestamp(),
+            'expiry': (timezone.now() + timezone.timedelta(minutes=30)).timestamp()
+        }
+        
+        token = base64.urlsafe_b64encode(json.dumps(payload).encode()).decode()
+        
+        # URL de confirmación
+        confirmation_url = request.build_absolute_uri(
+            reverse('confirmar_eliminacion_categoria', kwargs={'token': token})
+        )
+        
+        # Formatear montos para el correo
+        def format_clp(amount):
+            try:
+                amount = float(amount)
+                return f"${amount:,.0f}".replace(",", ".")
+            except (ValueError, TypeError):
+                return "$0"
+        
+        # Mensaje del correo
+        mensaje_correo = f"""
+        Se ha solicitado la eliminación de la siguiente categoría:
+        
+        ID: {categoria.id}
+        Nombre: {categoria.NombreCategoria}
+        Stock actual: {categoria.StockCategoria}
+        Productos Vendidos: {categoria.CantidadCategoriaVenta}
+        Productos Perdidos: {categoria.CantidadCategoriaPerdida}
+        Total Ventas: {format_clp(categoria.TotalCategoriaVenta)}
+        Total Pérdidas: {format_clp(categoria.TotalCategoriaPerdida)}
+        
+        Para confirmar la eliminación de esta categoría, haz clic en el siguiente enlace:
+        {confirmation_url}
+        
+        Este enlace expirará en 30 minutos.
+        
+        IMPORTANTE: Esta acción no se puede deshacer una vez confirmada.
+        Si no solicitaste esta eliminación, puedes ignorar este correo.
+        """
+        
+        # Enviar correo
+        send_mail(
+            'Confirmación de Eliminación de Categoría',
+            mensaje_correo,
+            settings.DEFAULT_FROM_EMAIL,
+            [request.user.email],
+            fail_silently=False,
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Se ha enviado un correo de confirmación'
+        })
+        
+    except Categoria.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Categoría no encontrada'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required(login_url='login')
+def confirmar_eliminacion_categoria(request, token):
+    try:
+        # Decodificar y validar token
+        payload = json.loads(base64.urlsafe_b64decode(token.encode()).decode())
+        
+        # Verificar expiración
+        if timezone.now().timestamp() > float(payload['expiry']):
+            return JsonResponse({
+                'success': False,
+                'error': 'El enlace ha expirado. Por favor, solicita un nuevo correo de confirmación.'
+            }, status=400)
+        
+        categoria_id = payload['categoria_id']
+        categoria = Categoria.objects.get(id=categoria_id)
+        
+        # Eliminar la categoría
+        categoria.delete()
+        
+        # Retornar mensaje de éxito
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'La categoría ha sido eliminada exitosamente'
+        })
+        
+    except (json.JSONDecodeError, KeyError, ValueError):
+        return JsonResponse({
+            'success': False,
+            'error': 'El enlace no es válido'
+        }, status=400)
+    except Categoria.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'La categoría no existe o ya fue eliminada'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
             'error': str(e)
         }, status=500)

@@ -1,0 +1,9 @@
+{% extends "plantilla/base.html" %}
+{% load static tailwind_tags %}
+{% tailwind_css %}
+
+{% block content %}
+{% csrf_token %}
+<div id="react-categoria"></div>
+<script src="{% static 'js/react/dist/categoria.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
+{% endblock %}
