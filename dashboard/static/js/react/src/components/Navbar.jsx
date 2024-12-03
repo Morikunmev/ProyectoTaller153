@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { UserCircle, X, Camera } from "lucide-react";
 import { useProfileEditModal } from "./useProfileEditModal";
+import ReportModal from "./ReporteComponents/ReportModal"; 
+
 
 // Componente Modal de Edición de Perfil
 const ProfileEditModal = ({ isOpen, onClose, userData, onUpdate }) => {
@@ -221,6 +223,7 @@ const Navbar = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   function getCookie(name) {
     let cookieValue = null;
@@ -236,6 +239,11 @@ const Navbar = () => {
     }
     return cookieValue;
   }
+  useEffect(() => {
+    const handleOpenModal = () => setIsReportModalOpen(true);
+    window.addEventListener("openReportModal", handleOpenModal);
+    return () => window.removeEventListener("openReportModal", handleOpenModal);
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -348,6 +356,11 @@ const Navbar = () => {
           setUserData(updatedUser);
           setIsProfileModalOpen(false);
         }}
+      />
+
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
       />
     </>
   );

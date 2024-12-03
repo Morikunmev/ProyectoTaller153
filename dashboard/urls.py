@@ -114,6 +114,9 @@ urlpatterns = [
     #-------------------RUTAS PARA USUARIOS-----------------
     path('api/usuario/actualizar/', views.actualizar_usuario, name='actualizar_usuario'),
 
+    #-------------------RUTAS PARA CORREO-----------------
+    path('api/enviar-reporte/', views.enviar_reporte, name='enviar_reporte'),
+
 
 
 

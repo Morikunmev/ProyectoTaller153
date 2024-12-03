@@ -41,6 +41,8 @@ from django.core.mail import send_mail
 from django.urls import reverse
 
 from cloudinary.uploader import upload
+from django.core.mail import EmailMessage
+
 
 
 
@@ -5430,4 +5432,57 @@ def actualizar_usuario(request):
         return JsonResponse({
             'success': False,
             'error': 'Error interno del servidor'
+        }, status=500)
+        
+@login_required(login_url='login')
+def enviar_reporte(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+    
+    try:
+        asunto = request.POST.get('asunto')
+        mensaje = request.POST.get('mensaje')
+        adjuntos = request.FILES.getlist('adjuntos')
+
+        # Formatear el mensaje del correo
+        mensaje_correo = f"""
+        Se ha recibido un nuevo reporte:
+        
+        Asunto: {asunto}
+        Enviado por: {request.user.email}
+        
+        Mensaje:
+        {mensaje}
+        """
+        
+        # Crear el email con EmailMessage para poder adjuntar archivos
+        email = EmailMessage(
+            subject=f'Reporte: {asunto}',
+            body=mensaje_correo,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=['kuromechiv@gmail.com']
+        )
+
+        # Adjuntar los archivos
+        for adjunto in adjuntos:
+            print(f"Adjuntando archivo: {adjunto.name}")  # Debug
+            email.attach(
+                adjunto.name,
+                adjunto.read(),
+                adjunto.content_type
+            )
+
+        # Enviar el email
+        email.send(fail_silently=False)
+        
+        return JsonResponse({
+            'success': True,
+            'mensaje': 'Reporte enviado exitosamente'
+        })
+        
+    except Exception as e:
+        print(f"Error al enviar reporte: {str(e)}")  # Para debugging
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
         }, status=500)
