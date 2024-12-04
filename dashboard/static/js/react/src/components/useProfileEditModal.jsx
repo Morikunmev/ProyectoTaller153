@@ -19,6 +19,7 @@ export const useProfileEditModal = ({
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (isOpen && userData) {
@@ -32,6 +33,7 @@ export const useProfileEditModal = ({
         FotoUsuario: null,
       });
       setPreviewUrl(userData.FotoUsuario || null);
+      setSuccess(false);
     }
   }, [isOpen, userData]);
 
@@ -75,7 +77,6 @@ export const useProfileEditModal = ({
       });
 
       const response = await fetch("/api/usuario/actualizar/", {
-        // URL actualizada
         method: "POST",
         headers: {
           "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
@@ -91,8 +92,13 @@ export const useProfileEditModal = ({
       }
 
       if (result.success) {
+        setSuccess(true);
         onUpdate(result.usuario);
-        onClose();
+
+        setTimeout(() => {
+          onClose();
+          setSuccess(false);
+        }, 2000);
       }
     } catch (error) {
       setErrors({ general: error.message });
@@ -106,6 +112,7 @@ export const useProfileEditModal = ({
     errors,
     isSubmitting,
     previewUrl,
+    success,
     handleInputChange,
     handleFotoChange,
     handleSubmit,

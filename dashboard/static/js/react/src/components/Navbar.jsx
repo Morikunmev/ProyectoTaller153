@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { UserCircle, X, Camera } from "lucide-react";
+import { UserCircle, X, Camera, Flag } from "lucide-react";
 import { useProfileEditModal } from "./useProfileEditModal";
-import ReportModal from "./ReporteComponents/ReportModal"; 
-
+import ReportModal from "./ReporteComponents/ReportModal";
 
 // Componente Modal de Edición de Perfil
 const ProfileEditModal = ({ isOpen, onClose, userData, onUpdate }) => {
@@ -239,11 +238,7 @@ const Navbar = () => {
     }
     return cookieValue;
   }
-  useEffect(() => {
-    const handleOpenModal = () => setIsReportModalOpen(true);
-    window.addEventListener("openReportModal", handleOpenModal);
-    return () => window.removeEventListener("openReportModal", handleOpenModal);
-  }, []);
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -298,6 +293,15 @@ const Navbar = () => {
 
             <div className="flex items-center space-x-4 flex-shrink-0">
               <div className="flex items-center space-x-3">
+                {/* Botón de Reporte */}
+                <button
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="flex items-center space-x-2 text-white hover:bg-gray-800 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                >
+                  <Flag className="w-5 h-5" />
+                  <span>Reportar</span>
+                </button>
+
                 <div
                   className="w-10 h-10 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center ring-2 ring-white flex-shrink-0 cursor-pointer"
                   onClick={() => setIsProfileModalOpen(true)}
