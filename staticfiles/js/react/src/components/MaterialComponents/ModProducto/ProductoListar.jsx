@@ -86,6 +86,7 @@ const ProductoListar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   const renderTableView = () => (
+    
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
@@ -216,7 +217,9 @@ const ProductoListar = () => {
           ))}
         </tbody>
       </table>
+      
     </div>
+    
   );
   const handleExportClick = async () => {
     try {

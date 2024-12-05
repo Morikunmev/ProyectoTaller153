@@ -6,6 +6,7 @@ const usePerdidaState = () => {
   const [perdidas, setPerdidas] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isGridView, setIsGridView] = useState(false);
 
   // Loading and error states
   const [loading, setLoading] = useState(true);
@@ -85,6 +86,16 @@ const usePerdidaState = () => {
       setIsSearching(false);
     }, 300);
 
+    return () => clearTimeout(timer);
+  }, []);
+  const handleViewChange = useCallback((gridView) => {
+    setIsChangingView(true);
+    setIsGridView(gridView);
+    
+    const timer = setTimeout(() => {
+      setIsChangingView(false);
+    }, 300); // Sincronizado con la duración de la transición CSS
+  
     return () => clearTimeout(timer);
   }, []);
 
@@ -175,7 +186,9 @@ const usePerdidaState = () => {
     isRestabling,
     updateModalOpen,
     perdidaToUpdate,
+    isGridView,
     handleSearch,
+    handleViewChange,
     handlePreviousPage,
     handleNextPage,
     handleExportClick,
