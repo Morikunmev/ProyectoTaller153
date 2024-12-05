@@ -1,12 +1,242 @@
 import React, { useState, useMemo } from "react";
-import { Search, RefreshCw, Pencil } from "lucide-react";
+import {
+  Search,
+  RefreshCw,
+  Pencil,
+  FileText,
+  LayoutGrid,
+  List,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import PaginacionModPerdida from "./PaginacionModPerdida";
 import usePerdidaState from "./hooks/usePerdidaState";
 import PerdidaRestablecerModal from "./modals/PerdidaRestablecerModal";
 import PerdidaUpdateModal from "./modals/PerdidaUpdateModal";
+import PerdidaGrid from "./layout/PerdidaGrid";
+
+// Componente para badge de estado
+const StateBadge = ({ children, type = "default" }) => {
+  const styles = {
+    default: "bg-gray-100 text-gray-700",
+    warning: "bg-yellow-100 text-yellow-800",
+  };
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-sm ${styles[type]}`}>
+      {children}
+    </span>
+  );
+};
+
+// Componente para el header con título y contador
+const Header = ({ count }) => (
+  <div className="flex items-center gap-4 mb-6">
+    <h1 className="text-2xl font-bold text-gray-900">Módulo Pérdidas</h1>
+    <StateBadge>{count} Pérdidas</StateBadge>
+  </div>
+);
+const StatsHeader = ({ perdidas }) => {
+  const totalValue = useMemo(
+    () =>
+      perdidas.reduce((sum, perdida) => sum + Number(perdida.valor_total), 0),
+    [perdidas]
+  );
+
+  return (
+    <div className="flex items-center gap-4 mb-6">
+      <h1 className="text-2xl font-bold text-gray-900">Módulo Pérdidas</h1>
+      <div className="flex items-center gap-2">
+        <StateBadge>
+          {perdidas.length} {perdidas.length === 1 ? "Pérdida" : "Pérdidas"}
+        </StateBadge>
+        <StateBadge type="warning">
+          Total: ${totalValue.toLocaleString("es-CL")}
+        </StateBadge>
+      </div>
+    </div>
+  );
+};
+
+// Componente para el toggle de vista
+const ViewToggle = ({ isGridView, onViewChange }) => (
+  <div className="bg-white border rounded-lg shadow-sm p-1 flex gap-1">
+    <button
+      onClick={() => onViewChange(false)}
+      className={`p-1.5 rounded flex items-center gap-1 transition-all duration-200 ${
+        !isGridView
+          ? "bg-blue-50 text-blue-600"
+          : "text-gray-500 hover:bg-gray-50"
+      }`}
+      title="Vista de lista"
+    >
+      <List className="w-4 h-4" />
+    </button>
+    <button
+      onClick={() => onViewChange(true)}
+      className={`p-1.5 rounded flex items-center gap-1 transition-all duration-200 ${
+        isGridView
+          ? "bg-blue-50 text-blue-600"
+          : "text-gray-500 hover:bg-gray-50"
+      }`}
+      title="Vista de cuadrícula"
+    >
+      <LayoutGrid className="w-4 h-4" />
+    </button>
+  </div>
+);
+
+// Componente para la barra de búsqueda y exportación
+const SearchAndExport = ({
+  searchTerm,
+  onSearch,
+  onExport,
+  isGridView,
+  onViewChange,
+}) => (
+  <div className="flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4">
+    <div className="relative w-[300px] max-[790px]:w-full">
+      <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+      <input
+        type="text"
+        placeholder="Buscar por nombre..."
+        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
+                  focus:outline-none focus:ring-1 focus:ring-blue-500
+                  transition-colors duration-200"
+        value={searchTerm}
+        onChange={(e) => onSearch(e.target.value)}
+      />
+    </div>
+
+    <div className="flex items-center gap-4">
+      <ViewToggle isGridView={isGridView} onViewChange={onViewChange} />
+      <button
+        onClick={onExport}
+        className="group bg-green-600 text-white px-4 py-2 rounded-lg 
+                  hover:bg-green-700 active:bg-green-800
+                  transition-all duration-200 ease-out 
+                  hover:shadow-lg active:shadow-none
+                  transform active:scale-95 max-[790px]:w-full"
+      >
+        <span className="flex items-center justify-center">
+          <FileText className="w-4 h-4 mr-2" />
+          <span>Generar Excel</span>
+        </span>
+      </button>
+    </div>
+  </div>
+);
+
+// Componente para los badges de productos
+const ProductStats = ({ stats, selectedProduct, onProductClick }) => (
+  <div className="flex flex-wrap gap-2 mb-6">
+    {stats.map(({ name, count, totalValue }) => (
+      <button
+        key={name}
+        onClick={() => onProductClick(name)}
+        className={`px-3 py-1 rounded-full text-sm transition-all duration-200 
+          ${
+            selectedProduct === name
+              ? "bg-blue-600 text-white hover:bg-blue-700"
+              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+          }`}
+      >
+        <span className="font-medium">{count}</span> {name}{" "}
+        <span className="text-xs ml-1 opacity-75">
+          (${totalValue.toLocaleString()})
+        </span>
+      </button>
+    ))}
+  </div>
+);
+
+// Componente para los botones de acción
+const ActionButtons = ({ perdida, onEdit, onRestablecer, isRestabling }) => (
+  <div className="flex justify-center gap-2">
+    <button
+      type="button"
+      onClick={() => onEdit(perdida)}
+      className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs
+                hover:bg-blue-50 rounded transition-all duration-200"
+    >
+      <Pencil className="w-3 h-3" />
+      <span>Editar</span>
+    </button>
+    <button
+      type="button"
+      onClick={() => onRestablecer(perdida)}
+      disabled={isRestabling}
+      className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs
+                hover:bg-blue-50 rounded transition-all duration-200
+                disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <RefreshCw className="w-3 h-3" />
+      <span>Restablecer</span>
+    </button>
+  </div>
+);
+
+// Componente para el contenido de la tabla
+const TableContent = ({ perdidas, onEdit, onRestablecer, isRestabling }) => (
+  <table className="w-full min-w-[1200px]">
+    <thead>
+      <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
+        <th className="p-2 font-medium">ID</th>
+        <th className="p-2 font-medium">NOMBRE</th>
+        <th className="p-2 font-medium">PRODUCTO</th>
+        <th className="p-2 font-medium">CANTIDAD</th>
+        <th className="p-2 font-medium">VALOR UNITARIO</th>
+        <th className="p-2 font-medium">VALOR TOTAL</th>
+        <th className="p-2 font-medium">MOTIVO</th>
+        <th className="p-2 font-medium">DESCRIPCIÓN</th>
+        <th className="p-2 font-medium">USUARIO</th>
+        <th className="p-2 font-medium">FECHA REGISTRO</th>
+        <th className="p-2 font-medium">ÚLTIMA MODIFICACIÓN</th>
+        <th className="p-2 font-medium text-center">ACCIONES</th>
+      </tr>
+    </thead>
+    <tbody className="text-sm">
+      {perdidas.map((perdida) => (
+        <tr key={perdida.id} className="border-b hover:bg-gray-50">
+          <td className="p-2 font-medium text-gray-900">#{perdida.id}</td>
+          <td className="p-2">{perdida.nombre}</td>
+          <td className="p-2">{perdida.producto.nombre}</td>
+          <td className="p-2">{perdida.cantidad}</td>
+          <td className="p-2">${perdida.valor_unitario.toLocaleString()}</td>
+          <td className="p-2">${perdida.valor_total.toLocaleString()}</td>
+          <td className="p-2">
+            <StateBadge type="warning">{perdida.motivo}</StateBadge>
+          </td>
+          <td
+            className="p-2 max-w-[200px] truncate"
+            title={perdida.descripcion}
+          >
+            {perdida.descripcion || "Sin descripción"}
+          </td>
+          <td className="p-2">{perdida.usuario.nombre}</td>
+          <td className="p-2 whitespace-nowrap">
+            {new Date(perdida.fecha_registro).toLocaleString()}
+          </td>
+          <td className="p-2 whitespace-nowrap">
+            {new Date(perdida.ultima_modificacion).toLocaleString()}
+          </td>
+          <td className="p-2">
+            <ActionButtons
+              perdida={perdida}
+              onEdit={onEdit}
+              onRestablecer={onRestablecer}
+              isRestabling={isRestabling}
+            />
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+);
 
 const PerdidaListar = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [isGridView, setIsGridView] = useState(false);
 
   const {
     searchTerm,
@@ -34,25 +264,18 @@ const PerdidaListar = () => {
     setRestablecerModalOpen,
     setPerdidaToRestablecer,
     handleUpdateModalOpen,
-    handleUpdateModalClose,
     handlePerdidaUpdated,
     setUpdateModalOpen,
     setPerdidaToUpdate,
   } = usePerdidaState();
 
-  // Calcular estadísticas de productos
   const productStats = useMemo(() => {
     const stats = filteredPerdidas.reduce((acc, perdida) => {
       const productName = perdida.producto.nombre;
       if (!acc[productName]) {
-        acc[productName] = {
-          count: 0,
-          totalValue: 0,
-          totalQuantity: 0,
-        };
+        acc[productName] = { count: 0, totalValue: 0, totalQuantity: 0 };
       }
       acc[productName].count++;
-      // Convertir a número y sumar
       acc[productName].totalValue += Number(perdida.valor_total);
       acc[productName].totalQuantity += perdida.cantidad;
       return acc;
@@ -68,7 +291,6 @@ const PerdidaListar = () => {
     );
   }, [filteredPerdidas]);
 
-  // Filtrar pérdidas por producto seleccionado
   const displayedPerdidas = useMemo(() => {
     if (!selectedProduct) return currentPerdidas;
     return currentPerdidas.filter(
@@ -76,90 +298,9 @@ const PerdidaListar = () => {
     );
   }, [currentPerdidas, selectedProduct]);
 
-  const handleProductClick = (productName) => {
-    setSelectedProduct((prev) => (prev === productName ? null : productName));
+  const handleViewChange = (gridView) => {
+    setIsGridView(gridView);
   };
-
-  const renderTableView = () => (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1200px]">
-        <thead>
-          <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
-            <th className="p-1.5 font-medium">ID</th>
-            <th className="p-1.5 font-medium">NOMBRE</th>
-            <th className="p-1.5 font-medium">PRODUCTO</th>
-            <th className="p-1.5 font-medium">CANTIDAD</th>
-            <th className="p-1.5 font-medium">VALOR UNITARIO</th>
-            <th className="p-1.5 font-medium">VALOR TOTAL</th>
-            <th className="p-1.5 font-medium">MOTIVO</th>
-            <th className="p-1.5 font-medium">DESCRIPCIÓN</th>
-            <th className="p-1.5 font-medium">USUARIO</th>
-            <th className="p-1.5 font-medium">FECHA REGISTRO</th>
-            <th className="p-1.5 font-medium">ÚLTIMA MODIFICACIÓN</th>
-            <th className="p-1.5 font-medium text-center">ACCIONES</th>
-          </tr>
-        </thead>
-        <tbody className="text-sm">
-          {displayedPerdidas.map((perdida) => (
-            <tr key={perdida.id} className="border-b hover:bg-gray-50">
-              <td className="p-1.5 font-medium text-gray-900">#{perdida.id}</td>
-              <td className="p-1.5">{perdida.nombre}</td>
-              <td className="p-1.5">{perdida.producto.nombre}</td>
-              <td className="p-1.5">{perdida.cantidad}</td>
-              <td className="p-1.5">
-                ${perdida.valor_unitario.toLocaleString()}
-              </td>
-              <td className="p-1.5">${perdida.valor_total.toLocaleString()}</td>
-              <td className="p-1.5">
-                <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs">
-                  {perdida.motivo}
-                </span>
-              </td>
-              <td
-                className="p-1.5 max-w-[200px] truncate"
-                title={perdida.descripcion}
-              >
-                {perdida.descripcion || "Sin descripción"}
-              </td>
-              <td className="p-1.5">{perdida.usuario.nombre}</td>
-              <td className="p-1.5 whitespace-nowrap">
-                {new Date(perdida.fecha_registro).toLocaleString()}
-              </td>
-              <td className="p-1.5 whitespace-nowrap">
-                {new Date(perdida.ultima_modificacion).toLocaleString()}
-              </td>
-              <td className="p-1.5">
-                <div className="flex justify-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateModalOpen(perdida)}
-                    className="p-0.5 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
-                            transition-all duration-200 ease-in-out hover:scale-105 active:scale-95"
-                    title="Editar pérdida"
-                  >
-                    <Pencil className="w-3 h-3" />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleRestablecer(perdida)}
-                    disabled={isRestabling}
-                    className="p-0.5 text-blue-600 hover:text-blue-800 flex items-center gap-0.5 text-xs
-                            transition-all duration-200 ease-in-out hover:scale-105 active:scale-95
-                            disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Restablecer pérdida"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Restablecer
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
 
   return (
     <main className="relative">
@@ -169,89 +310,33 @@ const PerdidaListar = () => {
         }`}
       >
         <div className="max-w-full mx-auto p-6">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Módulo Pérdidas
-            </h1>
-            <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-              {filteredPerdidas.length} Pérdidas
-            </span>
-          </div>
+          <StatsHeader perdidas={filteredPerdidas} />
 
-          {/* Search and Export */}
-          <div className="flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4">
-            <div className="relative w-[300px] max-[790px]:w-full">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar por nombre..."
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
-                        focus:outline-none focus:ring-1 focus:ring-blue-500
-                        transition-colors duration-200"
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-            </div>
+          <SearchAndExport
+            searchTerm={searchTerm}
+            onSearch={handleSearch}
+            onExport={handleExportClick}
+            isGridView={isGridView}
+            onViewChange={handleViewChange}
+          />
 
-            <div className="flex items-center space-x-3 max-[790px]:w-full">
-              <button
-                onClick={handleExportClick}
-                className="group relative bg-green-600 text-white px-4 py-2 rounded-lg 
-                        hover:bg-green-700 active:bg-green-800
-                        transition-all duration-200 ease-out 
-                        hover:shadow-lg active:shadow-none
-                        transform active:scale-95 max-[790px]:flex-1"
-              >
-                <span className="flex items-center max-[790px]:justify-center">
-                  <svg
-                    className="w-4 h-4 mr-2 inline-block transform transition-transform duration-200 group-hover:scale-110"
-                    fill="none"
-                    strokeWidth="2"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                  <span>Generar Excel</span>
-                </span>
-              </button>
-            </div>
-          </div>
+          <ProductStats
+            stats={productStats}
+            selectedProduct={selectedProduct}
+            onProductClick={(name) =>
+              setSelectedProduct((prev) => (prev === name ? null : name))
+            }
+          />
 
-          {/* Product Stats */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            {productStats.map(({ name, count, totalValue, totalQuantity }) => (
-              <button
-                key={name}
-                onClick={() => handleProductClick(name)}
-                className={`px-3 py-1 rounded-full text-sm transition-all duration-200 
-        ${
-          selectedProduct === name
-            ? "bg-blue-600 text-white hover:bg-blue-700"
-            : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-        }`}
-              >
-                <span className="font-medium">{count}</span> {name}{" "}
-                <span className="text-xs ml-1 opacity-75">
-                  ($<span>{totalValue.toLocaleString()}</span>)
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {/* Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             {error ? (
-              <div className="text-center p-8 text-red-500">
+              <div className="text-center p-8 text-red-500 flex items-center justify-center gap-2">
+                <AlertCircle className="w-5 h-5" />
                 <p className="text-lg">{error}</p>
               </div>
             ) : loading ? (
-              <div className="text-center p-8 text-gray-500">
+              <div className="text-center p-8 text-gray-500 flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 animate-spin" />
                 <p className="text-lg">Cargando...</p>
               </div>
             ) : displayedPerdidas.length === 0 ? (
@@ -262,14 +347,38 @@ const PerdidaListar = () => {
               <>
                 <div className="relative">
                   <div
-                    className={`transition-opacity duration-300 ease-in-out
-                             ${
-                               isChangingView || isSearching
-                                 ? "opacity-0"
-                                 : "opacity-100"
-                             }`}
+                    className={`transition-all duration-300 ease-in-out transform
+              ${
+                isChangingView || isSearching
+                  ? "opacity-0 scale-95"
+                  : "opacity-100 scale-100"
+              }`}
                   >
-                    {renderTableView()}
+                    {isGridView ? (
+                      <div
+                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4
+                    transform transition-all duration-300 ease-in-out"
+                      >
+                        {displayedPerdidas.map((perdida) => (
+                          <PerdidaGrid
+                            key={perdida.id}
+                            perdida={perdida}
+                            onEdit={() => handleUpdateModalOpen(perdida)}
+                            onRestablecer={() => handleRestablecer(perdida)}
+                            isRestabling={isRestabling}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto transform transition-all duration-300 ease-in-out">
+                        <TableContent
+                          perdidas={displayedPerdidas}
+                          onEdit={handleUpdateModalOpen}
+                          onRestablecer={handleRestablecer}
+                          isRestabling={isRestabling}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="border-t">
@@ -299,7 +408,6 @@ const PerdidaListar = () => {
         perdidaId={perdidaToRestablecer?.id}
         isRestabling={isRestabling}
       />
-
       <PerdidaUpdateModal
         isOpen={updateModalOpen}
         onClose={() => {
