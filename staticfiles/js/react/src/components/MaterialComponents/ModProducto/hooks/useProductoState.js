@@ -4,6 +4,7 @@ export const useProductoState = () => {
   // Estados principales
   const [productos, setProductos] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categorySearchTerm, setCategorySearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -26,6 +27,7 @@ export const useProductoState = () => {
   const [productoToVender, setProductoToVender] = useState(null);
   const [productoToDesechar, setProductoToDesechar] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const itemsPerPage = 10;
 
@@ -43,6 +45,7 @@ export const useProductoState = () => {
         throw new Error(data.message || "Error al cargar los productos");
       }
     } catch (error) {
+      console.error("Error en fetchProductos:", error);
       setError("No se pudieron cargar los productos");
     } finally {
       setLoading(false);
@@ -57,6 +60,21 @@ export const useProductoState = () => {
       setError(null);
     };
   }, []);
+
+  // Manejadores de búsqueda
+  const handleSearch = (value) => {
+    setSearchTerm(value);
+    setIsSearching(true);
+    setCurrentPage(1);
+    setTimeout(() => setIsSearching(false), 300);
+  };
+
+  const handleCategorySearch = (value) => {
+    setCategorySearchTerm(value);
+    setIsSearching(true);
+    setCurrentPage(1);
+    setTimeout(() => setIsSearching(false), 300);
+  };
 
   // Manejadores CRUD
   const handleDelete = useCallback((producto) => {
@@ -132,16 +150,7 @@ export const useProductoState = () => {
     }
   };
 
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
-
-  const handleSearch = (value) => {
-    setSearchTerm(value);
-    setIsSearching(true);
-    setCurrentPage(1);
-    setTimeout(() => setIsSearching(false), 300);
-  };
-
+  // Manejadores de vista
   const handleViewChange = (isGrid) => {
     setIsChangingView(true);
     setTimeout(() => {
@@ -150,6 +159,10 @@ export const useProductoState = () => {
     }, 300);
   };
 
+  const handleOpenModal = () => setIsModalOpen(true);
+  const handleCloseModal = () => setIsModalOpen(false);
+
+  // Manejadores de paginación
   const handlePreviousPage = () =>
     setCurrentPage((prev) => Math.max(prev - 1, 1));
   const handleNextPage = () => {
@@ -157,68 +170,19 @@ export const useProductoState = () => {
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
   };
 
-  // Handlers modales
+  // Manejadores de modales
   const handleUpdateModalOpen = useCallback((producto) => {
-    console.log("Estado antes de actualizar:", { producto });
-    if (!producto) {
-      console.log("No hay producto para editar");
-      return;
-    }
+    if (!producto) return;
     setProductoToUpdate(producto);
-    console.log("Abriendo modal con producto:", producto);
     setUpdateModalOpen(true);
   }, []);
 
   const handleUpdateModalClose = useCallback(() => {
     setUpdateModalOpen(false);
-    setTimeout(() => {
-      setProductoToUpdate(null);
-    }, 300);
+    setTimeout(() => setProductoToUpdate(null), 300);
   }, []);
 
   // Manejadores de venta y desecho
-  const handleVender = async (productoId, ventaData) => {
-    try {
-      const response = await fetch(`/api/producto/${productoId}/vender/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
-            .value,
-        },
-        body: JSON.stringify(ventaData),
-      });
-
-      if (!response.ok) throw new Error("Error al vender producto");
-      await fetchProductos();
-      setVenderModalOpen(false);
-      setProductoToVender(null);
-    } catch (error) {
-      setError("Error al vender: " + error.message);
-    }
-  };
-
-  const handleDesechar = async (productoId, cantidad) => {
-    try {
-      const response = await fetch(`/api/producto/${productoId}/desechar/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
-            .value,
-        },
-        body: JSON.stringify({ cantidad }),
-      });
-
-      if (!response.ok) throw new Error("Error al desechar producto");
-      await fetchProductos();
-      setDesecharModalOpen(false);
-      setProductoToDesechar(null);
-    } catch (error) {
-      setError("Error al desechar: " + error.message);
-    }
-  };
-
   const handleVenderOpen = useCallback((producto) => {
     if (!producto) return;
     setProductoToVender(producto);
@@ -241,13 +205,112 @@ export const useProductoState = () => {
     setProductoToDesechar(null);
   }, []);
 
-  // Filtrado y paginación
-  const filteredProductos = productos.filter(
-    (producto) =>
-      producto.NombreProducto.toLowerCase().includes(
-        searchTerm.toLowerCase()
-      ) || producto.id.toString().includes(searchTerm)
-  );
+  const handleVender = async (productoId, data) => {
+    if (isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      const ventaData = {
+        NombreVenta: data.NombreVenta,
+        CantidadVenta: parseInt(data.CantidadVenta),
+        PrecioVenta: parseFloat(data.PrecioVenta),
+      };
+
+      if (data.cliente) {
+        if (data.cliente.tipo === "existente") {
+          ventaData.cliente = { tipo: "existente", id: data.cliente.id };
+        } else if (data.cliente.tipo === "nuevo") {
+          ventaData.cliente = {
+            tipo: "nuevo",
+            NombreCliente: data.cliente.NombreCliente,
+            ApellidoCliente: data.cliente.ApellidoCliente,
+            RutCliente: data.cliente.RutCliente,
+            TipoCliente: data.cliente.TipoCliente,
+            NombreCompañia: data.cliente.NombreCompañia,
+            TelefonoCliente: data.cliente.TelefonoCliente,
+          };
+        }
+      }
+
+      const response = await fetch(`/api/producto/${productoId}/venta/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        body: JSON.stringify(ventaData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.errors || "Error al vender producto");
+      }
+
+      await fetchProductos();
+      setVenderModalOpen(false);
+      setProductoToVender(null);
+    } catch (error) {
+      console.error("Error al vender:", error);
+      setError("Error al vender: " + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDesechar = async (productoId, data) => {
+    if (isSubmitting) return;
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`/api/producto/${productoId}/perdida/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]")
+            .value,
+        },
+        body: JSON.stringify({
+          nombre_perdida: data.NombrePerdida,
+          cantidad: parseInt(data.CantidadPerdida),
+          valor_unitario: parseFloat(data.ValorUnitarioPerdida),
+          motivo: data.MotivoPerdida,
+          descripcion: data.DescripcionPerdida,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.errors || "Error al registrar pérdida");
+      }
+
+      await fetchProductos();
+      setDesecharModalOpen(false);
+      setProductoToDesechar(null);
+    } catch (error) {
+      console.error("Error al desechar:", error);
+      setError("Error al registrar pérdida: " + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Filtrado de productos
+  const filteredProductos = productos.filter((producto) => {
+    const productNameMatch = producto.NombreProducto.toLowerCase().includes(
+      searchTerm.toLowerCase()
+    );
+    const productIdMatch = producto.id.toString().includes(searchTerm);
+    const categoryMatch =
+      producto.Categoria?.NombreCategoria.toLowerCase().includes(
+        categorySearchTerm.toLowerCase()
+      );
+
+    return (
+      (productNameMatch || productIdMatch) &&
+      (!categorySearchTerm || categoryMatch)
+    );
+  });
 
   const totalPages = Math.ceil(filteredProductos.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -260,6 +323,7 @@ export const useProductoState = () => {
   return {
     // Estados
     searchTerm,
+    categorySearchTerm,
     loading,
     error,
     isGridView,
@@ -281,11 +345,13 @@ export const useProductoState = () => {
     productoToVender,
     desecharModalOpen,
     productoToDesechar,
+    isSubmitting,
 
     // Manejadores
+    handleSearch,
+    handleCategorySearch,
     handleOpenModal,
     handleCloseModal,
-    handleSearch,
     handleViewChange,
     handleProductoCreated,
     handleProductoUpdated,

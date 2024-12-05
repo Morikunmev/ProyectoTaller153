@@ -16,16 +16,18 @@ import { useProductoState } from "./hooks/useProductoState";
 import ProductoDeleteModal from "./modals/ProductoDeleteModal";
 import ProductoUpdateModal from "./modals/ProductoUpdateModal";
 import ProductoVenderModal from "./modals/ProductoVenderModal";
-import ProductoDesecharModal from "./modals/ProductoDesecharModal";
-import ProductoGrid from "./layout/ProductoGrid";
+import ProductoPerdidaModal from "./modals/ProductoPerdidaModal"; // Cambia esta líneaimport ProductoGrid from "./layout/ProductoGrid";
 import { exportToExcel } from "./utils/ProductoExport";
+import ProductoGrid from "./layout/ProductoGrid";
 import ProductoDetalle from "./ProductoDetalle";
 
 const ProductoListar = () => {
+  const [stockFilter, setStockFilter] = useState("all"); // 'all', 'inStock', 'outOfStock'
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
   const [detalleModalOpen, setDetalleModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
   const {
     searchTerm,
     loading,
@@ -36,8 +38,10 @@ const ProductoListar = () => {
     isModalOpen,
     currentProductos,
     totalPages,
+    categorySearchTerm, // Agregar esto
     currentPage,
     startIndex,
+    handleCategorySearch, // Agregar esto
     endIndex,
     filteredProductos,
     deleteModalOpen,
@@ -92,7 +96,7 @@ const ProductoListar = () => {
             <th className="px-2 py-1.5">STOCK I.</th>
             <th className="px-2 py-1.5">STOCK A.</th>
             <th className="px-2 py-1.5">P.UNIT</th>
-            <th className="px-2 py-1.5">P.TOTAL</th>
+            <th className="px-2 py-1.5">P.TOTAL A</th>
             <th className="px-2 py-1.5">CATEGORÍA</th>
             <th className="px-2 py-1.5">FECHA</th>
             <th className="px-2 py-1.5">DÍAS</th>
@@ -103,10 +107,17 @@ const ProductoListar = () => {
           </tr>
         </thead>
         <tbody>
-          {currentProductos.map((producto) => (
+          {displayedProductos.map((producto) => (
             <tr
               key={producto.id}
-              className="border-b last:border-b-0 hover:bg-gray-50 text-xs"
+              className={`border-b last:border-b-0 hover:bg-gray-50 text-xs
+                ${
+                  producto.StockProductoActual === 0
+                    ? "bg-red-50 hover:bg-red-100"
+                    : producto.StockProductoActual === 1
+                    ? "bg-yellow-50 hover:bg-yellow-100"
+                    : "bg-green-50 hover:bg-green-100"
+                }`}
             >
               <td className="px-2 py-1.5">#{producto.id}</td>
               <td className="px-2 py-1.5">{producto.NombreProducto}</td>
@@ -218,37 +229,142 @@ const ProductoListar = () => {
     setSelectedProduct(producto);
     setDetalleModalOpen(true);
   };
+  const displayedProductos = filteredProductos.filter((producto) => {
+    switch (stockFilter) {
+      case "inStock":
+        return producto.StockProductoActual > 1;
+      case "outOfStock":
+        return producto.StockProductoActual === 0;
+      case "lowStock":
+        return producto.StockProductoActual === 1;
+      default:
+        return true;
+    }
+  });
 
   return (
     <div>
       <div
         className={`transition-all duration-300 ease-in-out mt-16
-    ${isModalOpen || updateModalOpen || detalleModalOpen ? "pr-[448px]" : ""}`}
+    ${
+      isModalOpen ||
+      updateModalOpen ||
+      detalleModalOpen ||
+      desecharModalOpen ||
+      venderModalOpen
+        ? "pr-[448px]"
+        : ""
+    }`}
       >
         <div className="max-w-7xl mx-auto p-6">
           <div className="flex items-center gap-4 mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
               Módulo Producto
             </h1>
-            <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-              {filteredProductos.length} Productos
-            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setStockFilter("all")}
+                className={`px-3 py-1 rounded-full transition-colors duration-200 ${
+                  stockFilter === "all"
+                    ? "bg-gray-200 text-gray-800"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {filteredProductos.length} Total{" "}
+                <span className="text-xs ml-1">
+                  (Original: $
+                  {filteredProductos
+                    .reduce(
+                      (sum, p) =>
+                        sum + p.StockProductoInicial * p.PrecioUnitarioProducto,
+                      0
+                    )
+                    .toLocaleString()}
+                  ) (Actual: $
+                  {filteredProductos
+                    .reduce(
+                      (sum, p) => sum + parseFloat(p.PrecioTotalProducto),
+                      0
+                    )
+                    .toLocaleString()}
+                  )
+                </span>
+              </button>
+              <button
+                onClick={() => setStockFilter("inStock")}
+                className={`px-3 py-1 rounded-full transition-colors duration-200 ${
+                  stockFilter === "inStock"
+                    ? "bg-green-200 text-green-800"
+                    : "bg-green-100 text-green-700 hover:bg-green-200"
+                }`}
+              >
+                {
+                  filteredProductos.filter((p) => p.StockProductoActual > 1)
+                    .length
+                }{" "}
+                Con Stock
+              </button>
+              <button
+                onClick={() => setStockFilter("lowStock")}
+                className={`px-3 py-1 rounded-full transition-colors duration-200 ${
+                  stockFilter === "lowStock"
+                    ? "bg-yellow-200 text-yellow-800"
+                    : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                }`}
+              >
+                {
+                  filteredProductos.filter((p) => p.StockProductoActual === 1)
+                    .length
+                }{" "}
+                Stock Bajo
+              </button>
+              <button
+                onClick={() => setStockFilter("outOfStock")}
+                className={`px-3 py-1 rounded-full transition-colors duration-200 ${
+                  stockFilter === "outOfStock"
+                    ? "bg-red-200 text-red-800"
+                    : "bg-red-100 text-red-700 hover:bg-red-200"
+                }`}
+              >
+                {
+                  filteredProductos.filter((p) => p.StockProductoActual === 0)
+                    .length
+                }{" "}
+                Sin Stock
+              </button>
+            </div>
           </div>
-
           <div className="flex max-[790px]:flex-col justify-between items-center mb-6 max-[790px]:gap-4">
-            <div className="relative w-[300px] max-[790px]:w-full">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar producto..."
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
-                         focus:outline-none focus:ring-1 focus:ring-blue-500
-                         transition-colors duration-200"
-                value={searchTerm}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
+            {/* Búsquedas */}
+            <div className="flex gap-4 max-[790px]:w-full">
+              <div className="relative w-[300px] max-[790px]:flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar producto..."
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
+                 focus:outline-none focus:ring-1 focus:ring-blue-500
+                 transition-colors duration-200"
+                  value={searchTerm}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="relative w-[300px] max-[790px]:flex-1">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Buscar categoría..."
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
+           focus:outline-none focus:ring-1 focus:ring-blue-500
+           transition-colors duration-200"
+                  value={categorySearchTerm}
+                  onChange={(e) => handleCategorySearch(e.target.value)} // Usar el handler del hook
+                />
+              </div>
             </div>
 
+            {/* Vista Lista/Grid */}
             <div className="max-[790px]:w-full flex justify-center">
               <div className="flex bg-white border rounded-lg overflow-hidden">
                 <button
@@ -276,14 +392,15 @@ const ProductoListar = () => {
               </div>
             </div>
 
+            {/* Botones de Acción */}
             <div className="flex items-center space-x-3 max-[790px]:w-full">
               <button
                 onClick={handleExportClick}
                 className="group relative bg-green-600 text-white px-4 py-2 rounded-lg 
-                         hover:bg-green-700 active:bg-green-800
-                         transition-all duration-200 ease-out 
-                         hover:shadow-lg active:shadow-none
-                         transform active:scale-95 max-[790px]:flex-1"
+               hover:bg-green-700 active:bg-green-800
+               transition-all duration-200 ease-out 
+               hover:shadow-lg active:shadow-none
+               transform active:scale-95 max-[790px]:flex-1"
               >
                 <span className="flex items-center max-[790px]:justify-center">
                   <svg
@@ -303,12 +420,12 @@ const ProductoListar = () => {
                 </span>
               </button>
               <button
-                onClick={handleOpenModal} // Asegurarse que este handler está siendo pasado correctamente
+                onClick={handleOpenModal}
                 className="group relative bg-black text-white px-4 py-2 rounded-lg 
-            hover:bg-gray-800 active:bg-gray-900
-            transition-all duration-200 ease-out 
-            hover:shadow-lg active:shadow-none
-            transform active:scale-95 max-[790px]:flex-1"
+              hover:bg-gray-800 active:bg-gray-900
+              transition-all duration-200 ease-out 
+              hover:shadow-lg active:shadow-none
+              transform active:scale-95 max-[790px]:flex-1"
               >
                 <span className="flex items-center max-[790px]:justify-center">
                   <span className="inline-block transform transition-transform duration-200 group-hover:translate-x-[-2px]">
@@ -346,7 +463,7 @@ const ProductoListar = () => {
                   >
                     {isGridView ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-                        {currentProductos.map((producto) => (
+                        {displayedProductos.map((producto) => (
                           <ProductoGrid
                             key={producto.id}
                             producto={producto}
@@ -358,7 +475,7 @@ const ProductoListar = () => {
                         ))}
                       </div>
                     ) : (
-                      renderTableView()
+                      renderTableView(displayedProductos)
                     )}
                   </div>
                 </div>
@@ -406,10 +523,10 @@ const ProductoListar = () => {
         onVender={handleVender}
         producto={productoToVender}
       />
-      <ProductoDesecharModal
+      <ProductoPerdidaModal
         isOpen={desecharModalOpen}
         onClose={handleDesecharClose}
-        onDesechar={handleDesechar}
+        onSubmit={handleDesechar}
         producto={productoToDesechar}
       />
       <ProductoDetalle

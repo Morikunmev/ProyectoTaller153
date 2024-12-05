@@ -16,6 +16,7 @@ const ProductoUpdateModal = ({
 
   const {
     formData,
+    stockActual, // Agregamos esta línea
     errors,
     isSubmitting,
     isAnimating,
@@ -90,7 +91,6 @@ const ProductoUpdateModal = ({
                   </p>
                 )}
               </div>
-
               <div>
                 <label className="text-sm font-medium block mb-1">
                   Categoría*
@@ -100,11 +100,11 @@ const ProductoUpdateModal = ({
                   value={formData.Categoria}
                   onChange={handleInputChange}
                   className={`w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200 ${getInputBorderClass(
-                      formData.Categoria
-                    )}`}
+      transition-colors duration-200 ${getInputBorderClass(
+        formData.Categoria
+      )}`}
                 >
-                  <option value="">Seleccione una categoría</option>
+                  <option value="">Sin categoría</option>
                   {categorias.map((categoria) => (
                     <option key={categoria.id} value={categoria.id}>
                       {categoria.NombreCategoria}
@@ -117,7 +117,6 @@ const ProductoUpdateModal = ({
                   </p>
                 )}
               </div>
-
               <div>
                 <label className="text-sm font-medium block mb-1">
                   Descripción
@@ -160,7 +159,21 @@ const ProductoUpdateModal = ({
                     </p>
                   )}
                 </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">
+                    Stock Actual
+                  </label>
+                  <input
+                    type="number"
+                    name="StockProductoActual"
+                    value={stockActual} // Cambiamos esto de producto.StockProductoActual a stockActual
+                    disabled
+                    className="w-full px-3 py-1.5 border rounded bg-gray-50 text-gray-500"
+                  />
+                </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium block mb-1">
                     Precio Unitario*
@@ -183,34 +196,17 @@ const ProductoUpdateModal = ({
                     </p>
                   )}
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium block mb-1">
-                    Cantidad Vendida
-                  </label>
-                  <input
-                    type="number"
-                    name="CantidadProductoVendido"
-                    value={formData.CantidadProductoVendido}
-                    onChange={handleInputChange}
-                    min="0"
-                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
 
                 <div>
                   <label className="text-sm font-medium block mb-1">
-                    Cantidad Desechada
+                    Precio Total
                   </label>
                   <input
                     type="number"
-                    name="CantidadProductoDesechado"
-                    value={formData.CantidadProductoDesechado}
-                    onChange={handleInputChange}
-                    min="0"
-                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    name="PrecioTotalProducto"
+                    value={producto.PrecioTotalProducto}
+                    disabled
+                    className="w-full px-3 py-1.5 border rounded bg-gray-50 text-gray-500"
                   />
                 </div>
               </div>
@@ -227,17 +223,13 @@ const ProductoUpdateModal = ({
                   <label className="text-sm font-medium block mb-1">
                     Estado
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="EstadoProducto"
                     value={formData.EstadoProducto}
                     onChange={handleInputChange}
                     className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  >
-                    <option value="">Seleccione un estado</option>
-                    <option value="Activo">Activo</option>
-                    <option value="Inactivo">Inactivo</option>
-                    <option value="Agotado">Agotado</option>
-                  </select>
+                  />
                 </div>
 
                 <div>
@@ -257,20 +249,6 @@ const ProductoUpdateModal = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium block mb-1">
-                    Días de Producto
-                  </label>
-                  <input
-                    type="number"
-                    name="DiasProducto"
-                    value={formData.DiasProducto}
-                    onChange={handleInputChange}
-                    min="0"
-                    className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium block mb-1">
                     Fecha de Producto
                   </label>
                   <input
@@ -283,23 +261,67 @@ const ProductoUpdateModal = ({
                 </div>
               </div>
 
+              {/* Dentro del componente ProductoUpdateModal, reemplazar la sección del checkbox */}
               <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  name="ProductoVendido"
-                  checked={formData.ProductoVendido}
+                  name="ProductoAgotado"
+                  checked={formData.ProductoAgotado}
                   onChange={(e) =>
                     handleInputChange({
                       target: {
-                        name: "ProductoVendido",
+                        name: "ProductoAgotado",
                         value: e.target.checked,
                       },
                     })
                   }
                   className="h-4 w-4 text-blue-600 rounded border-gray-300"
                 />
-                <label className="text-sm font-medium">Producto Vendido</label>
+                <label className="text-sm font-medium">Producto Agotado</label>
               </div>
+
+              {formData.ProductoAgotado && stockActual > 0 && (
+                <div className="grid grid-cols-2 gap-4 mt-2">
+                  <div>
+                    <label className="text-sm font-medium block mb-1">
+                      Cantidad Vendida
+                    </label>
+                    <input
+                      type="number"
+                      name="CantidadProductoVendido"
+                      value={formData.CantidadProductoVendido}
+                      onChange={handleInputChange}
+                      min="0"
+                      max={stockActual}
+                      className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                    {errors.CantidadProductoVendido && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.CantidadProductoVendido}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-1">
+                      Cantidad Desechada
+                    </label>
+                    <input
+                      type="number"
+                      name="CantidadProductoDesechado"
+                      value={formData.CantidadProductoDesechado}
+                      onChange={handleInputChange}
+                      min="0"
+                      max={stockActual}
+                      className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    />
+                    {errors.CantidadProductoDesechado && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {errors.CantidadProductoDesechado}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Foto del Producto */}

@@ -88,10 +88,9 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     </p>
                   )}
                 </div>
-
                 <div>
                   <label className="text-sm font-medium block mb-1">
-                    Stock*
+                    Stock Inicial*
                   </label>
                   <input
                     type="number"
@@ -100,15 +99,18 @@ const MaterialCreateModal = ({ isOpen, onClose, onSubmit }) => {
                     onChange={handleInputChange}
                     min="0"
                     className={`w-full px-3 py-1.5 border rounded
-                    focus:ring-1 focus:ring-blue-500 focus:outline-none
-                    transition-colors duration-200
-                    ${getInputBorderClass(formData.StockMaterial)}`}
+    focus:ring-1 focus:ring-blue-500 focus:outline-none
+    transition-colors duration-200
+    ${getInputBorderClass(formData.StockMaterial)}`}
                   />
                   {errors.StockMaterial && (
                     <p className="text-xs text-red-500 mt-1">
                       {errors.StockMaterial}
                     </p>
                   )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Este será el stock inicial y original del material
+                  </p>
                 </div>
 
                 <div>

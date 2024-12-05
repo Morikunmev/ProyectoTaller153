@@ -46,7 +46,6 @@ export const useMaterialState = () => {
       setError("Error al exportar materiales: " + error.message);
     }
   }, []);
-
   const fetchMaterials = async () => {
     try {
       setLoading(true);
@@ -60,11 +59,12 @@ export const useMaterialState = () => {
 
       const data = await response.json();
       if (data.success) {
-        // Mapear solo los campos necesarios
+        // Mapear los campos incluyendo StockOriginal
         const materialsProcessed = data.materials.map((material) => ({
           id: material.id,
           NombreMaterial: material.NombreMaterial,
           StockMaterial: material.StockMaterial,
+          StockOriginal: material.StockOriginal, // Añadir esta línea
           PrecioMaterial: material.PrecioMaterial,
           TotalMaterial: material.TotalMaterial,
           FechaCompraMaterial: material.FechaCompraMaterial,

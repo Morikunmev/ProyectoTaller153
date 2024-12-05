@@ -15,7 +15,15 @@ export const useProductoUpdateModal = ({
     UbicacionProducto: "",
     EstadoProducto: "",
     FotoProducto: null,
+    DiasProducto: "",
+    FechaProducto: "",
+    ProductoAgotado: false,
+    CantidadProductoVendido: 0, // Agregamos esto
+    CantidadProductoDesechado: 0, // Agregamos esto
   });
+
+  // Nuevo estado para mantener un seguimiento del stock actual
+  const [stockActual, setStockActual] = useState(0);
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,7 +58,6 @@ export const useProductoUpdateModal = ({
       setErrors((prev) => ({ ...prev, general: "Error al cargar categorías" }));
     }
   };
-
   useEffect(() => {
     if (producto && isOpen) {
       setFormData({
@@ -62,12 +69,19 @@ export const useProductoUpdateModal = ({
         UbicacionProducto: producto.UbicacionProducto || "",
         EstadoProducto: producto.EstadoProducto || "",
         FotoProducto: null,
+        DiasProducto: producto.DiasProducto || "",
+        FechaProducto: producto.FechaProducto
+          ? producto.FechaProducto.split("T")[0]
+          : "",
+        ProductoAgotado: producto.ProductoAgotado || false,
+        CantidadProductoVendido: producto.CantidadProductoVendido || 0, // Agregamos esto
+        CantidadProductoDesechado: producto.CantidadProductoDesechado || 0, // Agregamos esto
       });
+      setStockActual(producto.StockProductoActual || 0);
       setPreviewUrl(producto.FotoProducto || "");
       setRemovedFiles({ foto: false });
     }
   }, [producto, isOpen]);
-
   const validateFile = useCallback((file) => {
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize)
@@ -87,14 +101,100 @@ export const useProductoUpdateModal = ({
     }
     return null;
   }, []);
-
   const handleInputChange = useCallback(
     (e) => {
       const { name, value } = e.target;
+
+      if (name === "StockProductoInicial") {
+        const newStockInicial = parseInt(value) || 0;
+        let nuevoStockActual = newStockInicial;
+
+        if (producto) {
+          const cantidadNoDisponible =
+            (producto.CantidadProductoVendido || 0) +
+            (producto.CantidadProductoDesechado || 0);
+
+          nuevoStockActual = Math.max(
+            0,
+            newStockInicial - cantidadNoDisponible
+          );
+        }
+
+        setStockActual(nuevoStockActual);
+      }
+
+      if (name === "ProductoAgotado") {
+        const isChecked = value === true;
+        if (isChecked) {
+          setFormData((prev) => ({
+            ...prev,
+            [name]: isChecked,
+            CantidadProductoVendido: 0,
+            CantidadProductoDesechado: 0,
+          }));
+          setErrors((prev) => ({
+            ...prev,
+            CantidadProductoVendido: `Debe distribuir el stock actual (${stockActual})`,
+            CantidadProductoDesechado: `Debe distribuir el stock actual (${stockActual})`,
+          }));
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            [name]: isChecked,
+            CantidadProductoVendido: 0,
+            CantidadProductoDesechado: 0,
+          }));
+          setErrors((prev) => ({
+            ...prev,
+            CantidadProductoVendido: null,
+            CantidadProductoDesechado: null,
+          }));
+        }
+        return;
+      }
+
+      if (
+        name === "CantidadProductoVendido" ||
+        name === "CantidadProductoDesechado"
+      ) {
+        // Actualizar primero el formData con el valor exacto
+        setFormData((prev) => ({ ...prev, [name]: value }));
+
+        // Solo validar si hay un valor numérico
+        if (value !== "") {
+          const cantidad = parseInt(value) || 0;
+          const otraCantidad =
+            name === "CantidadProductoVendido"
+              ? parseInt(formData.CantidadProductoDesechado) || 0
+              : parseInt(formData.CantidadProductoVendido) || 0;
+
+          if (formData.ProductoAgotado) {
+            // Validar que la suma sea igual al stock actual
+            if (cantidad + otraCantidad === stockActual) {
+              setErrors((prev) => ({
+                ...prev,
+                CantidadProductoVendido: null,
+                CantidadProductoDesechado: null,
+              }));
+            } else {
+              const errorMsg = `La suma debe ser igual al stock actual (${stockActual})`;
+              setErrors((prev) => ({
+                ...prev,
+                CantidadProductoVendido: errorMsg,
+                CantidadProductoDesechado: errorMsg,
+              }));
+            }
+          }
+        }
+        return;
+      }
+
       setFormData((prev) => ({ ...prev, [name]: value }));
-      if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
+      if (errors[name]) {
+        setErrors((prev) => ({ ...prev, [name]: null }));
+      }
     },
-    [errors]
+    [errors, producto, stockActual, formData]
   );
 
   const handleFotoChange = useCallback(
@@ -129,28 +229,56 @@ export const useProductoUpdateModal = ({
       onClose();
     }, 150);
   }, [onClose]);
+  const validateForm = useCallback(() => {
+    const newErrors = {};
 
+    if (!formData.NombreProducto) {
+      newErrors.NombreProducto = "El nombre del producto es requerido";
+    }
+
+    if (
+      !formData.StockProductoInicial ||
+      parseInt(formData.StockProductoInicial) < 0
+    ) {
+      newErrors.StockProductoInicial = "El stock inicial no puede ser negativo";
+    }
+
+    if (
+      !formData.PrecioUnitarioProducto ||
+      parseFloat(formData.PrecioUnitarioProducto) <= 0
+    ) {
+      newErrors.PrecioUnitarioProducto =
+        "El precio unitario debe ser mayor a 0";
+    }
+
+    // Validar que si está marcado como agotado, las cantidades sumen el stock actual
+    if (formData.ProductoAgotado && stockActual > 0) {
+      const totalCantidades =
+        (parseInt(formData.CantidadProductoVendido) || 0) +
+        (parseInt(formData.CantidadProductoDesechado) || 0);
+
+      if (totalCantidades !== stockActual) {
+        newErrors.CantidadProductoVendido = `Debe distribuir todo el stock actual (${stockActual})`;
+        newErrors.CantidadProductoDesechado = `Debe distribuir todo el stock actual (${stockActual})`;
+      }
+    }
+
+    return newErrors;
+  }, [formData, stockActual]);
   const handleSubmit = useCallback(
     async (e) => {
       if (e) e.preventDefault();
+
+      const validationErrors = validateForm();
+      if (Object.keys(validationErrors).length > 0) {
+        setErrors(validationErrors);
+        return;
+      }
+
       setIsSubmitting(true);
       console.log("Starting submission with data:", formData);
 
       try {
-        const newErrors = {};
-        if (!formData.NombreProducto)
-          newErrors.NombreProducto = "Nombre requerido";
-        if (!formData.StockProductoInicial)
-          newErrors.StockProductoInicial = "Stock inicial requerido";
-        if (!formData.PrecioUnitarioProducto)
-          newErrors.PrecioUnitarioProducto = "Precio unitario requerido";
-        if (!formData.Categoria) newErrors.Categoria = "Categoría requerida";
-
-        if (Object.keys(newErrors).length > 0) {
-          setErrors(newErrors);
-          throw new Error("Complete todos los campos requeridos");
-        }
-
         const submitData = new FormData();
         Object.keys(formData).forEach((key) => {
           if (formData[key] !== null) {
@@ -166,11 +294,6 @@ export const useProductoUpdateModal = ({
         const csrfToken = document.querySelector(
           "[name=csrfmiddlewaretoken]"
         ).value;
-        console.log("Using CSRF token:", csrfToken);
-        console.log(
-          "Submitting to URL:",
-          `/api/producto/${producto.id}/actualizar/`
-        );
 
         const response = await fetch(
           `/api/producto/${producto.id}/actualizar/`,
@@ -184,13 +307,10 @@ export const useProductoUpdateModal = ({
           }
         );
 
-        console.log("Server response:", response);
         const data = await response.json();
-        console.log("Response data:", data);
 
         if (!response.ok) {
           if (data.errors) {
-            console.error("Validation errors:", data.errors);
             setErrors(data.errors);
             throw new Error(Object.values(data.errors)[0]);
           }
@@ -199,7 +319,6 @@ export const useProductoUpdateModal = ({
 
         handleClose();
         if (onProductoUpdated) {
-          console.log("Updating product with:", data.producto);
           await onProductoUpdated(data.producto);
         }
       } catch (error) {
@@ -212,10 +331,19 @@ export const useProductoUpdateModal = ({
         setIsSubmitting(false);
       }
     },
-    [formData, producto, handleClose, onProductoUpdated, removedFiles]
+    [
+      formData,
+      producto,
+      handleClose,
+      onProductoUpdated,
+      removedFiles,
+      validateForm,
+    ]
   );
+
   return {
     formData,
+    stockActual, // Nuevo valor retornado
     errors,
     isSubmitting,
     isAnimating,

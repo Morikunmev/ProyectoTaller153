@@ -76,6 +76,7 @@ const ProductoDetalle = ({ isOpen, onClose, producto }) => {
           </div>
 
           {/* Stock y Precios */}
+          {/* Stock y Precios */}
           <div className="grid grid-cols-2 gap-2">
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-500">Stock Inicial</p>
@@ -92,13 +93,34 @@ const ProductoDetalle = ({ isOpen, onClose, producto }) => {
             <div className="p-3 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-500">Precio Unit.</p>
               <p className="text-lg font-medium">
-                ${producto.PrecioUnitarioProducto}
+                $
+                {Number(producto.PrecioUnitarioProducto).toLocaleString(
+                  "es-CL",
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                )}
               </p>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-500">Precio Total</p>
+              <p className="text-sm text-gray-500">Precio Total Original</p>
               <p className="text-lg font-medium">
-                ${producto.PrecioTotalProducto}
+                $
+                {(
+                  Number(producto.StockProductoInicial) *
+                  Number(producto.PrecioUnitarioProducto)
+                ).toLocaleString("es-CL", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+            <div className="p-3 bg-gray-50 rounded-lg col-span-2">
+              <p className="text-sm text-gray-500">Precio Total Actual</p>
+              <p className="text-lg font-medium">
+                $
+                {Number(producto.PrecioTotalProducto).toLocaleString("es-CL", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </p>
             </div>
           </div>
