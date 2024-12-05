@@ -30,6 +30,10 @@ from cloudinary_storage.storage import MediaCloudinaryStorage
 from cloudinary.exceptions import Error as CloudinaryError
 from datetime import date
 from django.views import View
+from django.db.models import F
+from django.db import transaction
+
+
 
 # Excel imports
 import xlsxwriter
@@ -4777,7 +4781,6 @@ def registrar_perdida(request, producto_id):
                     'categoria': {
                         'nombre': producto.Categoria.NombreCategoria,
                         'cantidad_perdidas': producto.Categoria.CantidadCategoriaPerdida,
-                        'total_perdidas': float(producto.Categoria.DineroCategoriaPerdida)
                     } if producto.Categoria else None
                 }
             })
@@ -5486,3 +5489,396 @@ def enviar_reporte(request):
             'success': False,
             'error': str(e)
         }, status=500)
+
+#------------------VIEWS PARA PERDIDA-----------------------
+@login_required(login_url='login')
+def mod_perdida(request):
+    return render(request, 'material/perdida.html')
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_perdida(request, perdida_id):
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': 'Método no permitido'}
+        }, status=405)
+
+    try:
+        perdida = get_object_or_404(Perdidas, id=perdida_id)
+        data = json.loads(request.body)
+
+        # Validar campos editables requeridos
+        campos_requeridos = {
+            'nombre_perdida': 'Nombre de la pérdida',
+            'motivo': 'Motivo'
+        }
+
+        errores = {}
+        for campo, nombre in campos_requeridos.items():
+            if campo not in data:
+                errores[campo] = f'El campo {nombre} es requerido'
+
+        if errores:
+            return JsonResponse({
+                'success': False,
+                'errors': errores
+            }, status=400)
+
+        # Validar el motivo
+        if data['motivo'] not in dict(Perdidas.MOTIVO_CHOICES):
+            return JsonResponse({
+                'success': False,
+                'errors': {'motivo': 'Motivo no válido'}
+            }, status=400)
+
+        # Actualizar solo los campos editables
+        perdida.NombrePerdida = data['nombre_perdida']
+        perdida.MotivoPerdida = data['motivo']
+        perdida.DescripcionPerdida = data.get('descripcion', '')
+
+        perdida.save()
+
+        # Retornar los datos actualizados
+        return JsonResponse({
+            'success': True,
+            'message': 'Pérdida actualizada exitosamente',
+            'perdida': {
+                'id': perdida.id,
+                'nombre': perdida.NombrePerdida,
+                'cantidad': perdida.CantidadPerdida,
+                'valor_unitario': str(perdida.ValorUnitarioPerdida),
+                'valor_total': str(perdida.ValorTotalPerdida),
+                'motivo': perdida.get_MotivoPerdida_display(),
+                'motivo_key': perdida.MotivoPerdida,
+                'descripcion': perdida.DescripcionPerdida,
+                'producto': {
+                    'id': perdida.Producto.id,
+                    'nombre': perdida.Producto.NombreProducto,
+                    'stock_actual': perdida.Producto.StockProductoActual
+                },
+                'usuario': {
+                    'id': perdida.Usuario.id if perdida.Usuario else None,
+                    'nombre': f"{perdida.Usuario.first_name} {perdida.Usuario.last_name}" if perdida.Usuario else "Usuario no disponible"
+                },
+                'fecha_registro': perdida.FechaRegistro.isoformat(),
+                'ultima_modificacion': perdida.UltimaModificacion.isoformat(),
+                'impacto_financiero': perdida.impacto_financiero
+            }
+        })
+
+    except ValidationError as e:
+        return JsonResponse({
+            'success': False,
+            'errors': e.message_dict if hasattr(e, 'message_dict') else {'general': str(e)}
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error al actualizar pérdida: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': str(e)}
+        }, status=500)
+@login_required(login_url='login')
+def listar_perdidas(request):
+    try:
+        perdidas = Perdidas.objects.select_related(
+            'Producto', 'Usuario'
+        ).order_by('-FechaRegistro')
+
+        perdidas_data = []
+        for perdida in perdidas:
+            perdida_data = {
+                'id': perdida.id,
+                'nombre': perdida.NombrePerdida,
+                'cantidad': perdida.CantidadPerdida,
+                'valor_unitario': str(perdida.ValorUnitarioPerdida),
+                'valor_total': str(perdida.ValorTotalPerdida),
+                'fecha': perdida.FechaPerdida.isoformat(),
+                'motivo': perdida.get_MotivoPerdida_display(),
+                'motivo_key': perdida.MotivoPerdida,
+                'descripcion': perdida.DescripcionPerdida,
+                'producto': {
+                    'id': perdida.Producto.id,
+                    'nombre': perdida.Producto.NombreProducto,
+                    'stock_actual': perdida.Producto.StockProductoActual,
+                    'categoria': perdida.Producto.Categoria.NombreCategoria if perdida.Producto.Categoria else None
+                },
+                'usuario': {
+                    'id': perdida.Usuario.id if perdida.Usuario else None,
+                    'nombre': f"{perdida.Usuario.first_name} {perdida.Usuario.last_name}" if perdida.Usuario else "Usuario no disponible"
+                },
+                'fecha_registro': perdida.FechaRegistro.isoformat(),
+                'ultima_modificacion': perdida.UltimaModificacion.isoformat(),
+                'impacto_financiero': perdida.impacto_financiero
+            }
+            perdidas_data.append(perdida_data)
+
+        return JsonResponse({
+            'success': True,
+            'perdidas': perdidas_data
+        })
+
+    except Exception as e:
+        logger.error(f"Error al listar pérdidas: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+def exportar_perdidas_excel(request):
+    output = BytesIO()
+    
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    worksheet_data = workbook.add_worksheet('Pérdidas')
+    worksheet_charts = workbook.add_worksheet('Gráficos')
+    
+    # Formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy',
+    })
+    
+    # Encabezados
+    headers = [
+        'ID',
+        'Nombre Pérdida',
+        'Producto',
+        'Cantidad',
+        'Valor Unitario',
+        'Valor Total',
+        'Motivo',
+        'Descripción',
+        'Fecha Pérdida',
+        'Usuario',
+        'Fecha Registro'
+    ]
+    
+    # Escribir encabezados
+    for col, header in enumerate(headers):
+        worksheet_data.write(0, col, header, header_format)
+        worksheet_data.set_column(col, col, 15)
+    
+    # Obtener datos
+    perdidas = Perdidas.objects.select_related('Producto', 'Usuario').order_by('-FechaPerdida')
+    
+    # Escribir datos
+    for row, perdida in enumerate(perdidas, start=1):
+        worksheet_data.write(row, 0, perdida.id)
+        worksheet_data.write(row, 1, perdida.NombrePerdida)
+        worksheet_data.write(row, 2, perdida.Producto.NombreProducto)
+        worksheet_data.write(row, 3, perdida.CantidadPerdida)
+        worksheet_data.write(row, 4, float(perdida.ValorUnitarioPerdida))
+        worksheet_data.write(row, 5, float(perdida.ValorTotalPerdida))
+        worksheet_data.write(row, 6, perdida.get_MotivoPerdida_display())
+        worksheet_data.write(row, 7, perdida.DescripcionPerdida or '')
+        worksheet_data.write_datetime(row, 8, perdida.FechaPerdida, date_format)
+        worksheet_data.write(row, 9, f"{perdida.Usuario.first_name} {perdida.Usuario.last_name}" if perdida.Usuario else "")
+        worksheet_data.write_datetime(row, 10, timezone.localtime(perdida.FechaRegistro).replace(tzinfo=None), date_format)
+    
+    # Preparar datos para gráficos
+    motivos_dict = {}
+    for perdida in perdidas:
+        motivo = perdida.get_MotivoPerdida_display()
+        motivos_dict[motivo] = motivos_dict.get(motivo, 0) + 1
+    
+    # Escribir datos para gráficos
+    worksheet_charts.write_row('A1', ['Motivo'], header_format)
+    worksheet_charts.write_row('B1', ['Cantidad de Pérdidas'], header_format)
+    
+    for i, (motivo, cantidad) in enumerate(motivos_dict.items(), start=2):
+        worksheet_charts.write(f'A{i}', motivo)
+        worksheet_charts.write(f'B{i}', cantidad)
+    
+    # Gráfico de Columnas
+    column_chart = workbook.add_chart({'type': 'column'})
+    column_chart.add_series({
+        'name': 'Pérdidas por Motivo',
+        'categories': f'=Gráficos!$A$2:$A${len(motivos_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(motivos_dict)+1}',
+        'data_labels': {'value': True},
+    })
+    column_chart.set_title({'name': 'Pérdidas por Motivo (Columnas)'})
+    column_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('D2', column_chart)
+    
+    # Gráfico de Pie
+    pie_chart = workbook.add_chart({'type': 'pie'})
+    pie_chart.add_series({
+        'categories': f'=Gráficos!$A$2:$A${len(motivos_dict)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(motivos_dict)+1}',
+        'data_labels': {'percentage': True},
+    })
+    pie_chart.set_title({'name': 'Distribución de Pérdidas por Motivo (%)'})
+    pie_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('D18', pie_chart)
+    
+    # Ajustar anchos de columna automáticamente
+    for i, header in enumerate(headers):
+        worksheet_data.set_column(i, i, len(header) + 2)
+    
+    workbook.close()
+    
+    # Preparar respuesta
+    output.seek(0)
+    filename = f'Perdidas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_perdida(request, perdida_id):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # Obtener la pérdida y el producto
+                perdida = get_object_or_404(Perdidas, id=perdida_id)
+                producto = get_object_or_404(Producto, id=perdida.Producto.id)
+                
+                # Verificar que la cantidad a restablecer no exceda la cantidad desechada
+                if perdida.CantidadPerdida > producto.CantidadProductoDesechado:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': f'Solo hay {producto.CantidadProductoDesechado} unidad(es) desechada(s) para restablecer'
+                    }, status=400)
+
+                # Primero eliminar la pérdida para evitar conflictos
+                perdida_cantidad = perdida.CantidadPerdida
+                perdida.delete()
+
+                # Ahora actualizar el producto
+                Producto.objects.filter(pk=producto.pk).update(
+                    CantidadProductoDesechado=F('CantidadProductoDesechado') - perdida_cantidad,
+                    StockProductoActual=F('StockProductoActual') + perdida_cantidad
+                )
+                
+                # Refrescar para obtener los nuevos valores
+                producto.refresh_from_db()
+                
+                # Actualizar el precio total
+                Producto.objects.filter(pk=producto.pk).update(
+                    PrecioTotalProducto=F('StockProductoActual') * F('PrecioUnitarioProducto'),
+                    ProductoAgotado=F('StockProductoActual') == 0
+                )
+
+                # Actualizar categoría si existe
+                if producto.Categoria:
+                    producto.Categoria.actualizar_totales()
+
+                producto.refresh_from_db()
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Pérdida restablecida exitosamente',
+                    'data': {
+                        'id': producto.id,
+                        'nombre': producto.NombreProducto,
+                        'stock_actual': producto.StockProductoActual,
+                        'cantidad_desechada': producto.CantidadProductoDesechado,
+                        'precio_total': float(producto.PrecioTotalProducto)
+                    }
+                })
+
+        except Exception as e:
+            logger.error(f"Error al eliminar pérdida: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': str(e)
+            }, status=500)
+
+    return JsonResponse({
+        'success': False,
+        'errors': 'Método no permitido'
+    }, status=405)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+#------------RUTA PARA VENTA---------
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_venta(request, venta_id):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                # 1. Obtener la venta y el producto
+                venta = get_object_or_404(Ventas, id=venta_id)
+                producto = get_object_or_404(Producto, id=venta.Producto.id)
+                cliente = venta.cliente
+
+                # 2. Verificar que podemos restablecer la cantidad vendida
+                if venta.CantidadVenta > producto.CantidadProductoVendido:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': f'No se puede restablecer esta venta. Inconsistencia en la cantidad vendida.'
+                    }, status=400)
+
+                # 3. Calcular nuevos valores
+                nueva_cantidad_vendida = producto.CantidadProductoVendido - venta.CantidadVenta
+                nuevo_stock = producto.StockProductoInicial - (nueva_cantidad_vendida + producto.CantidadProductoDesechado)
+
+                # 4. Actualizar el producto
+                Producto.objects.filter(pk=producto.pk).update(
+                    CantidadProductoVendido=nueva_cantidad_vendida,
+                    StockProductoActual=nuevo_stock,
+                    PrecioTotalProducto=nuevo_stock * producto.PrecioUnitarioProducto,
+                    ProductoAgotado=(nuevo_stock == 0)
+                )
+
+                # 5. Eliminar la venta
+                venta.delete()
+
+                # 6. Actualizar el producto y la categoría
+                producto.refresh_from_db()
+                if producto.Categoria:
+                    producto.Categoria.actualizar_totales()
+
+                # 7. Actualizar totales del cliente si existe
+                if cliente:
+                    cliente.actualizar_totales()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Venta eliminada exitosamente',
+                    'data': {
+                        'id': producto.id,
+                        'nombre': producto.NombreProducto,
+                        'stock_actual': producto.StockProductoActual,
+                        'cantidad_vendida': producto.CantidadProductoVendido,
+                        'precio_total': float(producto.PrecioTotalProducto),
+                        'cliente': {
+                            'nombre': str(cliente),
+                            'cantidad_compras': cliente.CantidadTotalCompras,
+                            'total_compras': float(cliente.TotalDineroCompras)
+                        } if cliente else None
+                    }
+                })
+
+        except Exception as e:
+            logger.error(f"Error al eliminar venta: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': str(e)
+            }, status=500)
+
+    return JsonResponse({
+        'success': False,
+        'errors': 'Método no permitido'
+    }, status=405)

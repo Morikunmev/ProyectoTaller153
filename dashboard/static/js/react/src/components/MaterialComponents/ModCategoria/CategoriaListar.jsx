@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Search, LayoutGrid, List, Pencil, Trash2, Box } from "lucide-react";
 import PaginacionModCategoria from "./PaginacionModCategoria";
 import CategoriaCreateModal from "./modals/CategoriaCreateModal";
-import { useCategoriaState } from "./hooks/useCategoriaState"; // Asegúrate de que sea una exportación nombrada
+import { useCategoriaState } from "./hooks/useCategoriaState";
 import CategoriaDeleteModal from "./modals/CategoriaDeleteModal";
 import CategoriaUpdateModal from "./modals/CategoriaUpdateModal";
 import CategoriaGrid from "./layout/CategoriaGrid";

@@ -96,7 +96,7 @@ const ProductoListar = () => {
             <th className="px-2 py-1.5">STOCK I.</th>
             <th className="px-2 py-1.5">STOCK A.</th>
             <th className="px-2 py-1.5">P.UNIT</th>
-            <th className="px-2 py-1.5">P.TOTAL</th>
+            <th className="px-2 py-1.5">P.TOTAL A</th>
             <th className="px-2 py-1.5">CATEGORÍA</th>
             <th className="px-2 py-1.5">FECHA</th>
             <th className="px-2 py-1.5">DÍAS</th>
@@ -111,11 +111,13 @@ const ProductoListar = () => {
             <tr
               key={producto.id}
               className={`border-b last:border-b-0 hover:bg-gray-50 text-xs
-    ${
-      producto.StockProductoActual === 0
-        ? "bg-red-50 hover:bg-red-100"
-        : "bg-green-50 hover:bg-green-100"
-    }`}
+                ${
+                  producto.StockProductoActual === 0
+                    ? "bg-red-50 hover:bg-red-100"
+                    : producto.StockProductoActual === 1
+                    ? "bg-yellow-50 hover:bg-yellow-100"
+                    : "bg-green-50 hover:bg-green-100"
+                }`}
             >
               <td className="px-2 py-1.5">#{producto.id}</td>
               <td className="px-2 py-1.5">{producto.NombreProducto}</td>
@@ -230,9 +232,11 @@ const ProductoListar = () => {
   const displayedProductos = filteredProductos.filter((producto) => {
     switch (stockFilter) {
       case "inStock":
-        return producto.StockProductoActual > 0;
+        return producto.StockProductoActual > 1;
       case "outOfStock":
         return producto.StockProductoActual === 0;
+      case "lowStock":
+        return producto.StockProductoActual === 1;
       default:
         return true;
     }
@@ -268,7 +272,15 @@ const ProductoListar = () => {
               >
                 {filteredProductos.length} Total{" "}
                 <span className="text-xs ml-1">
-                  ($
+                  (Original: $
+                  {filteredProductos
+                    .reduce(
+                      (sum, p) =>
+                        sum + p.StockProductoInicial * p.PrecioUnitarioProducto,
+                      0
+                    )
+                    .toLocaleString()}
+                  ) (Actual: $
                   {filteredProductos
                     .reduce(
                       (sum, p) => sum + parseFloat(p.PrecioTotalProducto),
@@ -287,10 +299,24 @@ const ProductoListar = () => {
                 }`}
               >
                 {
-                  filteredProductos.filter((p) => p.StockProductoActual > 0)
+                  filteredProductos.filter((p) => p.StockProductoActual > 1)
                     .length
                 }{" "}
                 Con Stock
+              </button>
+              <button
+                onClick={() => setStockFilter("lowStock")}
+                className={`px-3 py-1 rounded-full transition-colors duration-200 ${
+                  stockFilter === "lowStock"
+                    ? "bg-yellow-200 text-yellow-800"
+                    : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                }`}
+              >
+                {
+                  filteredProductos.filter((p) => p.StockProductoActual === 1)
+                    .length
+                }{" "}
+                Stock Bajo
               </button>
               <button
                 onClick={() => setStockFilter("outOfStock")}
@@ -449,7 +475,7 @@ const ProductoListar = () => {
                         ))}
                       </div>
                     ) : (
-                      renderTableView(displayedProductos) // Asegúrate de pasar displayedProductos aquí también
+                      renderTableView(displayedProductos)
                     )}
                   </div>
                 </div>

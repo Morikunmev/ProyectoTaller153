@@ -645,16 +645,6 @@ class Perdidas(models.Model):
             self.ValorTotalPerdida = self.CantidadPerdida * self.ValorUnitarioPerdida
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
-        if self.pk:
-            # Obtener una copia fresca del producto
-            producto = Producto.objects.get(pk=self.Producto.pk)
-            # Actualizar la cantidad desechada
-            producto.CantidadProductoDesechado -= self.CantidadPerdida
-            # Recalcular el stock actual
-            producto.StockProductoActual = producto.StockProductoInicial - (producto.CantidadProductoVendido + producto.CantidadProductoDesechado)
-            producto.save()
-        super().delete(*args, **kwargs)
 
     def __str__(self):
         return f"Pérdida de {self.Producto.NombreProducto} - {self.CantidadPerdida} unidades"
@@ -784,3 +774,6 @@ class Cliente(models.Model):
         if self.TipoCliente == 'empresa':
             return f"{self.NombreCompañia} - {self.RutCliente}"
         return f"{self.NombreCliente} {self.ApellidoCliente} - {self.RutCliente}"
+    
+    
+#----RUTA PARA VENTA

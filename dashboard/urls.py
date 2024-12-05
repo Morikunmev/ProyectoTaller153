@@ -116,7 +116,18 @@ urlpatterns = [
 
     #-------------------RUTAS PARA CORREO-----------------
     path('api/enviar-reporte/', views.enviar_reporte, name='enviar_reporte'),
-
+    
+    #-------------------RUTAS PARA PERDIDA-----------------
+    # APIs de pérdidas
+    path('perdida/', views.mod_perdida, name='mod_perdida'),  # Vista principal
+    path('api/perdidas/listar/', views.listar_perdidas, name='listar_perdidas'),
+    path('api/perdida/<int:perdida_id>/actualizar/', views.actualizar_perdida, name='actualizar_perdida'),
+    path('api/perdidas/exportar-excel/', views.exportar_perdidas_excel, name='exportar_perdidas_excel'),
+    path('api/perdida/<int:perdida_id>/eliminar/', views.eliminar_perdida, name='eliminar_perdida'),
+    
+    
+    #-------------------RUTAS PARA VENTAS-----------------
+    path('api/venta/<int:venta_id>/eliminar/', views.eliminar_venta, name='eliminar_venta'),
 
 
 

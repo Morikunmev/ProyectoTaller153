@@ -10,6 +10,7 @@ module.exports = {
     herramienta: "./src/herramienta.js",
     producto: "./src/producto.js", // Nueva entrada para productos
     categoria: "./src/categoria.js", // Nueva entrada para productos
+    perdida: "./src/perdida.js", // Nueva entrada
   },
   output: {
     path: path.resolve(__dirname, "dist"),
