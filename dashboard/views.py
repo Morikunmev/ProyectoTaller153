@@ -5813,6 +5813,244 @@ def eliminar_perdida(request, perdida_id):
     
 #------------RUTA PARA VENTA---------
 @login_required(login_url='login')
+def mod_venta(request):
+    return render(request, 'venta/venta.html')
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def listar_ventas(request):
+    try:
+        ventas = Ventas.objects.select_related(
+            'Producto', 'Usuario', 'cliente'
+        ).order_by('-FechaVenta')
+
+        ventas_data = []
+        for venta in ventas:
+            venta_data = {
+                'id': venta.id,
+                'nombre': venta.NombreVenta,
+                'cantidad': venta.CantidadVenta,
+                'precio_venta': str(venta.PrecioVenta),
+                'precio_total': str(venta.PrecioTotalVenta),
+                'fecha': venta.FechaVenta.isoformat(),
+                'producto': {
+                    'id': venta.Producto.id,
+                    'nombre': venta.Producto.NombreProducto,
+                    'stock_actual': venta.Producto.StockProductoActual,
+                    'categoria': venta.Producto.Categoria.NombreCategoria if venta.Producto.Categoria else None
+                },
+                'cliente': {
+                    'id': venta.cliente.id if venta.cliente else None,
+                    'nombre': str(venta.cliente) if venta.cliente else "Cliente no especificado",
+                    'tipo': venta.cliente.TipoCliente if venta.cliente else None,
+                    'rut': venta.cliente.RutCliente if venta.cliente else None
+                },
+                'usuario': {
+                    'id': venta.Usuario.id if venta.Usuario else None,
+                    'nombre': f"{venta.Usuario.first_name} {venta.Usuario.last_name}" if venta.Usuario else "Usuario no disponible"
+                },
+                'fecha_registro': venta.FechaRegistro.isoformat()
+            }
+            ventas_data.append(venta_data)
+
+        return JsonResponse({
+            'success': True,
+            'ventas': ventas_data
+        })
+
+    except Exception as e:
+        logger.error(f"Error al listar ventas: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_venta(request, venta_id):
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': 'Método no permitido'}
+        }, status=405)
+
+    try:
+        venta = get_object_or_404(Ventas, id=venta_id)
+        data = json.loads(request.body)
+
+        # Validar campos editables requeridos
+        campos_requeridos = {
+            'nombre_venta': 'Nombre de la venta'
+        }
+
+        errores = {}
+        for campo, nombre in campos_requeridos.items():
+            if campo not in data:
+                errores[campo] = f'El campo {nombre} es requerido'
+
+        if errores:
+            return JsonResponse({
+                'success': False,
+                'errors': errores
+            }, status=400)
+
+        # Actualizar solo los campos editables
+        venta.NombreVenta = data['nombre_venta']
+
+        venta.save()
+
+        # Retornar los datos actualizados
+        return JsonResponse({
+            'success': True,
+            'message': 'Venta actualizada exitosamente',
+            'venta': {
+                'id': venta.id,
+                'nombre': venta.NombreVenta,
+                'cantidad': venta.CantidadVenta,
+                'precio_venta': str(venta.PrecioVenta),
+                'precio_total': str(venta.PrecioTotalVenta),
+                'producto': {
+                    'id': venta.Producto.id,
+                    'nombre': venta.Producto.NombreProducto,
+                    'stock_actual': venta.Producto.StockProductoActual
+                },
+                'cliente': {
+                    'id': venta.cliente.id if venta.cliente else None,
+                    'nombre': str(venta.cliente) if venta.cliente else "Cliente no especificado"
+                },
+                'usuario': {
+                    'id': venta.Usuario.id if venta.Usuario else None,
+                    'nombre': f"{venta.Usuario.first_name} {venta.Usuario.last_name}" if venta.Usuario else "Usuario no disponible"
+                },
+                'fecha_registro': venta.FechaRegistro.isoformat()
+            }
+        })
+
+    except ValidationError as e:
+        return JsonResponse({
+            'success': False,
+            'errors': e.message_dict if hasattr(e, 'message_dict') else {'general': str(e)}
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error al actualizar venta: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': str(e)}
+        }, status=500)
+
+def exportar_ventas_excel(request):
+    output = BytesIO()
+    
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    worksheet_data = workbook.add_worksheet('Ventas')
+    worksheet_charts = workbook.add_worksheet('Gráficos')
+    
+    # Formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy',
+    })
+    
+    # Encabezados
+    headers = [
+        'ID',
+        'Nombre Venta',
+        'Producto',
+        'Cliente',
+        'Cantidad',
+        'Precio Unitario',
+        'Total',
+        'Fecha Venta',
+        'Usuario',
+        'Fecha Registro'
+    ]
+    
+    # Escribir encabezados
+    for col, header in enumerate(headers):
+        worksheet_data.write(0, col, header, header_format)
+        worksheet_data.set_column(col, col, 15)
+    
+    # Obtener datos
+    ventas = Ventas.objects.select_related('Producto', 'Usuario', 'cliente').order_by('-FechaVenta')
+    
+    # Escribir datos
+    for row, venta in enumerate(ventas, start=1):
+        worksheet_data.write(row, 0, venta.id)
+        worksheet_data.write(row, 1, venta.NombreVenta)
+        worksheet_data.write(row, 2, venta.Producto.NombreProducto)
+        worksheet_data.write(row, 3, str(venta.cliente) if venta.cliente else "Cliente no especificado")
+        worksheet_data.write(row, 4, venta.CantidadVenta)
+        worksheet_data.write(row, 5, float(venta.PrecioVenta))
+        worksheet_data.write(row, 6, float(venta.PrecioTotalVenta))
+        worksheet_data.write_datetime(row, 7, venta.FechaVenta, date_format)
+        worksheet_data.write(row, 8, f"{venta.Usuario.first_name} {venta.Usuario.last_name}" if venta.Usuario else "")
+        worksheet_data.write_datetime(row, 9, timezone.localtime(venta.FechaRegistro).replace(tzinfo=None), date_format)
+    
+    # Gráficos y análisis adicional
+    ventas_por_mes = {}
+    for venta in ventas:
+        mes = venta.FechaVenta.strftime('%Y-%m')
+        if mes not in ventas_por_mes:
+            ventas_por_mes[mes] = {
+                'cantidad': 0,
+                'total': 0
+            }
+        ventas_por_mes[mes]['cantidad'] += venta.CantidadVenta
+        ventas_por_mes[mes]['total'] += float(venta.PrecioTotalVenta)
+    
+    # Escribir datos para gráficos
+    worksheet_charts.write_row('A1', ['Mes', 'Cantidad', 'Total'], header_format)
+    
+    for i, (mes, datos) in enumerate(ventas_por_mes.items(), start=2):
+        worksheet_charts.write(f'A{i}', mes)
+        worksheet_charts.write(f'B{i}', datos['cantidad'])
+        worksheet_charts.write(f'C{i}', datos['total'])
+    
+    # Gráfico de columnas para ventas mensuales
+    column_chart = workbook.add_chart({'type': 'column'})
+    column_chart.add_series({
+        'name': 'Cantidad de Ventas',
+        'categories': f'=Gráficos!$A$2:$A${len(ventas_por_mes)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(ventas_por_mes)+1}',
+        'data_labels': {'value': True},
+    })
+    column_chart.set_title({'name': 'Ventas Mensuales'})
+    column_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('E2', column_chart)
+    
+    # Gráfico de línea para ingresos mensuales
+    line_chart = workbook.add_chart({'type': 'line'})
+    line_chart.add_series({
+        'name': 'Ingresos Totales',
+        'categories': f'=Gráficos!$A$2:$A${len(ventas_por_mes)+1}',
+        'values': f'=Gráficos!$C$2:$C${len(ventas_por_mes)+1}',
+        'data_labels': {'value': True},
+    })
+    line_chart.set_title({'name': 'Ingresos Mensuales'})
+    line_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('E18', line_chart)
+    
+    workbook.close()
+    
+    # Preparar respuesta
+    output.seek(0)
+    filename = f'Ventas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+@login_required(login_url='login')
 @ensure_csrf_cookie
 def eliminar_venta(request, venta_id):
     if request.method == 'POST':

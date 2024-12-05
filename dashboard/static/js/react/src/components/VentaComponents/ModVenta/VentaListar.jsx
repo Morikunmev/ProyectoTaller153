@@ -9,17 +9,17 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import PaginacionModPerdida from "./PaginacionModPerdida";
-import usePerdidaState from "./hooks/usePerdidaState";
-import PerdidaRestablecerModal from "./modals/PerdidaRestablecerModal";
-import PerdidaUpdateModal from "./modals/PerdidaUpdateModal";
-import PerdidaGrid from "./layout/PerdidaGrid";
+import PaginacionModVenta from "./PaginacionModVenta";
+import useVentaState from "./hooks/useVentaState";
+import VentaUpdateModal from "./modals/VentaUpdateModal";
+import VentaGrid from "./layout/VentaGrid";
+import VentaRestablecerModal from "./modals/VentaRestablecerModal";
 
 // Componente para badge de estado
 const StateBadge = ({ children, type = "default" }) => {
   const styles = {
     default: "bg-gray-100 text-gray-700",
-    warning: "bg-yellow-100 text-yellow-800",
+    success: "bg-green-100 text-green-800",
   };
 
   return (
@@ -29,28 +29,20 @@ const StateBadge = ({ children, type = "default" }) => {
   );
 };
 
-// Componente para el header con título y contador
-const Header = ({ count }) => (
-  <div className="flex items-center gap-4 mb-6">
-    <h1 className="text-2xl font-bold text-gray-900">Módulo Pérdidas</h1>
-    <StateBadge>{count} Pérdidas</StateBadge>
-  </div>
-);
-const StatsHeader = ({ perdidas }) => {
+const StatsHeader = ({ ventas }) => {
   const totalValue = useMemo(
-    () =>
-      perdidas.reduce((sum, perdida) => sum + Number(perdida.valor_total), 0),
-    [perdidas]
+    () => ventas.reduce((sum, venta) => sum + Number(venta.precio_total), 0),
+    [ventas]
   );
 
   return (
     <div className="flex items-center gap-4 mb-6">
-      <h1 className="text-2xl font-bold text-gray-900">Módulo Pérdidas</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Módulo Ventas</h1>
       <div className="flex items-center gap-2">
         <StateBadge>
-          {perdidas.length} {perdidas.length === 1 ? "Pérdida" : "Pérdidas"}
+          {ventas.length} {ventas.length === 1 ? "Venta" : "Ventas"}
         </StateBadge>
-        <StateBadge type="warning">
+        <StateBadge type="success">
           Total: ${totalValue.toLocaleString("es-CL")}
         </StateBadge>
       </div>
@@ -99,7 +91,7 @@ const SearchAndExport = ({
       <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
       <input
         type="text"
-        placeholder="Buscar por nombre..."
+        placeholder="Buscar por nombre o cliente..."
         className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 
                   focus:outline-none focus:ring-1 focus:ring-blue-500
                   transition-colors duration-200"
@@ -151,11 +143,12 @@ const ProductStats = ({ stats, selectedProduct, onProductClick }) => (
 );
 
 // Componente para los botones de acción
-const ActionButtons = ({ perdida, onEdit, onRestablecer, isRestabling }) => (
+// Componente para los botones de acción
+const ActionButtons = ({ venta, onEdit, onRestablecer, isRestabling }) => (
   <div className="flex justify-center gap-2">
     <button
       type="button"
-      onClick={() => onEdit(perdida)}
+      onClick={() => onEdit(venta)}
       className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs
                 hover:bg-blue-50 rounded transition-all duration-200"
     >
@@ -164,7 +157,7 @@ const ActionButtons = ({ perdida, onEdit, onRestablecer, isRestabling }) => (
     </button>
     <button
       type="button"
-      onClick={() => onRestablecer(perdida)}
+      onClick={() => onRestablecer(venta)}
       disabled={isRestabling}
       className="p-1 text-blue-600 hover:text-blue-800 flex items-center gap-1 text-xs
                 hover:bg-blue-50 rounded transition-all duration-200
@@ -175,54 +168,44 @@ const ActionButtons = ({ perdida, onEdit, onRestablecer, isRestabling }) => (
     </button>
   </div>
 );
-
 // Componente para el contenido de la tabla
-const TableContent = ({ perdidas, onEdit, onRestablecer, isRestabling }) => (
+const TableContent = ({ ventas, onEdit, onRestablecer, isRestabling }) => (
   <table className="w-full min-w-[1200px]">
     <thead>
       <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
         <th className="p-2 font-medium">ID</th>
         <th className="p-2 font-medium">NOMBRE</th>
         <th className="p-2 font-medium">PRODUCTO</th>
+        <th className="p-2 font-medium">CLIENTE</th>
         <th className="p-2 font-medium">CANTIDAD</th>
-        <th className="p-2 font-medium">VALOR UNITARIO</th>
-        <th className="p-2 font-medium">VALOR TOTAL</th>
-        <th className="p-2 font-medium">MOTIVO</th>
-        <th className="p-2 font-medium">DESCRIPCIÓN</th>
+        <th className="p-2 font-medium">PRECIO UNITARIO</th>
+        <th className="p-2 font-medium">PRECIO TOTAL</th>
         <th className="p-2 font-medium">USUARIO</th>
+        <th className="p-2 font-medium">FECHA VENTA</th>
         <th className="p-2 font-medium">FECHA REGISTRO</th>
-        <th className="p-2 font-medium">ÚLTIMA MODIFICACIÓN</th>
         <th className="p-2 font-medium text-center">ACCIONES</th>
       </tr>
     </thead>
     <tbody className="text-sm">
-      {perdidas.map((perdida) => (
-        <tr key={perdida.id} className="border-b hover:bg-gray-50">
-          <td className="p-2 font-medium text-gray-900">#{perdida.id}</td>
-          <td className="p-2">{perdida.nombre}</td>
-          <td className="p-2">{perdida.producto.nombre}</td>
-          <td className="p-2">{perdida.cantidad}</td>
-          <td className="p-2">${perdida.valor_unitario.toLocaleString()}</td>
-          <td className="p-2">${perdida.valor_total.toLocaleString()}</td>
-          <td className="p-2">
-            <StateBadge type="warning">{perdida.motivo}</StateBadge>
-          </td>
-          <td
-            className="p-2 max-w-[200px] truncate"
-            title={perdida.descripcion}
-          >
-            {perdida.descripcion || "Sin descripción"}
-          </td>
-          <td className="p-2">{perdida.usuario.nombre}</td>
+      {ventas.map((venta) => (
+        <tr key={venta.id} className="border-b hover:bg-gray-50">
+          <td className="p-2 font-medium text-gray-900">#{venta.id}</td>
+          <td className="p-2">{venta.nombre}</td>
+          <td className="p-2">{venta.producto.nombre}</td>
+          <td className="p-2">{venta.cliente.nombre}</td>
+          <td className="p-2">{venta.cantidad}</td>
+          <td className="p-2">${venta.precio_venta.toLocaleString()}</td>
+          <td className="p-2">${venta.precio_total.toLocaleString()}</td>
+          <td className="p-2">{venta.usuario.nombre}</td>
           <td className="p-2 whitespace-nowrap">
-            {new Date(perdida.fecha_registro).toLocaleString()}
+            {new Date(venta.fecha).toLocaleString()}
           </td>
           <td className="p-2 whitespace-nowrap">
-            {new Date(perdida.ultima_modificacion).toLocaleString()}
+            {new Date(venta.fecha_registro).toLocaleString()}
           </td>
           <td className="p-2">
             <ActionButtons
-              perdida={perdida}
+              venta={venta}
               onEdit={onEdit}
               onRestablecer={onRestablecer}
               isRestabling={isRestabling}
@@ -234,7 +217,7 @@ const TableContent = ({ perdidas, onEdit, onRestablecer, isRestabling }) => (
   </table>
 );
 
-const PerdidaListar = () => {
+const VentaListar = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isGridView, setIsGridView] = useState(false);
 
@@ -244,39 +227,39 @@ const PerdidaListar = () => {
     error,
     isChangingView,
     isSearching,
-    currentPerdidas,
+    currentVentas,
     totalPages,
     currentPage,
     startIndex,
     endIndex,
-    filteredPerdidas,
-    restablecerModalOpen,
-    perdidaToRestablecer,
-    isRestabling,
+    filteredVentas,
     updateModalOpen,
-    perdidaToUpdate,
+    ventaToUpdate,
     handleSearch,
     handlePreviousPage,
     handleNextPage,
     handleExportClick,
+    handleUpdateModalOpen,
+    handleVentaUpdated,
+    setUpdateModalOpen,
+    setVentaToUpdate,
+    restablecerModalOpen,
+    ventaToRestablecer,
+    isRestabling,
     handleRestablecer,
     handleConfirmRestablecer,
     setRestablecerModalOpen,
-    setPerdidaToRestablecer,
-    handleUpdateModalOpen,
-    handlePerdidaUpdated,
-    setUpdateModalOpen,
-    setPerdidaToUpdate,
-  } = usePerdidaState();
+    setVentaToRestablecer,
+  } = useVentaState();
 
   const productStats = useMemo(() => {
-    const stats = filteredPerdidas.reduce((acc, perdida) => {
-      const productName = perdida.producto.nombre;
+    const stats = filteredVentas.reduce((acc, venta) => {
+      const productName = venta.producto.nombre;
       if (!acc[productName]) {
         acc[productName] = { count: 0, totalQuantity: 0 };
       }
-      acc[productName].count++; // Cuenta los registros
-      acc[productName].totalQuantity += perdida.cantidad; // Suma las cantidades
+      acc[productName].count++; // Cuenta el número de registros
+      acc[productName].totalQuantity += venta.cantidad; // Suma la cantidad
       return acc;
     }, {});
 
@@ -285,14 +268,14 @@ const PerdidaListar = () => {
       count,
       totalQuantity,
     }));
-  }, [filteredPerdidas]);
+  }, [filteredVentas]);
 
-  const displayedPerdidas = useMemo(() => {
-    if (!selectedProduct) return currentPerdidas;
-    return currentPerdidas.filter(
-      (perdida) => perdida.producto.nombre === selectedProduct
+  const displayedVentas = useMemo(() => {
+    if (!selectedProduct) return currentVentas;
+    return currentVentas.filter(
+      (venta) => venta.producto.nombre === selectedProduct
     );
-  }, [currentPerdidas, selectedProduct]);
+  }, [currentVentas, selectedProduct]);
 
   const handleViewChange = (gridView) => {
     setIsGridView(gridView);
@@ -306,7 +289,7 @@ const PerdidaListar = () => {
         }`}
       >
         <div className="max-w-full mx-auto p-6">
-          <StatsHeader perdidas={filteredPerdidas} />
+          <StatsHeader ventas={filteredVentas} />
 
           <SearchAndExport
             searchTerm={searchTerm}
@@ -335,40 +318,37 @@ const PerdidaListar = () => {
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <p className="text-lg">Cargando...</p>
               </div>
-            ) : displayedPerdidas.length === 0 ? (
+            ) : displayedVentas.length === 0 ? (
               <div className="text-center p-8 text-gray-500">
-                <p className="text-lg">No se encontraron pérdidas</p>
+                <p className="text-lg">No se encontraron ventas</p>
               </div>
             ) : (
               <>
                 <div className="relative">
                   <div
                     className={`transition-all duration-300 ease-in-out transform
-              ${
-                isChangingView || isSearching
-                  ? "opacity-0 scale-95"
-                  : "opacity-100 scale-100"
-              }`}
+                    ${
+                      isChangingView || isSearching
+                        ? "opacity-0 scale-95"
+                        : "opacity-100 scale-100"
+                    }`}
                   >
                     {isGridView ? (
-                      <div
-                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4
-                    transform transition-all duration-300 ease-in-out"
-                      >
-                        {displayedPerdidas.map((perdida) => (
-                          <PerdidaGrid
-                            key={perdida.id}
-                            perdida={perdida}
-                            onEdit={() => handleUpdateModalOpen(perdida)}
-                            onRestablecer={() => handleRestablecer(perdida)}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+                        {displayedVentas.map((venta) => (
+                          <VentaGrid
+                            key={venta.id}
+                            venta={venta}
+                            onEdit={() => handleUpdateModalOpen(venta)}
+                            onRestablecer={() => handleRestablecer(venta)}
                             isRestabling={isRestabling}
                           />
                         ))}
                       </div>
                     ) : (
-                      <div className="overflow-x-auto transform transition-all duration-300 ease-in-out">
+                      <div className="overflow-x-auto">
                         <TableContent
-                          perdidas={displayedPerdidas}
+                          ventas={displayedVentas}
                           onEdit={handleUpdateModalOpen}
                           onRestablecer={handleRestablecer}
                           isRestabling={isRestabling}
@@ -378,14 +358,14 @@ const PerdidaListar = () => {
                   </div>
                 </div>
                 <div className="border-t">
-                  <PaginacionModPerdida
+                  <PaginacionModVenta
                     currentPage={currentPage}
                     totalPages={totalPages}
                     handlePreviousPage={handlePreviousPage}
                     handleNextPage={handleNextPage}
                     startIndex={startIndex}
                     endIndex={endIndex}
-                    totalItems={filteredPerdidas.length}
+                    totalItems={filteredVentas.length}
                   />
                 </div>
               </>
@@ -394,27 +374,29 @@ const PerdidaListar = () => {
         </div>
       </div>
 
-      <PerdidaRestablecerModal
-        isOpen={restablecerModalOpen}
-        onClose={() => {
-          setRestablecerModalOpen(false);
-          setPerdidaToRestablecer(null);
-        }}
-        onConfirm={handleConfirmRestablecer}
-        perdidaId={perdidaToRestablecer?.id}
-        isRestabling={isRestabling}
-      />
-      <PerdidaUpdateModal
+      <VentaUpdateModal
         isOpen={updateModalOpen}
         onClose={() => {
           setUpdateModalOpen(false);
-          setPerdidaToUpdate(null);
+          setVentaToUpdate(null);
         }}
-        perdida={perdidaToUpdate}
-        onPerdidaUpdated={handlePerdidaUpdated}
+        venta={ventaToUpdate}
+        onVentaUpdated={handleVentaUpdated}
+      />
+
+      <VentaRestablecerModal
+        isOpen={restablecerModalOpen}
+        onClose={() => {
+          setRestablecerModalOpen(false);
+          setVentaToRestablecer(null);
+        }}
+        onConfirm={handleConfirmRestablecer}
+        ventaId={ventaToRestablecer?.id}
+        isRestabling={isRestabling}
+        venta={ventaToRestablecer}
       />
     </main>
   );
 };
 
-export default PerdidaListar;
+export default VentaListar;

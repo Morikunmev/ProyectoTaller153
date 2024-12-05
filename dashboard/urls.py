@@ -127,6 +127,14 @@ urlpatterns = [
     
     
     #-------------------RUTAS PARA VENTAS-----------------
+#-------------------RUTAS PARA VENTAS-----------------
+# Vista principal de ventas
+    path('venta/', views.mod_venta, name='mod_venta'),
+
+# APIs de ventas
+    path('api/ventas/listar/', views.listar_ventas, name='listar_ventas'),
+    path('api/venta/<int:venta_id>/actualizar/', views.actualizar_venta, name='actualizar_venta'),
+    path('api/ventas/exportar-excel/', views.exportar_ventas_excel, name='exportar_ventas_excel'),
     path('api/venta/<int:venta_id>/eliminar/', views.eliminar_venta, name='eliminar_venta'),
 
 

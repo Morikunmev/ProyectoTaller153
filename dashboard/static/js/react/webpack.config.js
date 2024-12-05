@@ -11,6 +11,7 @@ module.exports = {
     producto: "./src/producto.js", // Nueva entrada para productos
     categoria: "./src/categoria.js", // Nueva entrada para productos
     perdida: "./src/perdida.js", // Nueva entrada
+    venta: "./src/venta.js", // Nueva entrada
   },
   output: {
     path: path.resolve(__dirname, "dist"),
