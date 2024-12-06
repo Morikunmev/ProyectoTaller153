@@ -8,10 +8,11 @@ module.exports = {
     dashboard: "./src/dashboard.js",
     material: "./src/material.js",
     herramienta: "./src/herramienta.js",
-    producto: "./src/producto.js", // Nueva entrada para productos
-    categoria: "./src/categoria.js", // Nueva entrada para productos
-    perdida: "./src/perdida.js", // Nueva entrada
-    venta: "./src/venta.js", // Nueva entrada
+    producto: "./src/producto.js", 
+    categoria: "./src/categoria.js", 
+    perdida: "./src/perdida.js", 
+    venta: "./src/venta.js", 
+    cliente: "./src/cliente.js", 
   },
   output: {
     path: path.resolve(__dirname, "dist"),

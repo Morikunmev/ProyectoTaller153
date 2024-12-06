@@ -127,15 +127,27 @@ urlpatterns = [
     
     
     #-------------------RUTAS PARA VENTAS-----------------
-#-------------------RUTAS PARA VENTAS-----------------
-# Vista principal de ventas
+    # Vista principal de ventas
     path('venta/', views.mod_venta, name='mod_venta'),
 
-# APIs de ventas
+    # APIs de ventas
     path('api/ventas/listar/', views.listar_ventas, name='listar_ventas'),
     path('api/venta/<int:venta_id>/actualizar/', views.actualizar_venta, name='actualizar_venta'),
     path('api/ventas/exportar-excel/', views.exportar_ventas_excel, name='exportar_ventas_excel'),
     path('api/venta/<int:venta_id>/eliminar/', views.eliminar_venta, name='eliminar_venta'),
+    
+    
+    #-------------------RUTAS PARA CLIENTE-----------------
+    # URL principal del módulo cliente
+    path('cliente/', views.mod_cliente, name='mod_cliente'),
+
+    # APIs de clientes
+    path('api/clientes/listar/', views.listar_clientes, name='listar_clientes'),
+    path('api/cliente/<int:cliente_id>/actualizar/', views.actualizar_cliente, name='actualizar_cliente'),
+    path('api/clientes/exportar-excel/', views.exportar_clientes_excel, name='exportar_clientes_excel'),
+    path('api/cliente/<int:cliente_id>/eliminar/', views.eliminar_cliente, name='eliminar_cliente'),
+    path('api/cliente/crear/', views.crear_cliente, name='crear_cliente'),
+
 
 
 

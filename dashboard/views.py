@@ -30,8 +30,11 @@ from cloudinary_storage.storage import MediaCloudinaryStorage
 from cloudinary.exceptions import Error as CloudinaryError
 from datetime import date
 from django.views import View
-from django.db.models import F
+from django.db.models import F,CharField
 from django.db import transaction
+from django.db.models.functions import Concat
+from django.db.models import Value
+
 
 
 
@@ -5826,6 +5829,11 @@ def listar_ventas(request):
 
         ventas_data = []
         for venta in ventas:
+            # Verificar si esta venta tenía un cliente que fue eliminado
+            was_deleted = hasattr(venta, '_cliente_eliminado') or (
+                venta.cliente is None and venta.NombreVenta.endswith('(Cliente eliminado)')
+            )
+
             venta_data = {
                 'id': venta.id,
                 'nombre': venta.NombreVenta,
@@ -5841,7 +5849,10 @@ def listar_ventas(request):
                 },
                 'cliente': {
                     'id': venta.cliente.id if venta.cliente else None,
-                    'nombre': str(venta.cliente) if venta.cliente else "Cliente no especificado",
+                    'nombre': (
+                        "Cliente eliminado" if venta.cliente_eliminado
+                        else (str(venta.cliente) if venta.cliente else "Cliente no especificado")
+                    ),
                     'tipo': venta.cliente.TipoCliente if venta.cliente else None,
                     'rut': venta.cliente.RutCliente if venta.cliente else None
                 },
@@ -6120,3 +6131,314 @@ def eliminar_venta(request, venta_id):
         'success': False,
         'errors': 'Método no permitido'
     }, status=405)
+    
+    
+    
+    
+#------------RUTA PARA CLIENTE---------
+
+@login_required(login_url='login')
+def mod_cliente(request):
+    return render(request, 'venta/cliente.html')
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def listar_clientes(request):
+    try:
+        clientes = Cliente.objects.all().order_by('NombreCliente')
+
+        clientes_data = []
+        for cliente in clientes:
+            cliente_data = {
+                'id': cliente.id,
+                'nombre': cliente.NombreCliente,
+                'apellido': cliente.ApellidoCliente,
+                'rut': cliente.RutCliente,
+                'tipo': cliente.TipoCliente,
+                'nombre_compania': cliente.NombreCompañia,
+                'cantidad_total_compras': cliente.CantidadTotalCompras,
+                'total_dinero_compras': str(cliente.TotalDineroCompras),
+                'comentario': cliente.ComentarioCliente,
+                'telefono': cliente.TelefonoCliente,
+                'fecha': cliente.FechaCliente.isoformat(),
+                'usuario': {
+                    'id': cliente.Usuario.id if cliente.Usuario else None,
+                    'nombre': f"{cliente.Usuario.first_name} {cliente.Usuario.last_name}" if cliente.Usuario else "Usuario no disponible"
+                },
+                'fecha_registro': cliente.FechaRegistro.isoformat(),
+                'ultima_modificacion': cliente.UltimaModificacion.isoformat()
+            }
+            clientes_data.append(cliente_data)
+
+        return JsonResponse({
+            'success': True,
+            'clientes': clientes_data
+        })
+
+    except Exception as e:
+        logger.error(f"Error al listar clientes: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_cliente(request, cliente_id):
+    if request.method != 'POST':
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': 'Método no permitido'}
+        }, status=405)
+
+    try:
+        cliente = get_object_or_404(Cliente, id=cliente_id)
+        data = json.loads(request.body)
+
+        campos_requeridos = {
+            'nombre': 'Nombre del cliente',
+            'apellido': 'Apellido del cliente',
+            'rut': 'RUT del cliente',
+            'tipo': 'Tipo de cliente'
+        }
+
+        errores = {}
+        for campo, nombre in campos_requeridos.items():
+            if campo not in data:
+                errores[campo] = f'El campo {nombre} es requerido'
+
+        if errores:
+            return JsonResponse({
+                'success': False,
+                'errors': errores
+            }, status=400)
+
+        cliente.NombreCliente = data['nombre']
+        cliente.ApellidoCliente = data['apellido']
+        cliente.RutCliente = data['rut']
+        cliente.TipoCliente = data['tipo']
+        cliente.NombreCompañia = data.get('nombre_compania', '')
+        cliente.ComentarioCliente = data.get('comentario', '')
+        cliente.TelefonoCliente = data.get('telefono', '')
+
+        cliente.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Cliente actualizado exitosamente',
+            'cliente': {
+                'id': cliente.id,
+                'nombre': cliente.NombreCliente,
+                'apellido': cliente.ApellidoCliente,
+                'rut': cliente.RutCliente,
+                'tipo': cliente.TipoCliente,
+                'nombre_compania': cliente.NombreCompañia,
+                'comentario': cliente.ComentarioCliente,
+                'telefono': cliente.TelefonoCliente,
+                'cantidad_total_compras': cliente.CantidadTotalCompras,
+                'total_dinero_compras': str(cliente.TotalDineroCompras)
+            }
+        })
+
+    except ValidationError as e:
+        return JsonResponse({
+            'success': False,
+            'errors': e.message_dict if hasattr(e, 'message_dict') else {'general': str(e)}
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error al actualizar cliente: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'errors': {'general': str(e)}
+        }, status=500)
+
+@login_required(login_url='login')
+def exportar_clientes_excel(request):
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    worksheet_data = workbook.add_worksheet('Clientes')
+    worksheet_charts = workbook.add_worksheet('Gráficos')
+    
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy',
+    })
+    
+    headers = [
+        'ID',
+        'Nombre',
+        'Apellido',
+        'RUT',
+        'Tipo',
+        'Compañía',
+        'Total Compras',
+        'Total Dinero',
+        'Teléfono',
+        'Fecha Registro'
+    ]
+    
+    for col, header in enumerate(headers):
+        worksheet_data.write(0, col, header, header_format)
+        worksheet_data.set_column(col, col, 15)
+    
+    clientes = Cliente.objects.all().order_by('NombreCliente')
+    
+    for row, cliente in enumerate(clientes, start=1):
+        worksheet_data.write(row, 0, cliente.id)
+        worksheet_data.write(row, 1, cliente.NombreCliente)
+        worksheet_data.write(row, 2, cliente.ApellidoCliente)
+        worksheet_data.write(row, 3, cliente.RutCliente)
+        worksheet_data.write(row, 4, cliente.get_TipoCliente_display())
+        worksheet_data.write(row, 5, cliente.NombreCompañia or '')
+        worksheet_data.write(row, 6, cliente.CantidadTotalCompras)
+        worksheet_data.write(row, 7, float(cliente.TotalDineroCompras))
+        worksheet_data.write(row, 8, cliente.TelefonoCliente or '')
+        worksheet_data.write_datetime(row, 9, timezone.localtime(cliente.FechaRegistro).replace(tzinfo=None), date_format)
+    
+    # Gráficos
+    clientes_por_tipo = {}
+    for cliente in clientes:
+        tipo = cliente.get_TipoCliente_display()
+        if tipo not in clientes_por_tipo:
+            clientes_por_tipo[tipo] = {
+                'cantidad': 0,
+                'total_compras': 0
+            }
+        clientes_por_tipo[tipo]['cantidad'] += 1
+        clientes_por_tipo[tipo]['total_compras'] += float(cliente.TotalDineroCompras)
+    
+    worksheet_charts.write_row('A1', ['Tipo Cliente', 'Cantidad', 'Total Compras'], header_format)
+    
+    for i, (tipo, datos) in enumerate(clientes_por_tipo.items(), start=2):
+        worksheet_charts.write(f'A{i}', tipo)
+        worksheet_charts.write(f'B{i}', datos['cantidad'])
+        worksheet_charts.write(f'C{i}', datos['total_compras'])
+    
+    pie_chart = workbook.add_chart({'type': 'pie'})
+    pie_chart.add_series({
+        'name': 'Distribución de Clientes',
+        'categories': f'=Gráficos!$A$2:$A${len(clientes_por_tipo)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(clientes_por_tipo)+1}',
+        'data_labels': {'percentage': True},
+    })
+    pie_chart.set_title({'name': 'Distribución por Tipo de Cliente'})
+    pie_chart.set_size({'width': 500, 'height': 300})
+    worksheet_charts.insert_chart('E2', pie_chart)
+    
+    workbook.close()
+    output.seek(0)
+    
+    filename = f'Clientes_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
+
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_cliente(request, cliente_id):
+    if request.method == 'POST':
+        try:
+            with transaction.atomic():
+                cliente = get_object_or_404(Cliente, id=cliente_id)
+                
+                # Marcar las ventas del cliente como eliminado
+                Ventas.objects.filter(cliente=cliente).update(
+                    cliente=None,
+                    cliente_eliminado=True
+                )
+                
+                # Eliminar el cliente
+                cliente.delete()
+
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Cliente eliminado exitosamente.'
+                })
+
+        except Exception as e:
+            logger.error(f"Error al eliminar cliente: {str(e)}")
+            return JsonResponse({
+                'success': False,
+                'errors': str(e)
+            }, status=500)
+
+    return JsonResponse({
+        'success': False,
+        'errors': 'Método no permitido'
+    }, status=405)
+    
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def crear_cliente(request):
+   if request.method == 'POST':
+       try:
+           data = json.loads(request.body)
+           
+           # Validar campos requeridos
+           required_fields = {
+               'nombre': data.get('nombre'),
+               'apellido': data.get('apellido'),
+               'rut': data.get('rut'),
+               'tipo': data.get('tipo')
+           }
+
+           if not all(required_fields.values()):
+               return JsonResponse({
+                   'success': False,
+                   'errors': 'Todos los campos son requeridos'
+               }, status=400)
+
+           # Validar que no exista otro cliente con el mismo nombre
+           if Cliente.objects.filter(NombreCliente=data['nombre'], ApellidoCliente=data['apellido']).exists():
+               return JsonResponse({
+                   'success': False,
+                   'errors': 'Ya existe un cliente con este nombre y apellido'
+               }, status=400)
+
+           # Validar que no exista otro cliente con el mismo RUT
+           if Cliente.objects.filter(RutCliente=data['rut']).exists():
+               return JsonResponse({
+                   'success': False,
+                   'errors': 'Ya existe un cliente con este RUT'
+               }, status=400)
+
+           cliente = Cliente.objects.create(
+               NombreCliente=data['nombre'],
+               ApellidoCliente=data['apellido'],
+               RutCliente=data['rut'],
+               TipoCliente=data['tipo'],
+               NombreCompañia=data.get('nombre_compania', ''),
+               TelefonoCliente=data.get('telefono', ''),
+               ComentarioCliente=data.get('comentario', ''),
+               Usuario=request.user
+           )
+
+           return JsonResponse({
+               'success': True,
+               'message': 'Cliente creado exitosamente',
+               'cliente': {
+                   'id': cliente.id,
+                   'nombre': cliente.NombreCliente,
+                   'apellido': cliente.ApellidoCliente,
+                   'rut': cliente.RutCliente
+               }
+           })
+
+       except Exception as e:
+           return JsonResponse({
+               'success': False,
+               'errors': str(e)
+           }, status=500)
+
+   return JsonResponse({'success': False, 'errors': 'Método no permitido'}, status=405)

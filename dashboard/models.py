@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 #------------------------------MODULO PROVEEDOR------------------------------
 class Proveedor(models.Model):
-    # Campos obligatorios y unicos
     # Campos obligatorios con restricciones de unicidad (1FN)
     NombreProveedor = models.CharField(max_length=100, unique=True,null=False, blank=False)
     RutProveedor = models.CharField(max_length=12, unique=True,null=False, blank=False,
@@ -179,9 +178,10 @@ class Material(models.Model):
     StockOriginal = models.PositiveIntegerField(editable=False, help_text="Stock inicial con el que se registró el material")
     PrecioMaterial = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     TotalMaterial = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
+    
     FechaCompraMaterial = models.DateField(auto_now_add=True)
-    DescripcionMaterial = models.TextField(null=True, blank=True)
     # Campos opcionales
+    DescripcionMaterial = models.TextField(null=True, blank=True)
     ColorMaterial = models.CharField(max_length=50, null=True, blank=True)
     PesoMaterial = models.CharField(max_length=50, null=True, blank=True)
     DimensionesMaterial = models.CharField(max_length=100, null=True, blank=True)
@@ -266,8 +266,8 @@ class Herramienta(models.Model):
     PrecioHerramienta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     TotalHerramienta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False, editable=False)
     FechaCompraHerramienta = models.DateField(auto_now_add=True)
-    DescripcionHerramienta = models.TextField(null=True, blank=True)
     # Modificados para ser opcionales
+    DescripcionHerramienta = models.TextField(null=True, blank=True)
     MarcaHerramienta = models.CharField(max_length=100, null=True, blank=True)  
     ModeloHerramienta = models.CharField(max_length=100, null=True, blank=True)  
     UbicacionHerramienta = models.CharField(max_length=100, null=True, blank=True)  
@@ -336,29 +336,15 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
 class Categoria(models.Model):
     # Campos obligatorios
     NombreCategoria = models.CharField(max_length=100, unique=True, null=False, blank=False)
-    
     # Campos opcionales
     DescripcionCategoria = models.TextField(null=True, blank=True)
     StockCategoria = models.PositiveIntegerField(default=0, editable=False)
     FotoCategoria = CloudinaryField('imagen', folder='categorias/', null=True, blank=True)
-    
     # Campos de tracking
-    CantidadCategoriaPerdida = models.PositiveIntegerField(
-        default=0,
-        editable=False,
-        help_text="Cantidad total de productos perdidos en esta categoría"
-    )
-    CantidadCategoriaVenta = models.PositiveIntegerField(
-        default=0,
-        editable=False,
-        help_text="Cantidad total de productos vendidos en esta categoría"
-    )
-    TotalCategoriaVenta = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        editable=False,
-        help_text="Total acumulado de ventas en esta categoría"
+    CantidadCategoriaPerdida = models.PositiveIntegerField(default=0,editable=False,help_text="Cantidad total de productos perdidos en esta categoría")
+    CantidadCategoriaVenta = models.PositiveIntegerField(default=0,editable=False,help_text="Cantidad total de productos vendidos en esta categoría")
+    TotalCategoriaVenta = models.DecimalField(max_digits=12,decimal_places=2,default=0,editable=False,
+help_text="Total acumulado de ventas en esta categoría"
     )
     TotalCategoriaPerdida = models.DecimalField(
         max_digits=12,
@@ -665,24 +651,32 @@ class Ventas(models.Model):
     PrecioVenta = models.DecimalField(max_digits=10, decimal_places=2, null=False, blank=False)
     PrecioTotalVenta = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
     FechaVenta = models.DateField(auto_now_add=True)
+    cliente_eliminado = models.BooleanField(default=False)  # Nuevo campo
+
     # Relaciones
     Producto = models.ForeignKey(
         'Producto', 
-        on_delete=models.CASCADE,  # Cambiar de PROTECT a CASCADE
+        on_delete=models.CASCADE,
         related_name='ventas'
     )
     cliente = models.ForeignKey(
-    'Cliente', 
-    on_delete=models.SET_NULL,
-    null=True,
-    blank=True,
-    related_name='ventas',
-    help_text="Cliente asociado a la venta (opcional)"
-)
+        'Cliente', 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ventas',
+        help_text="Cliente asociado a la venta (opcional)"
+    )
+    
     # Campo de auditoría
-    Usuario = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,help_text="Usuario que registró la venta"
+    Usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        help_text="Usuario que registró la venta"
     )
     FechaRegistro = models.DateTimeField(auto_now_add=True)
+
     class Meta:
         verbose_name = "Venta"
         verbose_name_plural = "Ventas"
@@ -699,15 +693,16 @@ class Ventas(models.Model):
             self.PrecioTotalVenta = self.CantidadVenta * self.PrecioVenta
         super().save(*args, **kwargs)
 
-        def delete(self, *args, **kwargs):
-            if self.pk:
-                self.Producto.CantidadProductoVendido -= self.CantidadVenta
-                self.Producto.save()
-            super().delete(*args, **kwargs)
+    def delete(self, *args, **kwargs):
+        if self.pk:
+            self.Producto.CantidadProductoVendido -= self.CantidadVenta
+            self.Producto.save()
+        super().delete(*args, **kwargs)
 
     def __str__(self):
-        cliente_str = str(self.cliente) if self.cliente else "Cliente no especificado"
-        return f"Venta {self.id} - {self.Producto.NombreProducto} a {cliente_str}"
+        if self.cliente_eliminado:
+            return f"Venta {self.id} - {self.Producto.NombreProducto} a Cliente eliminado"
+        return f"Venta {self.id} - {self.Producto.NombreProducto} a {str(self.cliente) if self.cliente else 'Cliente no especificado'}"
 
 class Cliente(models.Model):
     TIPO_CHOICES = [

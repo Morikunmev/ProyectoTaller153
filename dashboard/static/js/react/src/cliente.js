@@ -1,15 +1,15 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
-import PerdidaListar from "./components/MaterialComponents/ModPerdida/PerdidaListar";
+import ClienteListar from "./components/VentaComponents/ModCliente/ClienteListar";
 import Navbar from "./components/Navbar";
 import "./styles/index.css";
-const PerdidaApp = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
+const ClienteApp = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   return (
     <>
       <Navbar />
-      <PerdidaListar
+      <ClienteListar
         isModalOpen={isModalOpen}
         setIsModalOpen={setIsModalOpen}
       />
@@ -17,6 +17,6 @@ const PerdidaApp = () => {
   );
 };
 
-const container = document.getElementById("react-perdida");
+const container = document.getElementById("react-cliente");
 const root = createRoot(container);
-root.render(<PerdidaApp />);
+root.render(<ClienteApp />);

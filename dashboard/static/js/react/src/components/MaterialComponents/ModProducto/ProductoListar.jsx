@@ -9,6 +9,8 @@ import {
   Trash,
   Package,
   FileText,
+  ChevronUp, // Agregar esto
+  ChevronDown, // Agregar esto
 } from "lucide-react";
 import PaginacionModProducto from "./PaginacionModProducto";
 import ProductoCreateModal from "./modals/ProductoCreateModal";
@@ -22,11 +24,12 @@ import ProductoGrid from "./layout/ProductoGrid";
 import ProductoDetalle from "./ProductoDetalle";
 
 const ProductoListar = () => {
-  const [stockFilter, setStockFilter] = useState("all"); // 'all', 'inStock', 'outOfStock'
+  const [stockFilter, setStockFilter] = useState("all");
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
   const [detalleModalOpen, setDetalleModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [sortDirection, setSortDirection] = useState("desc"); // 'asc' o 'desc'
 
   const {
     searchTerm,
@@ -85,8 +88,22 @@ const ProductoListar = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  const renderTableView = () => (
-    
+  const renderTableView = () => {
+  // Agrupar productos por fecha
+  const groupedProductos = sortProductosByDate(displayedProductos).reduce((groups, producto) => {
+    const date = new Date(producto.FechaProducto).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(producto);
+    return groups;
+  }, {});
+
+  return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
@@ -99,7 +116,16 @@ const ProductoListar = () => {
             <th className="px-2 py-1.5">P.UNIT</th>
             <th className="px-2 py-1.5">P.TOTAL A</th>
             <th className="px-2 py-1.5">CATEGORÍA</th>
-            <th className="px-2 py-1.5">FECHA</th>
+            <th className="px-2 py-1.5 cursor-pointer group" onClick={toggleSortDirection}>
+              <div className="flex items-center gap-1">
+                FECHA
+                {sortDirection === "asc" ? (
+                  <ChevronUp className="w-4 h-4 opacity-0 group-hover:opacity-100 text-gray-400" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 opacity-0 group-hover:opacity-100 text-gray-400" />
+                )}
+              </div>
+            </th>
             <th className="px-2 py-1.5">DÍAS</th>
             <th className="px-2 py-1.5">VEND.</th>
             <th className="px-2 py-1.5">DESC.</th>
@@ -108,119 +134,117 @@ const ProductoListar = () => {
           </tr>
         </thead>
         <tbody>
-          {displayedProductos.map((producto) => (
-            <tr
-              key={producto.id}
-              className={`border-b last:border-b-0 hover:bg-gray-50 text-xs
-                ${
-                  producto.StockProductoActual === 0
-                    ? "bg-red-50 hover:bg-red-100"
-                    : producto.StockProductoActual === 1
-                    ? "bg-yellow-50 hover:bg-yellow-100"
-                    : "bg-green-50 hover:bg-green-100"
-                }`}
-            >
-              <td className="px-2 py-1.5">#{producto.id}</td>
-              <td className="px-2 py-1.5">{producto.NombreProducto}</td>
-              <td className="px-2 py-1.5">
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
-                  {producto.FotoProducto ? (
-                    <img
-                      src={producto.FotoProducto}
-                      alt={producto.NombreProducto}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.style.display = "none";
-                        e.target.parentNode.classList.add("bg-gray-200");
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                      <Package className="w-4 h-4 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-              </td>
-              <td className="px-2 py-1.5">{producto.StockProductoInicial}</td>
-              <td className="px-2 py-1.5">{producto.StockProductoActual}</td>
-              <td className="px-2 py-1.5">
-                ${producto.PrecioUnitarioProducto}
-              </td>
-              <td className="px-2 py-1.5">${producto.PrecioTotalProducto}</td>
-              <td className="px-2 py-1.5">
-                {producto.Categoria?.NombreCategoria}
-              </td>
-              <td className="px-2 py-1.5">
-                {new Date(producto.FechaProducto).toLocaleDateString("es-ES", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </td>
-              <td className="px-2 py-1.5 text-gray-600">
-                {producto.DiasProducto} días
-              </td>
-              <td className="px-2 py-1.5 text-green-600">
-                {producto.CantidadProductoVendido}
-              </td>
-              <td className="px-2 py-1.5 text-yellow-600">
-                {producto.CantidadProductoDesechado}
-              </td>
-              <td className="px-2 py-1.5 text-center">
-                <button
-                  onClick={() => handleDetailsClick(producto)}
-                  className="inline-flex p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-blue-50"
+          {Object.entries(groupedProductos).map(([date, productos]) => (
+            <React.Fragment key={date}>
+              <tr className="bg-gray-100">
+                <td colSpan="14" className="px-2 py-2 font-medium text-gray-700">
+                  {date}
+                </td>
+              </tr>
+              {productos.map((producto) => (
+                <tr
+                  key={producto.id}
+                  className={`border-b last:border-b-0 hover:bg-gray-50 text-xs
+                    ${
+                      producto.StockProductoActual === 0
+                        ? "bg-red-50 hover:bg-red-100"
+                        : producto.StockProductoActual === 1
+                        ? "bg-yellow-50 hover:bg-yellow-100"
+                        : "bg-green-50 hover:bg-green-100"
+                    }`}
                 >
-                  <FileText className="w-4 h-4" />
-                </button>
-              </td>
-              <td className="px-2 py-1.5">
-                <div className="grid grid-cols-2 gap-1">
-                  <button
-                    onClick={() => handleVenderOpen(producto)}
-                    disabled={producto.StockProductoActual === 0}
-                    className={`p-1 rounded ${
-                      producto.StockProductoActual === 0
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-green-600 hover:bg-green-50"
-                    }`}
-                  >
-                    <ShoppingCart className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDesecharOpen(producto)}
-                    disabled={producto.StockProductoActual === 0}
-                    className={`p-1 rounded ${
-                      producto.StockProductoActual === 0
-                        ? "text-gray-400 cursor-not-allowed"
-                        : "text-yellow-600 hover:bg-yellow-50"
-                    }`}
-                  >
-                    <Trash className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleUpdateModalOpen(producto)}
-                    className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(producto)}
-                    className="p-1 text-red-600 hover:bg-red-50 rounded"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </td>
-            </tr>
+                  <td className="px-2 py-1.5">#{producto.id}</td>
+                  <td className="px-2 py-1.5">{producto.NombreProducto}</td>
+                  <td className="px-2 py-1.5">
+                    <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center">
+                      {producto.FotoProducto ? (
+                        <img
+                          src={producto.FotoProducto}
+                          alt={producto.NombreProducto}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.style.display = "none";
+                            e.target.parentNode.classList.add("bg-gray-200");
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                          <Package className="w-4 h-4 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-2 py-1.5">{producto.StockProductoInicial}</td>
+                  <td className="px-2 py-1.5">{producto.StockProductoActual}</td>
+                  <td className="px-2 py-1.5">${producto.PrecioUnitarioProducto}</td>
+                  <td className="px-2 py-1.5">${producto.PrecioTotalProducto}</td>
+                  <td className="px-2 py-1.5">{producto.Categoria?.NombreCategoria}</td>
+                  <td className="px-2 py-1.5">
+                    {new Date(producto.FechaProducto).toLocaleDateString("es-ES", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </td>
+                  <td className="px-2 py-1.5 text-gray-600">{producto.DiasProducto} días</td>
+                  <td className="px-2 py-1.5 text-green-600">{producto.CantidadProductoVendido}</td>
+                  <td className="px-2 py-1.5 text-yellow-600">{producto.CantidadProductoDesechado}</td>
+                  <td className="px-2 py-1.5 text-center">
+                    <button
+                      onClick={() => handleDetailsClick(producto)}
+                      className="inline-flex p-1 text-gray-600 hover:text-blue-600 rounded-full hover:bg-blue-50"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <div className="grid grid-cols-2 gap-1">
+                      <button
+                        onClick={() => handleVenderOpen(producto)}
+                        disabled={producto.StockProductoActual === 0}
+                        className={`p-1 rounded ${
+                          producto.StockProductoActual === 0
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-green-600 hover:bg-green-50"
+                        }`}
+                      >
+                        <ShoppingCart className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDesecharOpen(producto)}
+                        disabled={producto.StockProductoActual === 0}
+                        className={`p-1 rounded ${
+                          producto.StockProductoActual === 0
+                            ? "text-gray-400 cursor-not-allowed"
+                            : "text-yellow-600 hover:bg-yellow-50"
+                        }`}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleUpdateModalOpen(producto)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(producto)}
+                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </React.Fragment>
           ))}
         </tbody>
       </table>
-      
     </div>
-    
   );
+};
   const handleExportClick = async () => {
     try {
       await exportToExcel();
@@ -244,6 +268,17 @@ const ProductoListar = () => {
         return true;
     }
   });
+  // Función para ordenar productos por fecha
+  const sortProductosByDate = (productos) => {
+    return [...productos].sort((a, b) => {
+      const dateA = new Date(a.FechaProducto);
+      const dateB = new Date(b.FechaProducto);
+      return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
+    });
+  };
+  const toggleSortDirection = () => {
+    setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
+  };
 
   return (
     <div>

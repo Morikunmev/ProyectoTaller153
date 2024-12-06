@@ -28,6 +28,75 @@ const StateBadge = ({ children, type = "default" }) => {
     </span>
   );
 };
+const ClienteStats = ({ ventas, selectedClienteType, onClienteTypeClick }) => {
+  const stats = useMemo(() => {
+    return {
+      eliminados: ventas.filter(
+        (venta) => venta.cliente.nombre === "Cliente eliminado"
+      ).length,
+      no_especificados: ventas.filter(
+        (venta) => venta.cliente.nombre === "Cliente no especificado"
+      ).length,
+      con_cliente: ventas.filter(
+        (venta) =>
+          !["Cliente eliminado", "Cliente no especificado"].includes(
+            venta.cliente.nombre
+          )
+      ).length,
+    };
+  }, [ventas]);
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-6">
+      <button
+        onClick={() => onClienteTypeClick(null)}
+        className={`px-3 py-1 rounded-full text-sm transition-all duration-200 
+          ${
+            selectedClienteType === null
+              ? "bg-gray-600 text-white hover:bg-gray-700"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+          }`}
+      >
+        <span className="font-medium">{ventas.length}</span> Todos
+      </button>
+      <button
+        onClick={() => onClienteTypeClick("eliminado")}
+        className={`px-3 py-1 rounded-full text-sm transition-all duration-200 
+          ${
+            selectedClienteType === "eliminado"
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : "bg-red-100 text-red-700 hover:bg-red-200"
+          }`}
+      >
+        <span className="font-medium">{stats.eliminados}</span> Clientes
+        eliminados
+      </button>
+      <button
+        onClick={() => onClienteTypeClick("no_especificado")}
+        className={`px-3 py-1 rounded-full text-sm transition-all duration-200 
+          ${
+            selectedClienteType === "no_especificado"
+              ? "bg-yellow-600 text-white hover:bg-yellow-700"
+              : "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+          }`}
+      >
+        <span className="font-medium">{stats.no_especificados}</span> Sin
+        cliente
+      </button>
+      <button
+        onClick={() => onClienteTypeClick("con_cliente")}
+        className={`px-3 py-1 rounded-full text-sm transition-all duration-200 
+          ${
+            selectedClienteType === "con_cliente"
+              ? "bg-green-600 text-white hover:bg-green-700"
+              : "bg-green-100 text-green-700 hover:bg-green-200"
+          }`}
+      >
+        <span className="font-medium">{stats.con_cliente}</span> Con cliente
+      </button>
+    </div>
+  );
+};
 
 const StatsHeader = ({ ventas }) => {
   const totalValue = useMemo(
@@ -122,7 +191,7 @@ const SearchAndExport = ({
 // Componente para los badges de productos
 const ProductStats = ({ stats, selectedProduct, onProductClick }) => (
   <div className="flex flex-wrap gap-2 mb-6">
-    {stats.map(({ name, count, totalQuantity }) => (
+    {stats.map(({ name, count, totalQuantity, totalAmount }) => (
       <button
         key={name}
         onClick={() => onProductClick(name)}
@@ -135,7 +204,7 @@ const ProductStats = ({ stats, selectedProduct, onProductClick }) => (
       >
         <span className="font-medium">{count}</span> {name}{" "}
         <span className="text-xs ml-1 opacity-75">
-          ({totalQuantity} unidades)
+          ({totalQuantity} unidades - ${totalAmount.toLocaleString()})
         </span>
       </button>
     ))}
@@ -192,7 +261,17 @@ const TableContent = ({ ventas, onEdit, onRestablecer, isRestabling }) => (
           <td className="p-2 font-medium text-gray-900">#{venta.id}</td>
           <td className="p-2">{venta.nombre}</td>
           <td className="p-2">{venta.producto.nombre}</td>
-          <td className="p-2">{venta.cliente.nombre}</td>
+          <td
+            className={`p-2 ${
+              venta.cliente.nombre === "Cliente eliminado"
+                ? "text-red-600 font-medium"
+                : venta.cliente.nombre === "Cliente no especificado"
+                ? "text-yellow-600 font-medium"
+                : ""
+            }`}
+          >
+            {venta.cliente.nombre}
+          </td>
           <td className="p-2">{venta.cantidad}</td>
           <td className="p-2">${venta.precio_venta.toLocaleString()}</td>
           <td className="p-2">${venta.precio_total.toLocaleString()}</td>
@@ -220,6 +299,7 @@ const TableContent = ({ ventas, onEdit, onRestablecer, isRestabling }) => (
 const VentaListar = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isGridView, setIsGridView] = useState(false);
+  const [selectedClienteType, setSelectedClienteType] = useState(null);
 
   const {
     searchTerm,
@@ -256,26 +336,62 @@ const VentaListar = () => {
     const stats = filteredVentas.reduce((acc, venta) => {
       const productName = venta.producto.nombre;
       if (!acc[productName]) {
-        acc[productName] = { count: 0, totalQuantity: 0 };
+        acc[productName] = {
+          count: 0,
+          totalQuantity: 0,
+          totalAmount: 0,
+        };
       }
       acc[productName].count++; // Cuenta el número de registros
       acc[productName].totalQuantity += venta.cantidad; // Suma la cantidad
+      acc[productName].totalAmount += venta.cantidad * venta.precio_venta; // Suma el total monetario
       return acc;
     }, {});
 
-    return Object.entries(stats).map(([name, { count, totalQuantity }]) => ({
-      name,
-      count,
-      totalQuantity,
-    }));
+    return Object.entries(stats).map(
+      ([name, { count, totalQuantity, totalAmount }]) => ({
+        name,
+        count,
+        totalQuantity,
+        totalAmount,
+      })
+    );
   }, [filteredVentas]);
 
   const displayedVentas = useMemo(() => {
-    if (!selectedProduct) return currentVentas;
-    return currentVentas.filter(
-      (venta) => venta.producto.nombre === selectedProduct
-    );
-  }, [currentVentas, selectedProduct]);
+    let filtered = currentVentas;
+
+    if (selectedProduct) {
+      filtered = filtered.filter(
+        (venta) => venta.producto.nombre === selectedProduct
+      );
+    }
+
+    if (selectedClienteType) {
+      switch (selectedClienteType) {
+        case "eliminado":
+          filtered = filtered.filter(
+            (venta) => venta.cliente.nombre === "Cliente eliminado"
+          );
+          break;
+        case "no_especificado":
+          filtered = filtered.filter(
+            (venta) => venta.cliente.nombre === "Cliente no especificado"
+          );
+          break;
+        case "con_cliente":
+          filtered = filtered.filter(
+            (venta) =>
+              !["Cliente eliminado", "Cliente no especificado"].includes(
+                venta.cliente.nombre
+              )
+          );
+          break;
+      }
+    }
+
+    return filtered;
+  }, [currentVentas, selectedProduct, selectedClienteType]);
 
   const handleViewChange = (gridView) => {
     setIsGridView(gridView);
@@ -305,6 +421,11 @@ const VentaListar = () => {
             onProductClick={(name) =>
               setSelectedProduct((prev) => (prev === name ? null : name))
             }
+          />
+          <ClienteStats
+            ventas={filteredVentas}
+            selectedClienteType={selectedClienteType}
+            onClienteTypeClick={(type) => setSelectedClienteType(type)}
           />
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
