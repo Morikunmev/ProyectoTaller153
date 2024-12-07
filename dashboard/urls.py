@@ -147,6 +147,17 @@ urlpatterns = [
     path('api/clientes/exportar-excel/', views.exportar_clientes_excel, name='exportar_clientes_excel'),
     path('api/cliente/<int:cliente_id>/eliminar/', views.eliminar_cliente, name='eliminar_cliente'),
     path('api/cliente/crear/', views.crear_cliente, name='crear_cliente'),
+    
+    #-------------------RUTAS PARA USUARIOS-----------------
+    # URL principal del módulo administrador
+    path('administrador/', views.mod_administrador, name='mod_administrador'),
+
+    # APIs de administrador
+    path('api/administradores/listar/', views.listar_administradores, name='listar_administradores'),
+    path('api/administrador/crear/', views.crear_administrador, name='crear_administrador'),
+    path('api/administrador/<int:administrador_id>/actualizar/', views.actualizar_administrador, name='actualizar_administrador'),
+    path('api/administrador/<int:administrador_id>/eliminar/', views.eliminar_administrador, name='eliminar_administrador'),
+    path('api/administradores/exportar-excel/', views.exportar_administradores_excel, name='exportar_administradores_excel'),
 
 
 

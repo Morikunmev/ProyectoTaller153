@@ -34,6 +34,8 @@ from django.db.models import F,CharField
 from django.db import transaction
 from django.db.models.functions import Concat
 from django.db.models import Value
+from django.db.models import Avg
+
 
 
 
@@ -55,7 +57,7 @@ from django.core.mail import EmailMessage
 
 
 # Local imports
-from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto,ProductoMaterial, Categoria, Cliente, Ventas, Perdidas
+from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto,ProductoMaterial, Categoria, Cliente, Ventas, Perdidas, User
 
 
 from login.models import Usuario
@@ -6442,3 +6444,407 @@ def crear_cliente(request):
            }, status=500)
 
    return JsonResponse({'success': False, 'errors': 'Método no permitido'}, status=405)
+
+
+#-----------RUTA PARA CLIENTE---------
+@login_required
+def mod_administrador(request):
+    return render(request, 'usuario/administrador.html')
+
+@login_required
+def listar_administradores(request):
+    try:
+        administradores = Usuario.objects.filter(TipoUsuario='Administrador').select_related('user')
+        data = [{
+            'id': admin.id,
+            'user_id': admin.user.id,
+            'username': admin.user.username,
+            'email': admin.user.email,
+            'rut': admin.RutUsuario,
+            'telefono': admin.TelefonoUsuario,
+            'edad': admin.EdadUsuario,
+            'foto': str(admin.FotoUsuario.url) if admin.FotoUsuario else None,
+        } for admin in administradores]
+        return JsonResponse({'administradores': data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required(login_url='login')
+@ensure_csrf_cookie 
+def crear_administrador(request):
+    if request.method == 'POST':
+        data = request.POST
+        user = None
+        
+        try:
+            # Validar campos requeridos
+            campos_requeridos = ['username', 'email', 'password', 'RutUsuario']
+            errores = {campo: f'El campo {campo} es requerido' 
+                      for campo in campos_requeridos if not data.get(campo)}
+            
+            if errores:
+                return JsonResponse({'success': False, 'errors': errores}, status=400)
+
+            # Validar RUT
+            rut = data.get('RutUsuario')
+            if not re.match(r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$', rut):
+                return JsonResponse({
+                    'success': False, 
+                    'errors': {'RutUsuario': 'RUT debe tener formato XX.XXX.XXX-X'}
+                }, status=400)
+
+            # Validar si ya existe el usuario
+            if User.objects.filter(username=data.get('username')).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'username': 'Este nombre de usuario ya existe'}
+                }, status=400)
+
+            if User.objects.filter(email=data.get('email')).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'email': 'Este email ya está registrado'}
+                }, status=400)
+
+            # Crear usuario base
+            user = User.objects.create_user(
+                username=data.get('username'),
+                email=data.get('email'),
+                password=data.get('password')
+            )
+            
+            # Crear perfil de administrador
+            nuevo_admin = Usuario(
+                user=user,
+                RutUsuario=rut,
+                TipoUsuario='Administrador',
+                EdadUsuario=data.get('EdadUsuario'),
+                TelefonoUsuario=data.get('TelefonoUsuario')
+            )
+
+            # Procesar foto si existe
+            if 'FotoUsuario' in request.FILES:
+                foto = request.FILES['FotoUsuario']
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    user.delete()
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoUsuario': 'Formato no válido. Solo se permiten imágenes en formato JPEG, PNG o GIF'}
+                    }, status=400)
+                nuevo_admin.FotoUsuario = foto
+
+            # Validar y guardar
+            nuevo_admin.full_clean()
+            nuevo_admin.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Administrador creado exitosamente',
+                'administrador': {
+                    'id': nuevo_admin.id,
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'rut': nuevo_admin.RutUsuario,
+                    'edad': nuevo_admin.EdadUsuario,
+                    'telefono': nuevo_admin.TelefonoUsuario,
+                    'foto': nuevo_admin.FotoUsuario.url if nuevo_admin.FotoUsuario else None,
+                    'tipo_usuario': nuevo_admin.TipoUsuario
+                }
+            })
+
+        except ValidationError as e:
+            if user:
+                user.delete()
+            return JsonResponse({
+                'success': False, 
+                'errors': e.message_dict
+            }, status=400)
+            
+        except Exception as e:
+            if user:
+                user.delete()
+            return JsonResponse({
+                'success': False,
+                'errors': {'general': f'Error al crear administrador: {str(e)}'}
+            }, status=500)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {'general': 'Método no permitido'}
+    }, status=405)
+    
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_administrador(request, administrador_id):
+    if request.method in ['PUT', 'POST']:
+        try:
+            admin = get_object_or_404(Usuario, id=administrador_id, TipoUsuario='Administrador')
+            data = request.POST
+            
+            campos_requeridos = ['username', 'email', 'RutUsuario']
+            errores = {campo: f'El campo {campo} es requerido' 
+                      for campo in campos_requeridos if not data.get(campo)}
+            
+            if errores:
+                return JsonResponse({'success': False, 'errors': errores}, status=400)
+            
+            # Validar RUT
+            rut = data.get('RutUsuario').upper()
+            if not re.match(r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$', rut):
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'RutUsuario': 'RUT debe tener formato XX.XXX.XXX-X'}
+                }, status=400)
+
+            # Validar email único
+            if Usuario.objects.filter(user__email=data.get('email')).exclude(id=administrador_id).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'email': 'Este email ya está registrado'}
+                }, status=400)
+
+            if 'FotoUsuario' in request.FILES:
+                foto = request.FILES['FotoUsuario']
+                if foto.content_type not in ['image/jpeg', 'image/png', 'image/gif']:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoUsuario': 'Formato de imagen no válido'}
+                    }, status=400)
+
+                if admin.FotoUsuario:
+                    try:
+                        url = admin.FotoUsuario.url
+                        parts = url.split('/')
+                        public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                        
+                        cloudinary.config(
+                            cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                            api_key=os.getenv('CLOUDINARY_API_KEY'),
+                            api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                        )
+                        
+                        cloudinary.uploader.destroy(
+                            public_id,
+                            resource_type="image",
+                            type="upload",
+                            invalidate=True
+                        )
+                    except Exception as e:
+                        print(f"Error eliminando imagen: {str(e)}")
+                
+                admin.FotoUsuario = foto
+
+            # Actualizar usuario base
+            admin.user.username = data.get('username')
+            admin.user.email = data.get('email')
+            if data.get('password'):
+                admin.user.set_password(data.get('password'))
+            admin.user.save()
+
+            # Actualizar administrador
+            admin.RutUsuario = rut
+            admin.TelefonoUsuario = data.get('TelefonoUsuario')
+            admin.EdadUsuario = data.get('EdadUsuario')
+
+            admin.full_clean()
+            admin.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Administrador actualizado exitosamente',
+                'administrador': {
+                    'id': admin.id,
+                    'username': admin.user.username,
+                    'email': admin.user.email,
+                    'rut': admin.RutUsuario,
+                    'telefono': admin.TelefonoUsuario,
+                    'edad': admin.EdadUsuario,
+                    'foto': admin.FotoUsuario.url if admin.FotoUsuario else None
+                }
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'errors': {'general': f'Error: {str(e)}'}
+            }, status=400)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {'general': 'Método no permitido'}
+    }, status=405)
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_administrador(request, administrador_id):
+    if request.method == 'DELETE':
+        try:
+            admin = get_object_or_404(Usuario, id=administrador_id, TipoUsuario='Administrador')
+            username = admin.user.username
+
+            if admin.FotoUsuario:
+                try:
+                    url = admin.FotoUsuario.url
+                    parts = url.split('/')
+                    public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+
+                    cloudinary.config(
+                        cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                        api_key=os.getenv('CLOUDINARY_API_KEY'),
+                        api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                    )
+
+                    cloudinary.uploader.destroy(
+                        public_id,
+                        resource_type="image",
+                        type="upload"
+                    )
+                except Exception as e:
+                    print(f"Error eliminando imagen: {str(e)}")
+
+            admin.user.delete()  # Eliminará en cascada el perfil de Usuario
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Administrador {username} eliminado exitosamente'
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'message': f'Error: {str(e)}'
+            }, status=500)
+
+    return JsonResponse({
+        'success': False,
+        'message': 'Método no permitido'
+    }, status=405)
+    
+def exportar_administradores_excel(request):
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    
+    # Formatos
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#000000',
+        'font_color': 'white',
+        'border': 1
+    })
+    
+    date_format = workbook.add_format({'num_format': 'dd/mm/yyyy'})
+    
+    # Hoja principal de datos
+    worksheet_data = workbook.add_worksheet('Administradores')
+    
+    # Encabezados para la hoja de datos
+    headers = [
+        'ID',
+        'Username',
+        'Email',
+        'RUT',
+        'Teléfono',
+        'Edad',
+        'Fecha Registro',
+        'Última Modificación',
+        'Clientes Registrados',
+        'Pérdidas Registradas'
+    ]
+    
+    # Escribir encabezados
+    for col, header in enumerate(headers):
+        worksheet_data.write(0, col, header, header_format)
+        worksheet_data.set_column(col, col, 15)
+    
+    # Obtener datos
+    administradores = Usuario.objects.filter(TipoUsuario='Administrador').select_related('user')
+    
+    # Escribir datos
+    for row, admin in enumerate(administradores, start=1):
+        clientes_registrados = Cliente.objects.filter(Usuario=admin.user).count()
+        perdidas_registradas = Perdidas.objects.filter(Usuario=admin.user).count()
+        
+        worksheet_data.write(row, 0, admin.id)
+        worksheet_data.write(row, 1, admin.user.username)
+        worksheet_data.write(row, 2, admin.user.email)
+        worksheet_data.write(row, 3, admin.RutUsuario)
+        worksheet_data.write(row, 4, admin.TelefonoUsuario or '')
+        worksheet_data.write(row, 5, admin.EdadUsuario or '')
+        worksheet_data.write_datetime(row, 6, timezone.localtime(admin.user.date_joined).replace(tzinfo=None), date_format)
+        worksheet_data.write_datetime(row, 7, timezone.localtime(admin.user.last_login).replace(tzinfo=None), date_format) if admin.user.last_login else worksheet_data.write(row, 7, '')
+        worksheet_data.write(row, 8, clientes_registrados)
+        worksheet_data.write(row, 9, perdidas_registradas)
+    
+    # Hoja de estadísticas
+    worksheet_stats = workbook.add_worksheet('Estadísticas')
+    
+    # Datos para estadísticas
+    estadisticas = {
+        'total_admins': administradores.count(),
+        'promedio_edad': administradores.filter(EdadUsuario__isnull=False).aggregate(Avg('EdadUsuario'))['EdadUsuario__avg'] or 0,
+        'clientes_por_admin': {},
+        'perdidas_por_admin': {}
+    }
+    
+    for admin in administradores:
+        username = admin.user.username
+        estadisticas['clientes_por_admin'][username] = Cliente.objects.filter(Usuario=admin.user).count()
+        estadisticas['perdidas_por_admin'][username] = Perdidas.objects.filter(Usuario=admin.user).count()
+    
+    # Escribir estadísticas generales
+    worksheet_stats.write('A1', 'Estadísticas Generales', header_format)
+    worksheet_stats.write('A2', 'Total Administradores')
+    worksheet_stats.write('B2', estadisticas['total_admins'])
+    worksheet_stats.write('A3', 'Promedio de Edad')
+    worksheet_stats.write('B3', round(estadisticas['promedio_edad'], 2))
+    
+    # Datos para gráficos
+    worksheet_stats.write('A5', 'Administrador', header_format)
+    worksheet_stats.write('B5', 'Clientes Registrados', header_format)
+    worksheet_stats.write('C5', 'Pérdidas Registradas', header_format)
+    
+    row = 6
+    for username in estadisticas['clientes_por_admin'].keys():
+        worksheet_stats.write(f'A{row}', username)
+        worksheet_stats.write(f'B{row}', estadisticas['clientes_por_admin'][username])
+        worksheet_stats.write(f'C{row}', estadisticas['perdidas_por_admin'][username])
+        row += 1
+    
+    # Gráfico de barras para clientes por administrador
+    chart_clientes = workbook.add_chart({'type': 'column'})
+    chart_clientes.add_series({
+        'name': 'Clientes Registrados',
+        'categories': f'=Estadísticas!$A$6:$A${row-1}',
+        'values': f'=Estadísticas!$B$6:$B${row-1}',
+        'data_labels': {'value': True}
+    })
+    chart_clientes.set_title({'name': 'Clientes Registrados por Administrador'})
+    chart_clientes.set_size({'width': 500, 'height': 300})
+    worksheet_stats.insert_chart('E2', chart_clientes)
+    
+    # Gráfico de barras para pérdidas por administrador
+    chart_perdidas = workbook.add_chart({'type': 'column'})
+    chart_perdidas.add_series({
+        'name': 'Pérdidas Registradas',
+        'categories': f'=Estadísticas!$A$6:$A${row-1}',
+        'values': f'=Estadísticas!$C$6:$C${row-1}',
+        'data_labels': {'value': True}
+    })
+    chart_perdidas.set_title({'name': 'Pérdidas Registradas por Administrador'})
+    chart_perdidas.set_size({'width': 500, 'height': 300})
+    worksheet_stats.insert_chart('E18', chart_perdidas)
+    
+    workbook.close()
+    
+    # Preparar respuesta
+    output.seek(0)
+    filename = f'Administradores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response

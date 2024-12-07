@@ -13,6 +13,8 @@ module.exports = {
     perdida: "./src/perdida.js", 
     venta: "./src/venta.js", 
     cliente: "./src/cliente.js", 
+    colaborador: "./src/colaborador.js",
+    administrador: "./src/administrador.js",
   },
   output: {
     path: path.resolve(__dirname, "dist"),
