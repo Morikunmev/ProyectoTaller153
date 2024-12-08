@@ -3,6 +3,9 @@
 {% tailwind_css %}
 {% block content %}
 {% csrf_token %}
+{% block title %}
+<title>Gestor Material</title>
+{% endblock %}
 
 <div id="react-material"></div>
 <script src="{% static 'js/react/dist/material.bundle.js' %}?v={{ CACHE_VERSION }}"></script>

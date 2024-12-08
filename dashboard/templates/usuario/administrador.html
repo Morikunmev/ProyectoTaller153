@@ -4,6 +4,9 @@
 
 {% block content %}
 {% csrf_token %}
+{% block title %}
+<title>Gestor Administradores</title>
+{% endblock %}
 
 <div id="react-administrador"></div>
 <script src="{% static 'js/react/dist/administrador.bundle.js' %}?v={{ CACHE_VERSION }}"></script>

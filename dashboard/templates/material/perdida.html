@@ -3,6 +3,9 @@
 {% tailwind_css %}
 {% block content %}
 {% csrf_token %}
+{% block title %}
+<title>Gestor Perdida</title>
+{% endblock %}
 
 <div id="react-perdida"></div>
 <script src="{% static 'js/react/dist/perdida.bundle.js' %}?v={{ CACHE_VERSION }}"></script>

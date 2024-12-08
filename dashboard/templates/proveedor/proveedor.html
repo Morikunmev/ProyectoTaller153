@@ -3,6 +3,9 @@
 {% tailwind_css %}
 {% block content %}
 {% csrf_token %} <!--nuevo-->
+{% block title %}
+<title>Gestor Proveedor</title>
+{% endblock %}
 <div id="react-proveedor"></div>
 <script src="{% static 'js/react/dist/proveedor.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
 {% endblock %}

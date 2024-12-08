@@ -3,6 +3,9 @@
 {% tailwind_css %}
 {% block content %}
 {% csrf_token %}
+{% block title %}
+<title>Gestor Producto</title>
+{% endblock %}
 
 <div id="react-producto"></div>
 <script src="{% static 'js/react/dist/producto.bundle.js' %}?v={{ CACHE_VERSION }}"></script>

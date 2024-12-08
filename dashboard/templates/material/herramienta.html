@@ -3,6 +3,9 @@
 {% tailwind_css %}
 {% block content %}
 {% csrf_token %}
+{% block title %}
+<title>Gestor Herramienta</title>
+{% endblock %}
 
 <div id="react-herramienta"></div>
 <script src="{% static 'js/react/dist/herramienta.bundle.js' %}?v={{ CACHE_VERSION }}"></script>

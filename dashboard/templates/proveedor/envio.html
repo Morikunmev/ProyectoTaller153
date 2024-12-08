@@ -4,6 +4,10 @@
 {% block content %}
 {% csrf_token %} <!--nuevo-->
 
+{% block title %}
+<title>Gestor Envio</title>
+{% endblock %}
+
 <div id="react-envio"></div>
 <script src="{% static 'js/react/dist/envio.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
 {% endblock %}

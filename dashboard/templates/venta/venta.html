@@ -4,6 +4,9 @@
 
 {% block content %}
 {% csrf_token %}
+{% block title %}
+<title>Gestor venta</title>
+{% endblock %}
 
 <div id="react-venta"></div>
 <script src="{% static 'js/react/dist/venta.bundle.js' %}?v={{ CACHE_VERSION }}"></script>

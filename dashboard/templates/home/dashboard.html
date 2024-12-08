@@ -3,6 +3,9 @@
 {% tailwind_css %}
 {% block content %}
 {% csrf_token %}
-    <div id="dashboard-root"></div>
-    <script src="{% static 'js/react/dist/dashboard.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
+{% block title %}
+<title>Dashboard</title>
+{% endblock %}
+<div id="dashboard-root"></div>
+<script src="{% static 'js/react/dist/dashboard.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
 {% endblock %}

@@ -60,7 +60,7 @@ def login_view(request):
             else:
                 try:
                     usuario = Usuario.objects.get(user=user)
-                    if usuario.TipoUsuario == "Administrador":
+                    if usuario.TipoUsuario == "Administrador" or usuario.TipoUsuario == "Colaborador":
                         auth_login(request, user)
                         # Configurar la duración de la sesión según el checkbox "recordarme"
                         if remember_me:
@@ -69,7 +69,7 @@ def login_view(request):
                             request.session.set_expiry(0)  # Expirar al cerrar el navegador
                         return redirect("dashboard")
                     else:
-                        messages.error(request, "Solo el administrador puede iniciar sesión.")
+                        messages.error(request, "Solo el administrador y el colaborador pueden iniciar sesión.")
                 except Usuario.DoesNotExist:
                     messages.error(request, "Nombre de usuario o contraseña incorrectos.")
         else:
