@@ -160,13 +160,23 @@ urlpatterns = [
     
     path('api/administrador/<int:administrador_id>/eliminar/', views.eliminar_administrador, name='eliminar_administrador'),
     
-    path('api/administradores/exportar-excel/', views.exportar_administradores_excel, name='exportar_administradores_excel')
-
-
-
-
+    path('api/administradores/exportar-excel/', views.exportar_administradores_excel, name='exportar_administradores_excel'),
     
     
+    #-------------------RUTAS PARA COLABORADORES-----------------
+    # URL principal del módulo colaborador
+    path('colaborador/', views.mod_colaborador, name='mod_colaborador'),
+
+    # APIs de colaborador
+    path('api/colaboradores/listar/', views.listar_colaboradores, name='listar_colaboradores'),
+
+    path('api/colaborador/crear/', views.crear_colaborador, name='crear_colaborador'),
+
+    path('api/colaborador/<int:colaborador_id>/actualizar/', views.actualizar_colaborador, name='actualizar_colaborador'),
+
+    path('api/colaborador/<int:colaborador_id>/eliminar/', views.eliminar_colaborador, name='eliminar_colaborador'),
+
+    path('api/colaboradores/exportar-excel/', views.exportar_colaboradores_excel, name='exportar_colaboradores_excel')
 ]
 
 

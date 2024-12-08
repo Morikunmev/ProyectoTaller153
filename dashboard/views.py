@@ -6913,3 +6913,451 @@ def exportar_administradores_excel(request):
    response['Content-Disposition'] = f'attachment; filename="{filename}"'
    
    return response
+
+
+
+#---------------RUTA PARA COLABORADOR------------
+@login_required
+def mod_colaborador(request):
+    return render(request, 'usuario/colaborador.html')
+
+@login_required
+def listar_colaboradores(request):
+    try:
+        colaboradores = Usuario.objects.filter(TipoUsuario='Colaborador').select_related('user')
+        data = [{
+            'id': colab.id,
+            'user_id': colab.user.id,
+            'username': colab.user.username,
+            'email': colab.user.email,
+            'rut': colab.RutUsuario,
+            'telefono': colab.TelefonoUsuario,
+            'edad': colab.EdadUsuario,
+            'foto': str(colab.FotoUsuario.url) if colab.FotoUsuario else None,
+        } for colab in colaboradores]
+        return JsonResponse({'colaboradores': data})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required(login_url='login')
+@ensure_csrf_cookie 
+def crear_colaborador(request):
+    if request.method == 'POST':
+        data = request.POST
+        user = None
+        
+        try:
+            # Validar campos requeridos
+            campos_requeridos = ['username', 'email', 'password', 'RutUsuario']
+            errores = {campo: f'El campo {campo} es requerido' 
+                      for campo in campos_requeridos if not data.get(campo)}
+            
+            if errores:
+                return JsonResponse({'success': False, 'errors': errores}, status=400)
+
+            # Validar RUT
+            rut = data.get('RutUsuario')
+            if not re.match(r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$', rut):
+                return JsonResponse({
+                    'success': False, 
+                    'errors': {'RutUsuario': 'RUT debe tener formato XX.XXX.XXX-X'}
+                }, status=400)
+
+            # Validar si ya existe el usuario
+            if User.objects.filter(username=data.get('username')).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'username': 'Este nombre de usuario ya existe'}
+                }, status=400)
+
+            if User.objects.filter(email=data.get('email')).exists():
+                return JsonResponse({
+                    'success': False,
+                    'errors': {'email': 'Este email ya está registrado'}
+                }, status=400)
+
+            # Crear usuario base
+            user = User.objects.create_user(
+                username=data.get('username'),
+                email=data.get('email'),
+                password=data.get('password')
+            )
+            
+            # Crear perfil de colaborador
+            nuevo_colab = Usuario(
+                user=user,
+                RutUsuario=rut,
+                TipoUsuario='Colaborador',
+                EdadUsuario=data.get('EdadUsuario'),
+                TelefonoUsuario=data.get('TelefonoUsuario')
+            )
+
+            # Procesar foto si existe
+            if 'FotoUsuario' in request.FILES:
+                foto = request.FILES['FotoUsuario']
+                if foto.content_type not in ALLOWED_FILE_TYPES:
+                    user.delete()
+                    return JsonResponse({
+                        'success': False,
+                        'errors': {'FotoUsuario': 'Formato no válido. Solo se permiten imágenes en formato JPEG, PNG o GIF'}
+                    }, status=400)
+                nuevo_colab.FotoUsuario = foto
+
+            # Validar y guardar
+            nuevo_colab.full_clean()
+            nuevo_colab.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Colaborador creado exitosamente',
+                'colaborador': {
+                    'id': nuevo_colab.id,
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'rut': nuevo_colab.RutUsuario,
+                    'edad': nuevo_colab.EdadUsuario,
+                    'telefono': nuevo_colab.TelefonoUsuario,
+                    'foto': nuevo_colab.FotoUsuario.url if nuevo_colab.FotoUsuario else None,
+                    'tipo_usuario': nuevo_colab.TipoUsuario
+                }
+            })
+
+        except ValidationError as e:
+            if user:
+                user.delete()
+            return JsonResponse({
+                'success': False, 
+                'errors': e.message_dict
+            }, status=400)
+            
+        except Exception as e:
+            if user:
+                user.delete()
+            return JsonResponse({
+                'success': False,
+                'errors': {'general': f'Error al crear colaborador: {str(e)}'}
+            }, status=500)
+
+    return JsonResponse({
+        'success': False,
+        'errors': {'general': 'Método no permitido'}
+    }, status=405)
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def actualizar_colaborador(request, colaborador_id):
+   if request.method in ['PUT', 'POST']:
+       try:
+           colab = get_object_or_404(Usuario, id=colaborador_id, TipoUsuario='Colaborador')
+           data = request.POST
+           
+           campos_requeridos = ['username', 'email', 'RutUsuario']
+           errores = {campo: f'El campo {campo} es requerido' 
+                     for campo in campos_requeridos if not data.get(campo)}
+           
+           if errores:
+               return JsonResponse({'success': False, 'errors': errores}, status=400)
+           
+           # Validar RUT
+           rut = data.get('RutUsuario').upper()
+           if not re.match(r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$', rut):
+               return JsonResponse({
+                   'success': False,
+                   'errors': {'RutUsuario': 'RUT debe tener formato XX.XXX.XXX-X'}
+               }, status=400)
+
+           # Validar email único
+           if Usuario.objects.filter(user__email=data.get('email')).exclude(id=colaborador_id).exists():
+               return JsonResponse({
+                   'success': False,
+                   'errors': {'email': 'Este email ya está registrado'}
+               }, status=400)
+
+           if 'FotoUsuario' in request.FILES:
+               foto = request.FILES['FotoUsuario']
+               if foto.content_type not in ['image/jpeg', 'image/png', 'image/gif']:
+                   return JsonResponse({
+                       'success': False,
+                       'errors': {'FotoUsuario': 'Formato de imagen no válido'}
+                   }, status=400)
+
+               if colab.FotoUsuario:
+                   try:
+                       url = colab.FotoUsuario.url
+                       parts = url.split('/')
+                       public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+                       
+                       cloudinary.config(
+                           cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                           api_key=os.getenv('CLOUDINARY_API_KEY'),
+                           api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                       )
+                       
+                       cloudinary.uploader.destroy(
+                           public_id,
+                           resource_type="image",
+                           type="upload",
+                           invalidate=True
+                       )
+                   except Exception as e:
+                       print(f"Error eliminando imagen: {str(e)}")
+               
+               colab.FotoUsuario = foto
+
+           # Actualizar usuario base
+           colab.user.username = data.get('username')
+           colab.user.email = data.get('email')
+           if data.get('password'):
+               colab.user.set_password(data.get('password'))
+           colab.user.save()
+
+           # Actualizar colaborador
+           colab.RutUsuario = rut
+           colab.TelefonoUsuario = data.get('TelefonoUsuario')
+           colab.EdadUsuario = data.get('EdadUsuario')
+
+           colab.full_clean()
+           colab.save()
+
+           return JsonResponse({
+               'success': True,
+               'message': 'Colaborador actualizado exitosamente',
+               'colaborador': {
+                   'id': colab.id,
+                   'username': colab.user.username,
+                   'email': colab.user.email,
+                   'rut': colab.RutUsuario,
+                   'telefono': colab.TelefonoUsuario,
+                   'edad': colab.EdadUsuario,
+                   'foto': colab.FotoUsuario.url if colab.FotoUsuario else None
+               }
+           })
+
+       except Exception as e:
+           return JsonResponse({
+               'success': False,
+               'errors': {'general': f'Error: {str(e)}'}
+           }, status=400)
+
+   return JsonResponse({
+       'success': False,
+       'errors': {'general': 'Método no permitido'}
+   }, status=405)
+
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def eliminar_colaborador(request, colaborador_id):
+   if request.method == 'DELETE':
+       try:
+           colab = get_object_or_404(Usuario, id=colaborador_id, TipoUsuario='Colaborador')
+           username = colab.user.username
+
+           if colab.FotoUsuario:
+               try:
+                   url = colab.FotoUsuario.url
+                   parts = url.split('/')
+                   public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
+
+                   cloudinary.config(
+                       cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+                       api_key=os.getenv('CLOUDINARY_API_KEY'),
+                       api_secret=os.getenv('CLOUDINARY_API_SECRET')
+                   )
+
+                   cloudinary.uploader.destroy(
+                       public_id,
+                       resource_type="image",
+                       type="upload"
+                   )
+               except Exception as e:
+                   print(f"Error eliminando imagen: {str(e)}")
+
+           colab.user.delete()  # Eliminará en cascada el perfil de Usuario
+
+           return JsonResponse({
+               'success': True,
+               'message': f'Colaborador {username} eliminado exitosamente'
+           })
+
+       except Exception as e:
+           return JsonResponse({
+               'success': False,
+               'message': f'Error: {str(e)}'
+           }, status=500)
+
+   return JsonResponse({
+       'success': False,
+       'message': 'Método no permitido'
+   }, status=405)
+def exportar_colaboradores_excel(request):
+   output = BytesIO()
+   workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+   
+   # Formatos
+   header_format = workbook.add_format({
+       'bold': True,
+       'bg_color': '#000000',
+       'font_color': 'white',
+       'border': 1
+   })
+   
+   date_format = workbook.add_format({'num_format': 'dd/mm/yyyy'})
+   
+   # Hoja principal de datos
+   worksheet_data = workbook.add_worksheet('Colaboradores')
+   
+   # Encabezados ampliados para incluir ventas
+   headers = [
+       'ID',
+       'Username', 
+       'Email',
+       'RUT',
+       'Teléfono',
+       'Edad',
+       'Fecha Registro',
+       'Última Modificación',
+       'Clientes Registrados',
+       'Pérdidas Registradas',
+       'Ventas Registradas',
+       'Total Ventas ($)',
+       'Total Pérdidas ($)',
+       'Promedio por Venta ($)',
+       'Promedio por Pérdida ($)'
+   ]
+   
+   # Escribir encabezados
+   for col, header in enumerate(headers):
+       worksheet_data.write(0, col, header, header_format)
+       worksheet_data.set_column(col, col, 15)
+   
+   # Obtener datos
+   colaboradores = Usuario.objects.filter(TipoUsuario='Colaborador').select_related('user')
+   
+   # Escribir datos
+   for row, colab in enumerate(colaboradores, start=1):
+       clientes = Cliente.objects.filter(Usuario=colab.user)
+       perdidas = Perdidas.objects.filter(Usuario=colab.user)
+       ventas = Ventas.objects.filter(Usuario=colab.user)
+       
+       # Calcular totales y promedios
+       total_ventas = sum(v.PrecioTotalVenta for v in ventas)
+       total_perdidas = sum(p.ValorTotalPerdida for p in perdidas)
+       promedio_venta = total_ventas / ventas.count() if ventas.count() > 0 else 0
+       promedio_perdida = total_perdidas / perdidas.count() if perdidas.count() > 0 else 0
+       
+       worksheet_data.write(row, 0, colab.id)
+       worksheet_data.write(row, 1, colab.user.username)
+       worksheet_data.write(row, 2, colab.user.email)
+       worksheet_data.write(row, 3, colab.RutUsuario)
+       worksheet_data.write(row, 4, colab.TelefonoUsuario or '')
+       worksheet_data.write(row, 5, colab.EdadUsuario or '')
+       worksheet_data.write_datetime(row, 6, timezone.localtime(colab.user.date_joined).replace(tzinfo=None), date_format)
+       worksheet_data.write_datetime(row, 7, timezone.localtime(colab.user.last_login).replace(tzinfo=None), date_format) if colab.user.last_login else worksheet_data.write(row, 7, '')
+       worksheet_data.write(row, 8, clientes.count())
+       worksheet_data.write(row, 9, perdidas.count())
+       worksheet_data.write(row, 10, ventas.count())
+       worksheet_data.write(row, 11, float(total_ventas))
+       worksheet_data.write(row, 12, float(total_perdidas))
+       worksheet_data.write(row, 13, float(promedio_venta))
+       worksheet_data.write(row, 14, float(promedio_perdida))
+   
+   # Hoja de estadísticas
+   worksheet_stats = workbook.add_worksheet('Estadísticas')
+   
+   # Datos para estadísticas
+   estadisticas = {
+       'total_colaboradores': colaboradores.count(),
+       'promedio_edad': colaboradores.filter(EdadUsuario__isnull=False).aggregate(Avg('EdadUsuario'))['EdadUsuario__avg'] or 0,
+       'clientes_por_colaborador': {},
+       'perdidas_por_colaborador': {},
+       'ventas_por_colaborador': {},
+       'total_ventas_por_colaborador': {},
+       'total_perdidas_por_colaborador': {}
+   }
+   
+   for colab in colaboradores:
+       username = colab.user.username
+       ventas = Ventas.objects.filter(Usuario=colab.user)
+       perdidas = Perdidas.objects.filter(Usuario=colab.user)
+       
+       estadisticas['clientes_por_colaborador'][username] = Cliente.objects.filter(Usuario=colab.user).count()
+       estadisticas['perdidas_por_colaborador'][username] = perdidas.count()
+       estadisticas['ventas_por_colaborador'][username] = ventas.count()
+       estadisticas['total_ventas_por_colaborador'][username] = sum(v.PrecioTotalVenta for v in ventas)
+       estadisticas['total_perdidas_por_colaborador'][username] = sum(p.ValorTotalPerdida for p in perdidas)
+   
+   # Escribir estadísticas generales
+   worksheet_stats.write('A1', 'Estadísticas Generales', header_format)
+   worksheet_stats.write('A2', 'Total Colaboradores')
+   worksheet_stats.write('B2', estadisticas['total_colaboradores'])
+   worksheet_stats.write('A3', 'Promedio de Edad')
+   worksheet_stats.write('B3', round(estadisticas['promedio_edad'], 2))
+   
+   # Datos para gráficos
+   worksheet_stats.write('A5', 'Colaborador', header_format)
+   worksheet_stats.write('B5', 'Clientes Registrados', header_format)
+   worksheet_stats.write('C5', 'Pérdidas Registradas', header_format)
+   worksheet_stats.write('D5', 'Ventas Registradas', header_format)
+   worksheet_stats.write('E5', 'Total Ventas ($)', header_format)
+   worksheet_stats.write('F5', 'Total Pérdidas ($)', header_format)
+   
+   row = 6
+   for username in estadisticas['clientes_por_colaborador'].keys():
+       worksheet_stats.write(f'A{row}', username)
+       worksheet_stats.write(f'B{row}', estadisticas['clientes_por_colaborador'][username])
+       worksheet_stats.write(f'C{row}', estadisticas['perdidas_por_colaborador'][username])
+       worksheet_stats.write(f'D{row}', estadisticas['ventas_por_colaborador'][username])
+       worksheet_stats.write(f'E{row}', float(estadisticas['total_ventas_por_colaborador'][username]))
+       worksheet_stats.write(f'F{row}', float(estadisticas['total_perdidas_por_colaborador'][username]))
+       row += 1
+   
+   # Gráficos
+   # Gráfico de clientes
+   chart_clientes = workbook.add_chart({'type': 'column'})
+   chart_clientes.add_series({
+       'name': 'Clientes Registrados',
+       'categories': f'=Estadísticas!$A$6:$A${row-1}',
+       'values': f'=Estadísticas!$B$6:$B${row-1}',
+       'data_labels': {'value': True}
+   })
+   chart_clientes.set_title({'name': 'Clientes Registrados por Colaborador'})
+   chart_clientes.set_size({'width': 500, 'height': 300})
+   worksheet_stats.insert_chart('H2', chart_clientes)
+   
+   # Gráfico de pérdidas
+   chart_perdidas = workbook.add_chart({'type': 'column'})
+   chart_perdidas.add_series({
+       'name': 'Pérdidas Registradas',
+       'categories': f'=Estadísticas!$A$6:$A${row-1}',
+       'values': f'=Estadísticas!$C$6:$C${row-1}',
+       'data_labels': {'value': True}
+   })
+   chart_perdidas.set_title({'name': 'Pérdidas Registradas por Colaborador'})
+   chart_perdidas.set_size({'width': 500, 'height': 300})
+   worksheet_stats.insert_chart('H18', chart_perdidas)
+   
+   # Gráfico de ventas
+   chart_ventas = workbook.add_chart({'type': 'column'})
+   chart_ventas.add_series({
+       'name': 'Ventas Registradas',
+       'categories': f'=Estadísticas!$A$6:$A${row-1}',
+       'values': f'=Estadísticas!$D$6:$D${row-1}',
+       'data_labels': {'value': True}
+   })
+   chart_ventas.set_title({'name': 'Ventas Registradas por Colaborador'})
+   chart_ventas.set_size({'width': 500, 'height': 300})
+   worksheet_stats.insert_chart('H34', chart_ventas)
+   
+   workbook.close()
+   
+   # Preparar respuesta
+   output.seek(0)
+   filename = f'Colaboradores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+   
+   response = HttpResponse(
+       output.read(),
+       content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+   )
+   response['Content-Disposition'] = f'attachment; filename="{filename}"'
+   
+   return response
