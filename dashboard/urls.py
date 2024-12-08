@@ -60,7 +60,6 @@ urlpatterns = [
     path('api/material/crear/', views.crear_material, name='crear_material'),
     path('api/material/<int:material_id>/eliminar/', views.eliminar_material, name='eliminar_material'),
     path('api/material/<int:material_id>/actualizar/', views.actualizar_material, name='actualizar_material'),
-    path('api/materiales/exportar-excel/', views.exportar_materiales_excel, name='exportar_materiales_excel'),
     path('api/materiales/<int:material_id>/detalles/', views.obtener_detalles_material, name='obtener_detalles_material'),
     
     
@@ -154,10 +153,14 @@ urlpatterns = [
 
     # APIs de administrador
     path('api/administradores/listar/', views.listar_administradores, name='listar_administradores'),
+    
     path('api/administrador/crear/', views.crear_administrador, name='crear_administrador'),
+    
     path('api/administrador/<int:administrador_id>/actualizar/', views.actualizar_administrador, name='actualizar_administrador'),
+    
     path('api/administrador/<int:administrador_id>/eliminar/', views.eliminar_administrador, name='eliminar_administrador'),
-    path('api/administradores/exportar-excel/', views.exportar_administradores_excel, name='exportar_administradores_excel'),
+    
+    path('api/administradores/exportar-excel/', views.exportar_administradores_excel, name='exportar_administradores_excel')
 
 
 

@@ -5328,119 +5328,138 @@ def confirmar_eliminacion_categoria(request, token):
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def actualizar_usuario(request):
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
-    
-    try:
-        user = request.user
-        
-        # Actualizar user primero
-        if user.is_superuser:
-            user.first_name = request.POST.get('first_name', user.first_name)
-            user.last_name = request.POST.get('last_name', user.last_name)
-            user.email = request.POST.get('email', user.email)
-            user.save()
-            
-            return JsonResponse({
-                'success': True,
-                'usuario': {
-                    'user': {
-                        'id': user.id,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
-                        'email': user.email,
-                    },
-                    'TipoUsuario': 'Superadmin',
-                }
-            })
-        
-        # Si no es superuser, obtener o crear perfil
-        try:
-            usuario = Usuario.objects.get(user=user)
-        except Usuario.DoesNotExist:
-            usuario = Usuario.objects.create(
-                user=user,
-                RutUsuario=request.POST.get('RutUsuario', ''),
-                TipoUsuario='Administrador'
-            )
-        
-        # Actualizar campos del user
-        user.first_name = request.POST.get('first_name', user.first_name)
-        user.last_name = request.POST.get('last_name', user.last_name)
-        user.email = request.POST.get('email', user.email)
-        user.save()
-        
-        # Actualizar campos del usuario
-        if 'RutUsuario' in request.POST:
-            usuario.RutUsuario = request.POST['RutUsuario']
-        if 'EdadUsuario' in request.POST and request.POST['EdadUsuario']:
-            usuario.EdadUsuario = int(request.POST['EdadUsuario'])
-        if 'TelefonoUsuario' in request.POST:
-            usuario.TelefonoUsuario = request.POST['TelefonoUsuario']
-            
-        # Manejar foto
-        if 'FotoUsuario' in request.FILES:
-            foto = request.FILES['FotoUsuario']
-            try:
-                # Validar tamaño y tipo
-                if foto.size > 5 * 1024 * 1024:  # 5MB
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'La imagen no debe superar 5MB'
-                    }, status=400)
-                
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-                if foto.content_type not in allowed_types:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Formato de imagen no permitido. Use JPG, PNG, GIF o WEBP'
-                    }, status=400)
-                
-                upload_result = upload(
-                    foto,
-                    folder='usuarios/',
-                    public_id=f'usuario_{user.id}',
-                    overwrite=True,
-                    resource_type='auto'
-                )
-                usuario.FotoUsuario = upload_result['secure_url']
-            except Exception as e:
-                print(f"Error al subir la imagen: {str(e)}")
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Error al subir la imagen'
-                }, status=500)
-        
-        usuario.save()
-        
-        return JsonResponse({
-            'success': True,
-            'usuario': {
-                'user': {
-                    'id': user.id,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                    'email': user.email,
-                },
-                'RutUsuario': usuario.RutUsuario,
-                'TipoUsuario': usuario.TipoUsuario,
-                'EdadUsuario': usuario.EdadUsuario,
-                'TelefonoUsuario': usuario.TelefonoUsuario,
-                'FotoUsuario': usuario.FotoUsuario.url if usuario.FotoUsuario else None,
-            }
-        })
-        
-    except ValidationError as e:
-        return JsonResponse({
-            'success': False,
-            'errors': e.message_dict if hasattr(e, 'message_dict') else {'error': str(e)}
-        }, status=400)
-    except Exception as e:
-        print(f"Error inesperado: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'error': 'Error interno del servidor'
-        }, status=500)
+   if request.method != 'POST':
+       return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
+   
+   try:
+       user = request.user
+       
+       # Actualizar user primero si es superusuario
+       if user.is_superuser:
+           user.first_name = request.POST.get('first_name', user.first_name)
+           user.last_name = request.POST.get('last_name', user.last_name)
+           user.email = request.POST.get('email', user.email)
+           user.save()
+           
+           return JsonResponse({
+               'success': True,
+               'usuario': {
+                   'user': {
+                       'id': user.id,
+                       'first_name': user.first_name,
+                       'last_name': user.last_name,
+                       'email': user.email,
+                   },
+                   'TipoUsuario': 'Superadmin',
+               }
+           })
+       
+       # Si no es superuser, obtener o crear perfil
+       try:
+           usuario = Usuario.objects.get(user=user)
+       except Usuario.DoesNotExist:
+           usuario = Usuario.objects.create(
+               user=user,
+               RutUsuario=request.POST.get('RutUsuario', ''),
+               TipoUsuario='Administrador'
+           )
+       
+       # Actualizar campos del user
+       user.first_name = request.POST.get('first_name', user.first_name)
+       user.last_name = request.POST.get('last_name', user.last_name)
+       user.email = request.POST.get('email', user.email)
+       user.save()
+       
+       # Actualizar campos del usuario
+       if 'RutUsuario' in request.POST:
+           usuario.RutUsuario = request.POST['RutUsuario']
+       if 'EdadUsuario' in request.POST and request.POST['EdadUsuario']:
+           usuario.EdadUsuario = int(request.POST['EdadUsuario'])
+       if 'TelefonoUsuario' in request.POST:
+           usuario.TelefonoUsuario = request.POST['TelefonoUsuario']
+           
+       # Manejar foto
+       if 'FotoUsuario' in request.FILES:
+           foto = request.FILES['FotoUsuario']
+           try:
+               # Validar tamaño y tipo
+               if foto.size > 5 * 1024 * 1024:  # 5MB
+                   return JsonResponse({
+                       'success': False,
+                       'error': 'La imagen no debe superar 5MB'
+                   }, status=400)
+               
+               allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+               if foto.content_type not in allowed_types:
+                   return JsonResponse({
+                       'success': False,
+                       'error': 'Formato de imagen no permitido. Use JPG, PNG, GIF o WEBP'
+                   }, status=400)
+               
+               # Si existe una foto anterior, eliminarla de Cloudinary
+               if usuario.FotoUsuario and hasattr(usuario.FotoUsuario, 'public_id'):
+                   try:
+                       cloudinary.uploader.destroy(usuario.FotoUsuario.public_id)
+                   except Exception as e:
+                       print(f"Error al eliminar imagen anterior: {str(e)}")
+
+               # Generar un nuevo public_id único
+               public_id = f'usuario_{user.id}_{int(time.time())}'
+               
+               # Subir nueva imagen
+               resultado = cloudinary.uploader.upload(
+                   foto,
+                   folder='usuarios',
+                   public_id=public_id,
+                   overwrite=True,
+                   resource_type='auto'
+               )
+               
+               # Actualizar el campo FotoUsuario con la URL segura
+               usuario.FotoUsuario = resultado['secure_url']
+               
+           except Exception as e:
+               print(f"Error al procesar la imagen: {str(e)}")
+               return JsonResponse({
+                   'success': False,
+                   'error': 'Error al procesar la imagen: ' + str(e)
+               }, status=500)
+       
+       # Guardar cambios
+       usuario.save()
+       
+       # Preparar respuesta con datos actualizados
+       response_data = {
+           'success': True,
+           'usuario': {
+               'user': {
+                   'id': user.id,
+                   'first_name': user.first_name,
+                   'last_name': user.last_name,
+                   'email': user.email,
+               },
+               'RutUsuario': usuario.RutUsuario,
+               'TipoUsuario': usuario.TipoUsuario,
+               'EdadUsuario': usuario.EdadUsuario,
+               'TelefonoUsuario': usuario.TelefonoUsuario,
+               'FotoUsuario': usuario.FotoUsuario if usuario.FotoUsuario else None,
+           }
+       }
+       
+       return JsonResponse(response_data)
+       
+   except ValidationError as e:
+       return JsonResponse({
+           'success': False,
+           'errors': e.message_dict if hasattr(e, 'message_dict') else {'error': str(e)}
+       }, status=400)
+   
+   except Exception as e:
+       print(f"Error inesperado: {str(e)}")
+       return JsonResponse({
+           'success': False,
+           'error': 'Error interno del servidor: ' + str(e)
+       }, status=500)
         
 @login_required(login_url='login')
 def enviar_reporte(request):
@@ -6721,130 +6740,176 @@ def eliminar_administrador(request, administrador_id):
         'message': 'Método no permitido'
     }, status=405)
     
+
 def exportar_administradores_excel(request):
-    output = BytesIO()
-    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    
-    # Formatos
-    header_format = workbook.add_format({
-        'bold': True,
-        'bg_color': '#000000',
-        'font_color': 'white',
-        'border': 1
-    })
-    
-    date_format = workbook.add_format({'num_format': 'dd/mm/yyyy'})
-    
-    # Hoja principal de datos
-    worksheet_data = workbook.add_worksheet('Administradores')
-    
-    # Encabezados para la hoja de datos
-    headers = [
-        'ID',
-        'Username',
-        'Email',
-        'RUT',
-        'Teléfono',
-        'Edad',
-        'Fecha Registro',
-        'Última Modificación',
-        'Clientes Registrados',
-        'Pérdidas Registradas'
-    ]
-    
-    # Escribir encabezados
-    for col, header in enumerate(headers):
-        worksheet_data.write(0, col, header, header_format)
-        worksheet_data.set_column(col, col, 15)
-    
-    # Obtener datos
-    administradores = Usuario.objects.filter(TipoUsuario='Administrador').select_related('user')
-    
-    # Escribir datos
-    for row, admin in enumerate(administradores, start=1):
-        clientes_registrados = Cliente.objects.filter(Usuario=admin.user).count()
-        perdidas_registradas = Perdidas.objects.filter(Usuario=admin.user).count()
-        
-        worksheet_data.write(row, 0, admin.id)
-        worksheet_data.write(row, 1, admin.user.username)
-        worksheet_data.write(row, 2, admin.user.email)
-        worksheet_data.write(row, 3, admin.RutUsuario)
-        worksheet_data.write(row, 4, admin.TelefonoUsuario or '')
-        worksheet_data.write(row, 5, admin.EdadUsuario or '')
-        worksheet_data.write_datetime(row, 6, timezone.localtime(admin.user.date_joined).replace(tzinfo=None), date_format)
-        worksheet_data.write_datetime(row, 7, timezone.localtime(admin.user.last_login).replace(tzinfo=None), date_format) if admin.user.last_login else worksheet_data.write(row, 7, '')
-        worksheet_data.write(row, 8, clientes_registrados)
-        worksheet_data.write(row, 9, perdidas_registradas)
-    
-    # Hoja de estadísticas
-    worksheet_stats = workbook.add_worksheet('Estadísticas')
-    
-    # Datos para estadísticas
-    estadisticas = {
-        'total_admins': administradores.count(),
-        'promedio_edad': administradores.filter(EdadUsuario__isnull=False).aggregate(Avg('EdadUsuario'))['EdadUsuario__avg'] or 0,
-        'clientes_por_admin': {},
-        'perdidas_por_admin': {}
-    }
-    
-    for admin in administradores:
-        username = admin.user.username
-        estadisticas['clientes_por_admin'][username] = Cliente.objects.filter(Usuario=admin.user).count()
-        estadisticas['perdidas_por_admin'][username] = Perdidas.objects.filter(Usuario=admin.user).count()
-    
-    # Escribir estadísticas generales
-    worksheet_stats.write('A1', 'Estadísticas Generales', header_format)
-    worksheet_stats.write('A2', 'Total Administradores')
-    worksheet_stats.write('B2', estadisticas['total_admins'])
-    worksheet_stats.write('A3', 'Promedio de Edad')
-    worksheet_stats.write('B3', round(estadisticas['promedio_edad'], 2))
-    
-    # Datos para gráficos
-    worksheet_stats.write('A5', 'Administrador', header_format)
-    worksheet_stats.write('B5', 'Clientes Registrados', header_format)
-    worksheet_stats.write('C5', 'Pérdidas Registradas', header_format)
-    
-    row = 6
-    for username in estadisticas['clientes_por_admin'].keys():
-        worksheet_stats.write(f'A{row}', username)
-        worksheet_stats.write(f'B{row}', estadisticas['clientes_por_admin'][username])
-        worksheet_stats.write(f'C{row}', estadisticas['perdidas_por_admin'][username])
-        row += 1
-    
-    # Gráfico de barras para clientes por administrador
-    chart_clientes = workbook.add_chart({'type': 'column'})
-    chart_clientes.add_series({
-        'name': 'Clientes Registrados',
-        'categories': f'=Estadísticas!$A$6:$A${row-1}',
-        'values': f'=Estadísticas!$B$6:$B${row-1}',
-        'data_labels': {'value': True}
-    })
-    chart_clientes.set_title({'name': 'Clientes Registrados por Administrador'})
-    chart_clientes.set_size({'width': 500, 'height': 300})
-    worksheet_stats.insert_chart('E2', chart_clientes)
-    
-    # Gráfico de barras para pérdidas por administrador
-    chart_perdidas = workbook.add_chart({'type': 'column'})
-    chart_perdidas.add_series({
-        'name': 'Pérdidas Registradas',
-        'categories': f'=Estadísticas!$A$6:$A${row-1}',
-        'values': f'=Estadísticas!$C$6:$C${row-1}',
-        'data_labels': {'value': True}
-    })
-    chart_perdidas.set_title({'name': 'Pérdidas Registradas por Administrador'})
-    chart_perdidas.set_size({'width': 500, 'height': 300})
-    worksheet_stats.insert_chart('E18', chart_perdidas)
-    
-    workbook.close()
-    
-    # Preparar respuesta
-    output.seek(0)
-    filename = f'Administradores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
-    
-    response = HttpResponse(
-        output.read(),
-        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    )
-    response['Content-Disposition'] = f'attachment; filename="{filename}"'
-    
-    return response
+   output = BytesIO()
+   workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+   
+   # Formatos
+   header_format = workbook.add_format({
+       'bold': True,
+       'bg_color': '#000000',
+       'font_color': 'white',
+       'border': 1
+   })
+   
+   date_format = workbook.add_format({'num_format': 'dd/mm/yyyy'})
+   
+   # Hoja principal de datos
+   worksheet_data = workbook.add_worksheet('Administradores')
+   
+   # Encabezados ampliados para incluir ventas
+   headers = [
+       'ID',
+       'Username', 
+       'Email',
+       'RUT',
+       'Teléfono',
+       'Edad',
+       'Fecha Registro',
+       'Última Modificación',
+       'Clientes Registrados',
+       'Pérdidas Registradas',
+       'Ventas Registradas',
+       'Total Ventas ($)',
+       'Total Pérdidas ($)',
+       'Promedio por Venta ($)',
+       'Promedio por Pérdida ($)'
+   ]
+   
+   # Escribir encabezados
+   for col, header in enumerate(headers):
+       worksheet_data.write(0, col, header, header_format)
+       worksheet_data.set_column(col, col, 15)
+   
+   # Obtener datos
+   administradores = Usuario.objects.filter(TipoUsuario='Administrador').select_related('user')
+   
+   # Escribir datos
+   for row, admin in enumerate(administradores, start=1):
+       clientes = Cliente.objects.filter(Usuario=admin.user)
+       perdidas = Perdidas.objects.filter(Usuario=admin.user)
+       ventas = Ventas.objects.filter(Usuario=admin.user)
+       
+       # Calcular totales y promedios
+       total_ventas = sum(v.PrecioTotalVenta for v in ventas)
+       total_perdidas = sum(p.ValorTotalPerdida for p in perdidas)
+       promedio_venta = total_ventas / ventas.count() if ventas.count() > 0 else 0
+       promedio_perdida = total_perdidas / perdidas.count() if perdidas.count() > 0 else 0
+       
+       worksheet_data.write(row, 0, admin.id)
+       worksheet_data.write(row, 1, admin.user.username)
+       worksheet_data.write(row, 2, admin.user.email)
+       worksheet_data.write(row, 3, admin.RutUsuario)
+       worksheet_data.write(row, 4, admin.TelefonoUsuario or '')
+       worksheet_data.write(row, 5, admin.EdadUsuario or '')
+       worksheet_data.write_datetime(row, 6, timezone.localtime(admin.user.date_joined).replace(tzinfo=None), date_format)
+       worksheet_data.write_datetime(row, 7, timezone.localtime(admin.user.last_login).replace(tzinfo=None), date_format) if admin.user.last_login else worksheet_data.write(row, 7, '')
+       worksheet_data.write(row, 8, clientes.count())
+       worksheet_data.write(row, 9, perdidas.count())
+       worksheet_data.write(row, 10, ventas.count())
+       worksheet_data.write(row, 11, float(total_ventas))
+       worksheet_data.write(row, 12, float(total_perdidas))
+       worksheet_data.write(row, 13, float(promedio_venta))
+       worksheet_data.write(row, 14, float(promedio_perdida))
+   
+   # Hoja de estadísticas
+   worksheet_stats = workbook.add_worksheet('Estadísticas')
+   
+   # Datos para estadísticas
+   estadisticas = {
+       'total_admins': administradores.count(),
+       'promedio_edad': administradores.filter(EdadUsuario__isnull=False).aggregate(Avg('EdadUsuario'))['EdadUsuario__avg'] or 0,
+       'clientes_por_admin': {},
+       'perdidas_por_admin': {},
+       'ventas_por_admin': {},
+       'total_ventas_por_admin': {},
+       'total_perdidas_por_admin': {}
+   }
+   
+   for admin in administradores:
+       username = admin.user.username
+       ventas = Ventas.objects.filter(Usuario=admin.user)
+       perdidas = Perdidas.objects.filter(Usuario=admin.user)
+       
+       estadisticas['clientes_por_admin'][username] = Cliente.objects.filter(Usuario=admin.user).count()
+       estadisticas['perdidas_por_admin'][username] = perdidas.count()
+       estadisticas['ventas_por_admin'][username] = ventas.count()
+       estadisticas['total_ventas_por_admin'][username] = sum(v.PrecioTotalVenta for v in ventas)
+       estadisticas['total_perdidas_por_admin'][username] = sum(p.ValorTotalPerdida for p in perdidas)
+   
+   # Escribir estadísticas generales
+   worksheet_stats.write('A1', 'Estadísticas Generales', header_format)
+   worksheet_stats.write('A2', 'Total Administradores')
+   worksheet_stats.write('B2', estadisticas['total_admins'])
+   worksheet_stats.write('A3', 'Promedio de Edad')
+   worksheet_stats.write('B3', round(estadisticas['promedio_edad'], 2))
+   
+   # Datos para gráficos
+   worksheet_stats.write('A5', 'Administrador', header_format)
+   worksheet_stats.write('B5', 'Clientes Registrados', header_format)
+   worksheet_stats.write('C5', 'Pérdidas Registradas', header_format)
+   worksheet_stats.write('D5', 'Ventas Registradas', header_format)
+   worksheet_stats.write('E5', 'Total Ventas ($)', header_format)
+   worksheet_stats.write('F5', 'Total Pérdidas ($)', header_format)
+   
+   row = 6
+   for username in estadisticas['clientes_por_admin'].keys():
+       worksheet_stats.write(f'A{row}', username)
+       worksheet_stats.write(f'B{row}', estadisticas['clientes_por_admin'][username])
+       worksheet_stats.write(f'C{row}', estadisticas['perdidas_por_admin'][username])
+       worksheet_stats.write(f'D{row}', estadisticas['ventas_por_admin'][username])
+       worksheet_stats.write(f'E{row}', float(estadisticas['total_ventas_por_admin'][username]))
+       worksheet_stats.write(f'F{row}', float(estadisticas['total_perdidas_por_admin'][username]))
+       row += 1
+   
+   # Gráficos
+   # Gráfico de clientes
+   chart_clientes = workbook.add_chart({'type': 'column'})
+   chart_clientes.add_series({
+       'name': 'Clientes Registrados',
+       'categories': f'=Estadísticas!$A$6:$A${row-1}',
+       'values': f'=Estadísticas!$B$6:$B${row-1}',
+       'data_labels': {'value': True}
+   })
+   chart_clientes.set_title({'name': 'Clientes Registrados por Administrador'})
+   chart_clientes.set_size({'width': 500, 'height': 300})
+   worksheet_stats.insert_chart('H2', chart_clientes)
+   
+   # Gráfico de pérdidas
+   chart_perdidas = workbook.add_chart({'type': 'column'})
+   chart_perdidas.add_series({
+       'name': 'Pérdidas Registradas',
+       'categories': f'=Estadísticas!$A$6:$A${row-1}',
+       'values': f'=Estadísticas!$C$6:$C${row-1}',
+       'data_labels': {'value': True}
+   })
+   chart_perdidas.set_title({'name': 'Pérdidas Registradas por Administrador'})
+   chart_perdidas.set_size({'width': 500, 'height': 300})
+   worksheet_stats.insert_chart('H18', chart_perdidas)
+   
+   # Gráfico de ventas
+   chart_ventas = workbook.add_chart({'type': 'column'})
+   chart_ventas.add_series({
+       'name': 'Ventas Registradas',
+       'categories': f'=Estadísticas!$A$6:$A${row-1}',
+       'values': f'=Estadísticas!$D$6:$D${row-1}',
+       'data_labels': {'value': True}
+   })
+   chart_ventas.set_title({'name': 'Ventas Registradas por Administrador'})
+   chart_ventas.set_size({'width': 500, 'height': 300})
+   worksheet_stats.insert_chart('H34', chart_ventas)
+   
+   workbook.close()
+   
+   # Preparar respuesta
+   output.seek(0)
+   filename = f'Administradores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+   
+   response = HttpResponse(
+       output.read(),
+       content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+   )
+   response['Content-Disposition'] = f'attachment; filename="{filename}"'
+   
+   return response
