@@ -35,11 +35,6 @@ from django.db import transaction
 from django.db.models.functions import Concat
 from django.db.models import Value
 from django.db.models import Avg
-
-
-
-
-
 # Excel imports
 import xlsxwriter
 from django.http import JsonResponse
@@ -51,11 +46,6 @@ from django.urls import reverse
 
 from cloudinary.uploader import upload
 from django.core.mail import EmailMessage
-
-
-
-
-
 # Local imports
 from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto,ProductoMaterial, Categoria, Cliente, Ventas, Perdidas, User
 
@@ -70,12 +60,28 @@ import mimetypes
 from django.db import connection
 from django.views.decorators.http import require_http_methods
 
-
+#Import de permisos
+from django.core.exceptions import PermissionDenied
+from functools import wraps
 # Configurar logging
 logger = logging.getLogger(__name__)
 
-
-
+def admin_required(view_func):
+    @wraps(view_func)
+    def _wrapped_view(request, *args, **kwargs):
+        # Verificar si es superusuario (id == 1)
+        if request.user.id == 1:
+            return view_func(request, *args, **kwargs)
+        
+        # Verificar si el usuario tiene un perfil y es Administrador
+        try:
+            if request.user.usuario.TipoUsuario != 'Administrador':
+                raise PermissionDenied
+        except:
+            raise PermissionDenied
+            
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
 
 #Exportar proveedores a Excel
 def exportar_proveedores_excel(request):
@@ -344,6 +350,7 @@ def get_current_user(request):
 
 #--------------------------LOGICA DE LOGIN --------------------------------
 @login_required(login_url='login')
+
 def dashboard(request):
     return render(request, 'home/dashboard.html')
 
@@ -358,6 +365,7 @@ def logout(request):
 
 
 #--------------------------GESTOR PROVEEDORES --------------------------------
+@admin_required
 @login_required(login_url='login')
 def mod_proveedor(request):
     return render(request, 'proveedor/proveedor.html')
@@ -782,6 +790,7 @@ def actualizar_proveedor(request, proveedor_id):
         }
     }, status=405)
 #--------------------------GESTOR FACTURA --------------------------------
+@admin_required
 @login_required(login_url='login')
 def mod_factura(request):
     return render(request, 'proveedor/factura.html')
@@ -1457,6 +1466,7 @@ def ver_documento_factura(request, factura_id):
 #------------------------------------------------------------------------------
 
 #--------------------------GESTOR ENVIO --------------------------------
+@admin_required
 @login_required(login_url='login')
 def mod_envio(request):
     return render(request, 'proveedor/envio.html')
@@ -2325,13 +2335,10 @@ def consultar_facturas_detalle(request):
            
            
 #------------------------LOGICA PARA EL MATERIAL---------------------
+@admin_required
 @login_required(login_url='login')
 def mod_material(request):
     return render(request, 'material/material.html')
-
-
-
-
 @login_required(login_url='login')
 @ensure_csrf_cookie 
 def crear_material(request):
@@ -3028,6 +3035,7 @@ def obtener_detalles_material(request, material_id):
     
     
 #---------LOGICA PARA HERRAMIENTA
+@admin_required
 @login_required(login_url='login')
 def mod_herramienta(request):
     return render(request, 'material/herramienta.html')
@@ -4881,6 +4889,7 @@ def listar_clientes(request):
         }, status=500)
         
 #-------------MODULO PARA CATEGORIA----------------------
+
 @login_required(login_url='login')
 def mod_categoria(request):
     return render(request, 'material/categoria.html')
@@ -5515,6 +5524,7 @@ def enviar_reporte(request):
         }, status=500)
 
 #------------------VIEWS PARA PERDIDA-----------------------
+@admin_required
 @login_required(login_url='login')
 def mod_perdida(request):
     return render(request, 'material/perdida.html')
@@ -5824,16 +5834,7 @@ def eliminar_perdida(request, perdida_id):
     }, status=405)
     
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+ 
     
 #------------RUTA PARA VENTA---------
 @login_required(login_url='login')
@@ -6465,8 +6466,9 @@ def crear_cliente(request):
    return JsonResponse({'success': False, 'errors': 'Método no permitido'}, status=405)
 
 
-#-----------RUTA PARA CLIENTE---------
-@login_required
+#-----------RUTA PARA ADMINISTRADOR---------
+@admin_required
+@login_required(login_url='login')
 def mod_administrador(request):
     return render(request, 'usuario/administrador.html')
 
@@ -6917,6 +6919,7 @@ def exportar_administradores_excel(request):
 
 
 #---------------RUTA PARA COLABORADOR------------
+@admin_required
 @login_required
 def mod_colaborador(request):
     return render(request, 'usuario/colaborador.html')

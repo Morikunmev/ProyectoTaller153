@@ -51,15 +51,18 @@
                     </li>
                 </ul>
             </li>
+            {% endif %}
 
-            <!-- Menú Material -->
+            <!-- Menú Material (fuera del if para que sea visible para todos) -->
             <li>
                 <a href="javascript:void(0);" onclick="toggleSubMenu('submenu-material')"
                     class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
                     <i class="fas fa-tools"></i>
                     <span class="hidden group-hover:inline-block">Material</span>
                 </a>
-                <ul id="submenu-material" class="hidden pl-4 space-y-2">
+                <ul id="submenu-material"
+                    class="pl-4 space-y-2 {% if user.usuario.TipoUsuario == 'Colaborador' %}block{% else %}hidden{% endif %}">
+                    {% if user.usuario.TipoUsuario != 'Colaborador' %}
                     <li>
                         <a href="{% url 'mod_material' %}"
                             class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
@@ -74,6 +77,8 @@
                             <span class="hidden group-hover:inline-block">Herramienta</span>
                         </a>
                     </li>
+                    {% endif %}
+                    <!-- Estos siempre se muestran -->
                     <li>
                         <a href="{% url 'mod_producto' %}"
                             class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
@@ -88,6 +93,7 @@
                             <span class="hidden group-hover:inline-block">Categoria</span>
                         </a>
                     </li>
+                    {% if user.usuario.TipoUsuario != 'Colaborador' %}
                     <li>
                         <a href="{% url 'mod_perdida' %}"
                             class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
@@ -95,9 +101,9 @@
                             <span class="hidden group-hover:inline-block">Perdida</span>
                         </a>
                     </li>
+                    {% endif %}
                 </ul>
             </li>
-            {% endif %}
 
             <!-- Menú Venta -->
             <li>
