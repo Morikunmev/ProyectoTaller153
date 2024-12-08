@@ -31,13 +31,21 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
         const response = await fetch("/api/clientes/listar/");
         if (response.ok) {
           const data = await response.json();
-          console.log("Datos de clientes recibidos:", data); // Para debug
+          console.log("Datos de clientes recibidos:", data);
           if (data.success) {
-            setClientes(data.data);
+            // Filtrar los clientes que no están eliminados
+            const clientesActivos = (data.clientes || []).filter(
+              (cliente) => !cliente.cliente_eliminado
+            );
+            setClientes(clientesActivos);
           }
+        } else {
+          console.error("Error en la respuesta del servidor");
+          setClientes([]);
         }
       } catch (error) {
         console.error("Error al cargar clientes:", error);
+        setClientes([]);
       }
     };
 
@@ -187,12 +195,16 @@ const ProductoVenderModal = ({ isOpen, onClose, onVender, producto }) => {
             className="w-full px-3 py-1.5 border rounded focus:ring-1 focus:ring-blue-500 focus:outline-none"
           >
             <option value="">Seleccionar cliente</option>
-            {clientes.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>
-                {cliente.nombre || "Cliente sin nombre"}{" "}
-                {/* Usamos la propiedad 'nombre' que viene del backend */}
-              </option>
-            ))}
+            {Array.isArray(clientes) &&
+              clientes.map((cliente) => (
+                <option key={cliente.id} value={cliente.id}>
+                  {`${cliente.nombre} ${cliente.apellido}${
+                    cliente.tipo === "empresa"
+                      ? ` - ${cliente.nombre_compania}`
+                      : ""
+                  }`}
+                </option>
+              ))}
           </select>
         );
 

@@ -130,7 +130,7 @@ const SearchAndExport = ({
 // Componente para los badges de productos
 const ProductStats = ({ stats, selectedProduct, onProductClick }) => (
   <div className="flex flex-wrap gap-2 mb-6">
-    {stats.map(({ name, count, totalQuantity }) => (
+    {stats.map(({ name, count, totalQuantity, totalValue }) => (
       <button
         key={name}
         onClick={() => onProductClick(name)}
@@ -143,7 +143,7 @@ const ProductStats = ({ stats, selectedProduct, onProductClick }) => (
       >
         <span className="font-medium">{count}</span> {name}{" "}
         <span className="text-xs ml-1 opacity-75">
-          ({totalQuantity} unidades)
+          ({totalQuantity} unidades - ${totalValue.toLocaleString()})
         </span>
       </button>
     ))}
@@ -268,23 +268,30 @@ const PerdidaListar = () => {
     setUpdateModalOpen,
     setPerdidaToUpdate,
   } = usePerdidaState();
-
   const productStats = useMemo(() => {
     const stats = filteredPerdidas.reduce((acc, perdida) => {
       const productName = perdida.producto.nombre;
       if (!acc[productName]) {
-        acc[productName] = { count: 0, totalQuantity: 0 };
+        acc[productName] = {
+          count: 0,
+          totalQuantity: 0,
+          totalValue: 0, // Agregado para el valor total
+        };
       }
-      acc[productName].count++; // Cuenta los registros
-      acc[productName].totalQuantity += perdida.cantidad; // Suma las cantidades
+      acc[productName].count++;
+      acc[productName].totalQuantity += perdida.cantidad;
+      acc[productName].totalValue += perdida.cantidad * perdida.valor_unitario; // Calcula el total
       return acc;
     }, {});
 
-    return Object.entries(stats).map(([name, { count, totalQuantity }]) => ({
-      name,
-      count,
-      totalQuantity,
-    }));
+    return Object.entries(stats).map(
+      ([name, { count, totalQuantity, totalValue }]) => ({
+        name,
+        count,
+        totalQuantity,
+        totalValue,
+      })
+    );
   }, [filteredPerdidas]);
 
   const displayedPerdidas = useMemo(() => {
