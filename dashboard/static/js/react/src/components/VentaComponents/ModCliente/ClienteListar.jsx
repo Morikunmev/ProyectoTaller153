@@ -159,62 +159,119 @@ const ActionButtons = ({ cliente, onEdit, onDelete }) => (
 );
 
 // Componente para el contenido de la tabla
-const TableContent = ({ clientes, onEdit, onDelete }) => (
-  <table className="w-full min-w-[1200px]">
-    <thead>
-      <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
-        <th className="p-2 font-medium">ID</th>
-        <th className="p-2 font-medium">NOMBRE</th>
-        <th className="p-2 font-medium">APELLIDO</th>
-        <th className="p-2 font-medium">RUT</th>
-        <th className="p-2 font-medium">TIPO</th>
-        <th className="p-2 font-medium">COMPAÑÍA</th>
-        <th className="p-2 font-medium">TOTAL COMPRAS</th>
-        <th className="p-2 font-medium">DINERO TOTAL</th>
-        <th className="p-2 font-medium">TELÉFONO</th>
-        <th className="p-2 font-medium">FECHA REGISTRO</th>
-        <th className="p-2 font-medium">ÚLTIMA MODIFICACIÓN</th>
-        <th className="p-2 font-medium text-center">ACCIONES</th>
-      </tr>
-    </thead>
-    <tbody className="text-sm">
-      {clientes.map((cliente) => (
-        <tr key={cliente.id} className="border-b hover:bg-gray-50">
-          <td className="p-2 font-medium text-gray-900">#{cliente.id}</td>
-          <td className="p-2">{cliente.nombre}</td>
-          <td className="p-2">{cliente.apellido}</td>
-          <td className="p-2">{cliente.rut}</td>
-          <td className="p-2">
-            <StateBadge
-              type={cliente.tipo === "empresa" ? "success" : "default"}
-            >
-              {cliente.tipo === "empresa" ? "Empresa" : "Particular"}
-            </StateBadge>
-          </td>
-          <td className="p-2">{cliente.nombre_compania || "-"}</td>
-          <td className="p-2">{cliente.cantidad_total_compras}</td>
-          <td className="p-2">
-            ${Number(cliente.total_dinero_compras).toLocaleString()}
-          </td>
-          <td className="p-2">{cliente.telefono || "-"}</td>
-          <td className="p-2 whitespace-nowrap">
-            {new Date(cliente.fecha_registro).toLocaleString()}
-          </td>
-          <td className="p-2 whitespace-nowrap">
-            {new Date(cliente.ultima_modificacion).toLocaleString()}
-          </td>
-          <td className="p-2">
-            <ActionButtons
-              cliente={cliente}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          </td>
+const TableContent = ({ clientes, onEdit, onDelete }) => {
+  // Agrupar clientes por fecha de registro
+  const groupedClientes = clientes.reduce((groups, cliente) => {
+    const date = new Date(cliente.fecha_registro).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(cliente);
+    return groups;
+  }, {});
+
+  // Esquema de colores para grupos
+  const groupColors = {
+    header: [
+      "bg-indigo-50 border-indigo-100",
+      "bg-cyan-50 border-cyan-100",
+      "bg-teal-50 border-teal-100",
+      "bg-lime-50 border-lime-100",
+      "bg-fuchsia-50 border-fuchsia-100",
+    ],
+    row: [
+      "hover:bg-indigo-50/70 bg-indigo-50/20",
+      "hover:bg-cyan-50/70 bg-cyan-50/20",
+      "hover:bg-teal-50/70 bg-teal-50/20",
+      "hover:bg-lime-50/70 bg-lime-50/20",
+      "hover:bg-fuchsia-50/70 bg-fuchsia-50/20",
+    ],
+  };
+
+  return (
+    <table className="w-full min-w-[1200px]">
+      <thead>
+        <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
+          <th className="p-2 font-medium">ID</th>
+          <th className="p-2 font-medium">NOMBRE</th>
+          <th className="p-2 font-medium">APELLIDO</th>
+          <th className="p-2 font-medium">RUT</th>
+          <th className="p-2 font-medium">TIPO</th>
+          <th className="p-2 font-medium">COMPAÑÍA</th>
+          <th className="p-2 font-medium">TOTAL COMPRAS</th>
+          <th className="p-2 font-medium">DINERO TOTAL</th>
+          <th className="p-2 font-medium">TELÉFONO</th>
+          <th className="p-2 font-medium">FECHA REGISTRO</th>
+          <th className="p-2 font-medium">ÚLTIMA MODIFICACIÓN</th>
+          <th className="p-2 font-medium text-center">ACCIONES</th>
         </tr>
-      ))}
-    </tbody>
-  </table>
-);
+      </thead>
+      <tbody className="text-sm">
+        {Object.entries(groupedClientes).map(
+          ([date, clientesGroup], groupIndex) => {
+            const colorIndex = groupIndex % groupColors.header.length;
+            return (
+              <React.Fragment key={date}>
+                {/* Encabezado de grupo con color */}
+                <tr className={`${groupColors.header[colorIndex]} border-y`}>
+                  <td colSpan="12" className="p-2 font-medium text-gray-700">
+                    {date}
+                  </td>
+                </tr>
+                {/* Filas de clientes con color de fondo y hover */}
+                {clientesGroup.map((cliente) => (
+                  <tr
+                    key={cliente.id}
+                    className={`border-b transition-colors duration-150 ${groupColors.row[colorIndex]}`}
+                  >
+                    <td className="p-2 font-medium text-gray-900">
+                      #{cliente.id}
+                    </td>
+                    <td className="p-2">{cliente.nombre}</td>
+                    <td className="p-2">{cliente.apellido}</td>
+                    <td className="p-2">{cliente.rut}</td>
+                    <td className="p-2">
+                      <StateBadge
+                        type={
+                          cliente.tipo === "empresa" ? "success" : "default"
+                        }
+                      >
+                        {cliente.tipo === "empresa" ? "Empresa" : "Particular"}
+                      </StateBadge>
+                    </td>
+                    <td className="p-2">{cliente.nombre_compania || "-"}</td>
+                    <td className="p-2">{cliente.cantidad_total_compras}</td>
+                    <td className="p-2">
+                      ${Number(cliente.total_dinero_compras).toLocaleString()}
+                    </td>
+                    <td className="p-2">{cliente.telefono || "-"}</td>
+                    <td className="p-2 whitespace-nowrap">
+                      {new Date(cliente.fecha_registro).toLocaleString()}
+                    </td>
+                    <td className="p-2 whitespace-nowrap">
+                      {new Date(cliente.ultima_modificacion).toLocaleString()}
+                    </td>
+                    <td className="p-2">
+                      <ActionButtons
+                        cliente={cliente}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            );
+          }
+        )}
+      </tbody>
+    </table>
+  );
+};
 
 const ClienteListar = () => {
   const [isGridView, setIsGridView] = useState(false);
