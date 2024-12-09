@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from "react";
 import { UserCircle } from "lucide-react";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
   Tooltip,
+  Filler,
   Legend,
-  ResponsiveContainer,
-} from "recharts";
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+
+// Registrar los componentes de Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Filler,
+  Legend
+);
 
 const Seccion1 = () => {
   const [userData, setUserData] = useState(null);
@@ -38,6 +51,7 @@ const Seccion1 = () => {
     }
     return cookieValue;
   }
+
   useEffect(() => {
     const fetchVentasGrafico = async () => {
       try {
@@ -137,6 +151,108 @@ const Seccion1 = () => {
     fetchVentasGrafico();
   }, []);
 
+  // Configuración del gráfico
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: "index",
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        position: "top",
+        labels: {
+          font: {
+            size: 11,
+          },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: function (context) {
+            let label = context.dataset.label || "";
+            if (label) {
+              label += ": ";
+            }
+            if (context.parsed.y !== null) {
+              label += new Intl.NumberFormat("es-CL", {
+                style: "currency",
+                currency: "CLP",
+              }).format(context.parsed.y);
+            }
+            return label;
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+        ticks: {
+          font: {
+            size: 10,
+          },
+        },
+      },
+      y: {
+        grid: {
+          color: "#f0f0f0",
+        },
+        ticks: {
+          font: {
+            size: 10,
+          },
+          callback: function (value) {
+            return new Intl.NumberFormat("es-CL", {
+              style: "currency",
+              currency: "CLP",
+              maximumFractionDigits: 0,
+            }).format(value);
+          },
+        },
+      },
+    },
+  };
+
+  const chartData = {
+    labels: dataGrafico.map((item) => {
+      const fecha = new Date(item.fecha);
+      return fecha.toLocaleDateString("es-CL", {
+        month: "short",
+        day: "numeric",
+      });
+    }),
+    datasets: [
+      {
+        fill: true,
+        label: "Mayores Ventas",
+        data: dataGrafico.map((item) => item.maxVentas),
+        borderColor: "#82ca9d",
+        backgroundColor: "rgba(130, 202, 157, 0.5)",
+        tension: 0.4,
+      },
+      {
+        fill: true,
+        label: "Promedio Ventas",
+        data: dataGrafico.map((item) => item.promedioVentas),
+        borderColor: "#8884d8",
+        backgroundColor: "rgba(136, 132, 216, 0.5)",
+        tension: 0.4,
+      },
+      {
+        fill: true,
+        label: "Menores Ventas",
+        data: dataGrafico.map((item) => item.minVentas),
+        borderColor: "#ff8042",
+        backgroundColor: "rgba(255, 128, 66, 0.5)",
+        tension: 0.4,
+      },
+    ],
+  };
+
   return (
     <div className="pt-20">
       {/* Card de bienvenida */}
@@ -214,6 +330,8 @@ const Seccion1 = () => {
           ))}
         </div>
       </div>
+
+      {/* Cards de estadísticas */}
       <div className="flex flex-row gap-6 mt-6">
         {/* Mayores Ventas */}
         <div className="flex-1 bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-lg border border-green-200">
@@ -303,54 +421,24 @@ const Seccion1 = () => {
           </div>
         </div>
       </div>
-      <div className="mt-6 bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-800">Ventas</h2>
-          <div className="text-sm text-gray-500">
+
+      {/* Gráfico de Ventas */}
+      <div className="mt-6 bg-white rounded-lg shadow-sm p-3 border border-gray-100">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-base font-semibold text-gray-800">Ventas</h2>
+          <div className="text-xs text-gray-500">
             {new Date().toLocaleString("es-ES", {
               day: "numeric",
               month: "long",
               year: "numeric",
-              hour: "numeric",
-              minute: "numeric",
             })}
           </div>
         </div>
 
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dataGrafico}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="fecha" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="maxVentas"
-                stackId="1"
-                stroke="#82ca9d"
-                fill="#82ca9d"
-                name="Mayores Ventas"
-              />
-              <Area
-                type="monotone"
-                dataKey="promedioVentas"
-                stackId="2"
-                stroke="#8884d8"
-                fill="#8884d8"
-                name="Promedio Ventas"
-              />
-              <Area
-                type="monotone"
-                dataKey="minVentas"
-                stackId="3"
-                stroke="#ff8042"
-                fill="#ff8042"
-                name="Menores Ventas"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="h-[180px]">
+          {dataGrafico.length > 0 && (
+            <Line options={options} data={chartData} />
+          )}
         </div>
       </div>
     </div>

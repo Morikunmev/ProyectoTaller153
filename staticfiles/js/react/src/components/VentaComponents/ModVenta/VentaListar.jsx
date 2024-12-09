@@ -238,63 +238,124 @@ const ActionButtons = ({ venta, onEdit, onRestablecer, isRestabling }) => (
   </div>
 );
 // Componente para el contenido de la tabla
-const TableContent = ({ ventas, onEdit, onRestablecer, isRestabling }) => (
-  <table className="w-full min-w-[1200px]">
-    <thead>
-      <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
-        <th className="p-2 font-medium">ID</th>
-        <th className="p-2 font-medium">NOMBRE</th>
-        <th className="p-2 font-medium">PRODUCTO</th>
-        <th className="p-2 font-medium">CLIENTE</th>
-        <th className="p-2 font-medium">CANTIDAD</th>
-        <th className="p-2 font-medium">PRECIO UNITARIO</th>
-        <th className="p-2 font-medium">PRECIO TOTAL</th>
-        <th className="p-2 font-medium">USUARIO</th>
-        <th className="p-2 font-medium">FECHA VENTA</th>
-        <th className="p-2 font-medium">FECHA REGISTRO</th>
-        <th className="p-2 font-medium text-center">ACCIONES</th>
-      </tr>
-    </thead>
-    <tbody className="text-sm">
-      {ventas.map((venta) => (
-        <tr key={venta.id} className="border-b hover:bg-gray-50">
-          <td className="p-2 font-medium text-gray-900">#{venta.id}</td>
-          <td className="p-2">{venta.nombre}</td>
-          <td className="p-2">{venta.producto.nombre}</td>
-          <td
-            className={`p-2 ${
-              venta.cliente.nombre === "Cliente eliminado"
-                ? "text-red-600 font-medium"
-                : venta.cliente.nombre === "Cliente no especificado"
-                ? "text-yellow-600 font-medium"
-                : ""
-            }`}
-          >
-            {venta.cliente.nombre}
-          </td>
-          <td className="p-2">{venta.cantidad}</td>
-          <td className="p-2">${venta.precio_venta.toLocaleString()}</td>
-          <td className="p-2">${venta.precio_total.toLocaleString()}</td>
-          <td className="p-2">{venta.usuario.nombre}</td>
-          <td className="p-2 whitespace-nowrap">
-            {new Date(venta.fecha).toLocaleString()}
-          </td>
-          <td className="p-2 whitespace-nowrap">
-            {new Date(venta.fecha_registro).toLocaleString()}
-          </td>
-          <td className="p-2">
-            <ActionButtons
-              venta={venta}
-              onEdit={onEdit}
-              onRestablecer={onRestablecer}
-              isRestabling={isRestabling}
-            />
-          </td>
+const TableContent = ({ ventas, onEdit, onRestablecer, isRestabling }) => {
+  // Agrupar ventas por fecha
+  const groupedVentas = ventas.reduce((groups, venta) => {
+    const date = new Date(venta.fecha).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(venta);
+    return groups;
+  }, {});
+
+  // Colores para los diferentes grupos de fecha
+  const groupColors = {
+    header: [
+      "bg-blue-50 border-blue-100",
+      "bg-emerald-50 border-emerald-100",
+      "bg-violet-50 border-violet-100",
+      "bg-amber-50 border-amber-100",
+      "bg-rose-50 border-rose-100",
+    ],
+    row: [
+      "hover:bg-blue-50/70 bg-blue-50/30",
+      "hover:bg-emerald-50/70 bg-emerald-50/30",
+      "hover:bg-violet-50/70 bg-violet-50/30",
+      "hover:bg-amber-50/70 bg-amber-50/30",
+      "hover:bg-rose-50/70 bg-rose-50/30",
+    ],
+  };
+
+  return (
+    <table className="w-full min-w-[1200px]">
+      <thead>
+        <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
+          <th className="p-2 font-medium">ID</th>
+          <th className="p-2 font-medium">NOMBRE</th>
+          <th className="p-2 font-medium">PRODUCTO</th>
+          <th className="p-2 font-medium">CLIENTE</th>
+          <th className="p-2 font-medium">CANTIDAD</th>
+          <th className="p-2 font-medium">PRECIO UNITARIO</th>
+          <th className="p-2 font-medium">PRECIO TOTAL</th>
+          <th className="p-2 font-medium">USUARIO</th>
+          <th className="p-2 font-medium">FECHA VENTA</th>
+          <th className="p-2 font-medium">FECHA REGISTRO</th>
+          <th className="p-2 font-medium text-center">ACCIONES</th>
         </tr>
-      ))}
-    </tbody>
-  </table>
-);
+      </thead>
+      <tbody className="text-sm">
+        {Object.entries(groupedVentas).map(
+          ([date, ventasGroup], groupIndex) => {
+            const colorIndex = groupIndex % groupColors.header.length;
+            return (
+              <React.Fragment key={date}>
+                {/* Encabezado del grupo con color */}
+                <tr
+                  className={`${groupColors.header[colorIndex]} border-y font-medium`}
+                >
+                  <td colSpan="11" className="p-2 text-gray-700">
+                    {date}
+                  </td>
+                </tr>
+                {/* Filas de ventas con color de fondo y hover */}
+                {ventasGroup.map((venta) => (
+                  <tr
+                    key={venta.id}
+                    className={`border-b transition-colors duration-150 ${groupColors.row[colorIndex]}`}
+                  >
+                    <td className="p-2 font-medium text-gray-900">
+                      #{venta.id}
+                    </td>
+                    <td className="p-2">{venta.nombre}</td>
+                    <td className="p-2">{venta.producto.nombre}</td>
+                    <td
+                      className={`p-2 ${
+                        venta.cliente.nombre === "Cliente eliminado"
+                          ? "text-red-600 font-medium"
+                          : venta.cliente.nombre === "Cliente no especificado"
+                          ? "text-yellow-600 font-medium"
+                          : "text-green-600 font-medium"
+                      }`}
+                    >
+                      {venta.cliente.nombre}
+                    </td>
+                    <td className="p-2">{venta.cantidad}</td>
+                    <td className="p-2">
+                      ${venta.precio_venta.toLocaleString()}
+                    </td>
+                    <td className="p-2">
+                      ${venta.precio_total.toLocaleString()}
+                    </td>
+                    <td className="p-2">{venta.usuario.nombre}</td>
+                    <td className="p-2 whitespace-nowrap">
+                      {new Date(venta.fecha).toLocaleString()}
+                    </td>
+                    <td className="p-2 whitespace-nowrap">
+                      {new Date(venta.fecha_registro).toLocaleString()}
+                    </td>
+                    <td className="p-2">
+                      <ActionButtons
+                        venta={venta}
+                        onEdit={onEdit}
+                        onRestablecer={onRestablecer}
+                        isRestabling={isRestabling}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            );
+          }
+        )}
+      </tbody>
+    </table>
+  );
+};
 
 const VentaListar = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);

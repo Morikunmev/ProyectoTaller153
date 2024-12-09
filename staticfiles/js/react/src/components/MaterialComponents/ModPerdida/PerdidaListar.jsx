@@ -177,62 +177,121 @@ const ActionButtons = ({ perdida, onEdit, onRestablecer, isRestabling }) => (
 );
 
 // Componente para el contenido de la tabla
-const TableContent = ({ perdidas, onEdit, onRestablecer, isRestabling }) => (
-  <table className="w-full min-w-[1200px]">
-    <thead>
-      <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
-        <th className="p-2 font-medium">ID</th>
-        <th className="p-2 font-medium">NOMBRE</th>
-        <th className="p-2 font-medium">PRODUCTO</th>
-        <th className="p-2 font-medium">CANTIDAD</th>
-        <th className="p-2 font-medium">VALOR UNITARIO</th>
-        <th className="p-2 font-medium">VALOR TOTAL</th>
-        <th className="p-2 font-medium">MOTIVO</th>
-        <th className="p-2 font-medium">DESCRIPCIÓN</th>
-        <th className="p-2 font-medium">USUARIO</th>
-        <th className="p-2 font-medium">FECHA REGISTRO</th>
-        <th className="p-2 font-medium">ÚLTIMA MODIFICACIÓN</th>
-        <th className="p-2 font-medium text-center">ACCIONES</th>
-      </tr>
-    </thead>
-    <tbody className="text-sm">
-      {perdidas.map((perdida) => (
-        <tr key={perdida.id} className="border-b hover:bg-gray-50">
-          <td className="p-2 font-medium text-gray-900">#{perdida.id}</td>
-          <td className="p-2">{perdida.nombre}</td>
-          <td className="p-2">{perdida.producto.nombre}</td>
-          <td className="p-2">{perdida.cantidad}</td>
-          <td className="p-2">${perdida.valor_unitario.toLocaleString()}</td>
-          <td className="p-2">${perdida.valor_total.toLocaleString()}</td>
-          <td className="p-2">
-            <StateBadge type="warning">{perdida.motivo}</StateBadge>
-          </td>
-          <td
-            className="p-2 max-w-[200px] truncate"
-            title={perdida.descripcion}
-          >
-            {perdida.descripcion || "Sin descripción"}
-          </td>
-          <td className="p-2">{perdida.usuario.nombre}</td>
-          <td className="p-2 whitespace-nowrap">
-            {new Date(perdida.fecha_registro).toLocaleString()}
-          </td>
-          <td className="p-2 whitespace-nowrap">
-            {new Date(perdida.ultima_modificacion).toLocaleString()}
-          </td>
-          <td className="p-2">
-            <ActionButtons
-              perdida={perdida}
-              onEdit={onEdit}
-              onRestablecer={onRestablecer}
-              isRestabling={isRestabling}
-            />
-          </td>
+const TableContent = ({ perdidas, onEdit, onRestablecer, isRestabling }) => {
+  // Agrupar pérdidas por fecha
+  const groupedPerdidas = perdidas.reduce((groups, perdida) => {
+    const date = new Date(perdida.fecha_registro).toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(perdida);
+    return groups;
+  }, {});
+
+  // Colores para alternar entre grupos de fechas
+  const groupColors = {
+    header: [
+      "bg-blue-50 border-blue-100",
+      "bg-purple-50 border-purple-100",
+      "bg-green-50 border-green-100",
+      "bg-amber-50 border-amber-100",
+      "bg-pink-50 border-pink-100",
+    ],
+    row: [
+      "hover:bg-blue-50/70",
+      "hover:bg-purple-50/70",
+      "hover:bg-green-50/70",
+      "hover:bg-amber-50/70",
+      "hover:bg-pink-50/70",
+    ],
+  };
+
+  return (
+    <table className="w-full min-w-[1200px]">
+      <thead>
+        <tr className="text-left text-gray-500 text-xs border-b bg-gray-50">
+          <th className="p-2 font-medium">ID</th>
+          <th className="p-2 font-medium">NOMBRE</th>
+          <th className="p-2 font-medium">PRODUCTO</th>
+          <th className="p-2 font-medium">CANTIDAD</th>
+          <th className="p-2 font-medium">VALOR UNITARIO</th>
+          <th className="p-2 font-medium">VALOR TOTAL</th>
+          <th className="p-2 font-medium">MOTIVO</th>
+          <th className="p-2 font-medium">DESCRIPCIÓN</th>
+          <th className="p-2 font-medium">USUARIO</th>
+          <th className="p-2 font-medium">FECHA REGISTRO</th>
+          <th className="p-2 font-medium">ÚLTIMA MODIFICACIÓN</th>
+          <th className="p-2 font-medium text-center">ACCIONES</th>
         </tr>
-      ))}
-    </tbody>
-  </table>
-);
+      </thead>
+      <tbody className="text-sm">
+        {Object.entries(groupedPerdidas).map(
+          ([date, perdidasGroup], groupIndex) => {
+            const colorIndex = groupIndex % groupColors.header.length;
+            return (
+              <React.Fragment key={date}>
+                {/* Encabezado del grupo con color */}
+                <tr className={`${groupColors.header[colorIndex]} border-y`}>
+                  <td colSpan="12" className="p-2 font-medium text-gray-700">
+                    {date}
+                  </td>
+                </tr>
+                {/* Filas de datos con color de hover correspondiente */}
+                {perdidasGroup.map((perdida) => (
+                  <tr
+                    key={perdida.id}
+                    className={`border-b ${groupColors.row[colorIndex]} transition-colors duration-150`}
+                  >
+                    <td className="p-2 font-medium text-gray-900">
+                      #{perdida.id}
+                    </td>
+                    <td className="p-2">{perdida.nombre}</td>
+                    <td className="p-2">{perdida.producto.nombre}</td>
+                    <td className="p-2">{perdida.cantidad}</td>
+                    <td className="p-2">
+                      ${perdida.valor_unitario.toLocaleString()}
+                    </td>
+                    <td className="p-2">
+                      ${perdida.valor_total.toLocaleString()}
+                    </td>
+                    <td className="p-2">
+                      <StateBadge type="warning">{perdida.motivo}</StateBadge>
+                    </td>
+                    <td
+                      className="p-2 max-w-[200px] truncate"
+                      title={perdida.descripcion}
+                    >
+                      {perdida.descripcion || "Sin descripción"}
+                    </td>
+                    <td className="p-2">{perdida.usuario.nombre}</td>
+                    <td className="p-2 whitespace-nowrap">
+                      {new Date(perdida.fecha_registro).toLocaleString()}
+                    </td>
+                    <td className="p-2 whitespace-nowrap">
+                      {new Date(perdida.ultima_modificacion).toLocaleString()}
+                    </td>
+                    <td className="p-2">
+                      <ActionButtons
+                        perdida={perdida}
+                        onEdit={onEdit}
+                        onRestablecer={onRestablecer}
+                        isRestabling={isRestabling}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </React.Fragment>
+            );
+          }
+        )}
+      </tbody>
+    </table>
+  );
+};
 
 const PerdidaListar = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);

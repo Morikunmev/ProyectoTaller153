@@ -1,17 +1,26 @@
 import React, { useState, useEffect } from "react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
+  Chart as ChartJS,
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
   Tooltip,
-  PieChart,
-  Pie,
   Legend,
-  Cell,
-  ResponsiveContainer,
-} from "recharts";
+} from "chart.js";
+
+import { Pie, Bar } from "react-chartjs-2";
+
+// Registrar solo componentes necesarios
+ChartJS.register(
+  ArcElement,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip,
+  Legend
+);
 
 const Seccion2 = () => {
   const COLORS = [
@@ -27,7 +36,7 @@ const Seccion2 = () => {
   const [stats, setStats] = useState({
     ventas: [],
     perdidas: [],
-    categorias: [], // Nuevo array para datos de categorías
+    categorias: [],
     total_ventas: 0,
     total_perdidas: 0,
     loading: true,
@@ -37,27 +46,13 @@ const Seccion2 = () => {
   const fetchStats = async () => {
     try {
       setStats((prev) => ({ ...prev, loading: true, error: null }));
-
-      const response = await fetch("/api/stats/productos-categorias/", {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-      });
-
-      if (!response.ok) {
+      const response = await fetch("/api/stats/productos-categorias/");
+      if (!response.ok)
         throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
-      setStats({
-        ...data,
-        loading: false,
-        error: null,
-      });
+      setStats({ ...data, loading: false, error: null });
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      console.error("Error:", error);
       setStats({
         ventas: [],
         perdidas: [],
@@ -74,40 +69,115 @@ const Seccion2 = () => {
     fetchStats();
   }, []);
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 rounded shadow-lg border border-gray-200">
-          <p className="font-medium">{payload[0].payload.name}</p>
-          <p className="text-sm text-gray-600">Cantidad: {payload[0].value}</p>
-          <p className="text-sm text-gray-600">
-            Porcentaje: {payload[0].payload.percentage}%
-          </p>
-        </div>
-      );
-    }
-    return null;
+  // Configuración base optimizada
+  const baseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: {
+        position: "bottom",
+        labels: { font: { size: 11 } },
+      },
+    },
   };
 
-  const CustomBarTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 rounded shadow-lg border border-gray-200">
-          <p className="font-medium">{label}</p>
-          <p className="text-sm text-gray-600">Vendidos: {payload[0].value}%</p>
-          <p className="text-sm text-gray-600">
-            Desechados: {payload[1].value}%
-          </p>
-        </div>
-      );
-    }
-    return null;
+  // Configuración para gráficos circulares
+  const pieOptions = {
+    ...baseOptions,
+    plugins: {
+      ...baseOptions.plugins,
+      legend: {
+        ...baseOptions.plugins.legend,
+        labels: {
+          boxWidth: 12,
+          padding: 8,
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context) => {
+            const value = context.parsed;
+            const label = context.label || "";
+            return `${label}: ${value} unidades`;
+          },
+        },
+      },
+    },
+  };
+
+  // Configuración para gráfico de barras
+  const barOptions = {
+    ...baseOptions,
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { font: { size: 10 } },
+      },
+      y: {
+        beginAtZero: true,
+        max: 100,
+        ticks: {
+          font: { size: 10 },
+          callback: (value) => `${value}%`,
+        },
+      },
+    },
+    plugins: {
+      ...baseOptions.plugins,
+      tooltip: {
+        callbacks: {
+          label: (context) => `${context.dataset.label}: ${context.parsed.y}%`,
+        },
+      },
+    },
+  };
+
+  // Datos para gráficos
+  const ventasChartData = {
+    labels: stats.ventas.map((item) => item.name),
+    datasets: [
+      {
+        data: stats.ventas.map((item) => item.value),
+        backgroundColor: COLORS.slice(0, stats.ventas.length),
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  const perdidasChartData = {
+    labels: stats.perdidas.map((item) => item.name),
+    datasets: [
+      {
+        data: stats.perdidas.map((item) => item.value),
+        backgroundColor: COLORS.slice(0, stats.perdidas.length),
+        borderWidth: 0,
+      },
+    ],
+  };
+
+  const categoriasChartData = {
+    labels: stats.categorias.map((item) => item.name),
+    datasets: [
+      {
+        label: "Vendidos",
+        data: stats.categorias.map((item) => item.porcentaje_vendidos),
+        backgroundColor: "#82ca9d",
+        borderWidth: 0,
+      },
+      {
+        label: "Desechados",
+        data: stats.categorias.map((item) => item.porcentaje_perdidas),
+        backgroundColor: "#ff8042",
+        borderWidth: 0,
+      },
+    ],
   };
 
   if (stats.loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
       </div>
     );
   }
@@ -121,106 +191,62 @@ const Seccion2 = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Ventas */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">
             Productos más vendidos
           </h2>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stats.ventas}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                  dataKey="value"
-                >
-                  {stats.ventas.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="h-[250px] relative">
+            {stats.ventas.length > 0 ? (
+              <Pie data={ventasChartData} options={pieOptions} />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                No hay datos disponibles
+              </div>
+            )}
           </div>
-          <div className="mt-4 text-center">
+          <div className="mt-2 text-center">
             <p className="text-sm text-gray-600">
-              Total de productos vendidos: {stats.total_ventas}
+              Total: {stats.total_ventas} unidades
             </p>
           </div>
         </div>
 
         {/* Pérdidas */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-          <h2 className="text-xl font-bold text-gray-800 mb-6">
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">
             Productos perdidos/desechados
           </h2>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={stats.perdidas}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percentage }) => `${name}: ${percentage}%`}
-                  dataKey="value"
-                >
-                  {stats.perdidas.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="h-[250px] relative">
+            {stats.perdidas.length > 0 ? (
+              <Pie data={perdidasChartData} options={pieOptions} />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                No hay datos disponibles
+              </div>
+            )}
           </div>
-          <div className="mt-4 text-center">
+          <div className="mt-2 text-center">
             <p className="text-sm text-gray-600">
-              Total de productos perdidos: {stats.total_perdidas}
+              Total: {stats.total_perdidas} unidades
             </p>
           </div>
         </div>
       </div>
 
-      {/* Gráfico de barras de categorías */}
-      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">
-          Porcentaje por Categorías
-        </h2>
-        <div className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={stats.categorias}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip content={<CustomBarTooltip />} />
-              <Legend />
-              <Bar
-                dataKey="porcentaje_vendidos"
-                name="Vendidos"
-                fill="#82ca9d"
-              />
-              <Bar
-                dataKey="porcentaje_perdidas"
-                name="Desechados"
-                fill="#ff8042"
-              />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Gráfico de barras */}
+      {stats.categorias?.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-100">
+          <h2 className="text-lg font-bold text-gray-800 mb-4">
+            Porcentaje por Categorías
+          </h2>
+          <div className="h-[300px]">
+            <Bar data={categoriasChartData} options={barOptions} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
