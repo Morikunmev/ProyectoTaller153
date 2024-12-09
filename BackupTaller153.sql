@@ -5,7 +5,7 @@
 -- Dumped from database version 16.4 (Debian 16.4-1.pgdg120+2)
 -- Dumped by pg_dump version 16.4
 
--- Started on 2024-12-06 14:29:09
+-- Started on 2024-12-08 21:10:51
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -1269,9 +1269,9 @@ COPY public.auth_permission (id, name, content_type_id, codename) FROM stdin;
 --
 
 COPY public.auth_user (id, password, last_login, is_superuser, username, first_name, last_name, email, is_staff, is_active, date_joined) FROM stdin;
-3	pbkdf2_sha256$870000$Ba566RHQ0uHw7k0GL6gjFt$H38EhrYM9ENYlJtvwb1BGQqte55UL9PAFL0EKdfUqD0=	\N	f	usuario2	María	López	maria.lopez@example.com	f	t	2024-10-29 03:56:38.575454+00
-1	pbkdf2_sha256$870000$uToNJaiGfSFvlI7VzLWOKY$qkWcoAH/CoNiu2QusdOAKxU4FsKz6hydKT0KuP0OJI4=	2024-12-06 17:01:15.100345+00	t	richard	RICHARD	ROCUANT	ricky201325@gmail.com	t	t	2024-10-25 08:00:06+00
-2	pbkdf2_sha256$870000$Ba566RHQ0uHw7k0GL6gjFt$H38EhrYM9ENYlJtvwb1BGQqte55UL9PAFL0EKdfUqD0=	2024-12-03 14:05:04.986372+00	f	usuario1	Juannnn	Pérez	juan.perez@gmail.com	f	t	2024-10-29 03:56:36.25974+00
+15	pbkdf2_sha256$870000$KYMhyzfIewmZh9nQqT9uqP$rRLClGmDFX9Fy1IYwYtkp5bBd5f1HGuXZgs7b1EzEJc=	2024-12-08 05:29:25.806807+00	f	JuanPerez			juan.perez@gmail.com	f	t	2024-12-08 04:44:44.294812+00
+17	pbkdf2_sha256$870000$SjS8p46Hu73O3eihHwwsl5$vaq4NK6W0DoLYBS0yHr2eyGVKnSvoPM6OQjnlzKKNco=	2024-12-08 18:55:35.180292+00	f	MariaLopez			MariaLopez@gmail.com	f	t	2024-12-08 05:12:10.157937+00
+1	pbkdf2_sha256$870000$uS0tlnyxkGK4DKdvQ08yrA$rP42xMCp1gD0nBSMFQa9jSVAeP5IYGrSWeNUxWmEI7M=	2024-12-08 22:34:50.861527+00	t	richard	Richard	Rocuant	ricky201325@gmail.com	t	t	2024-10-25 08:00:06+00
 \.
 
 
@@ -1314,7 +1314,8 @@ COPY public.dashboard_categoria (id, "NombreCategoria", "DescripcionCategoria", 
 --
 
 COPY public.dashboard_cliente (id, "ApellidoCliente", "ComentarioCliente", "FechaCliente", "FechaRegistro", "NombreCliente", "NombreCompañia", "RutCliente", "TelefonoCliente", "TipoCliente", "UltimaModificacion", "Usuario_id", "CantidadTotalCompras", "TotalDineroCompras") FROM stdin;
-10	rocuant	\N	2024-12-06	2024-12-06 06:52:29.672965+00	richard		19.662.924-6		particular	2024-12-06 06:52:31.05724+00	1	1	25000.00
+10	rocuant	\N	2024-12-06	2024-12-06 06:52:29.672965+00	richard		19.662.924-6		particular	2024-12-08 04:21:44.849871+00	1	0	0.00
+12	coca cola	nada	2024-12-08	2024-12-08 04:41:37.030199+00	Coca cola	Coca cola	93.281.000-K	+56992319557	empresa	2024-12-08 04:41:37.030199+00	\N	0	0.00
 \.
 
 
@@ -1375,6 +1376,8 @@ COPY public.dashboard_material (id, "NombreMaterial", "StockMaterial", "PrecioMa
 
 COPY public.dashboard_perdidas (id, "NombrePerdida", "CantidadPerdida", "ValorUnitarioPerdida", "ValorTotalPerdida", "FechaPerdida", "MotivoPerdida", "DescripcionPerdida", "FechaRegistro", "UltimaModificacion", "Producto_id", "Usuario_id") FROM stdin;
 51	Perdida de Destapador de Cerveza	1	5.00	5.00	2024-12-05	otros		2024-12-05 04:29:11.132378+00	2024-12-05 04:49:03.99373+00	67	1
+53	Venta de tabla de asado	1	25000.00	25000.00	2024-12-08	otros		2024-12-08 04:28:37.655557+00	2024-12-08 04:28:37.655557+00	66	1
+54	perdida de tabla de asado	1	25000.00	25000.00	2024-12-08	otros		2024-12-08 04:29:31.599507+00	2024-12-08 04:29:31.599507+00	66	\N
 \.
 
 
@@ -1389,9 +1392,9 @@ COPY public.dashboard_producto (id, "NombreProducto", "PrecioUnitarioProducto", 
 65	Tabla de Asado medida de 50 cm	20000.00	180000.00	1	0				2024-12-02	0	f	2024-12-02 04:51:17.80808+00	image/upload/v1733115079/productos/jciy8tuylrg11v5bovx9.png	\N	9	10
 64	Letrero decorativo	18000.00	180000.00	0	0	En lenga reciclada\r\nTrabajo 100% artesanal\r\nPirograbado a mano 💅\r\n\r\n$18.000 cada uno			2024-12-02	0	f	2024-12-02 04:49:40.561346+00	image/upload/v1733114987/productos/sd1qldmiq0lsd5hsdbta.png	\N	10	10
 67	Destapador de Cerveza	5.00	0.00	3	1				2024-12-02	4	t	2024-12-02 04:53:04.726199+00	image/upload/v1733115185/productos/rkagxdjts5tyqbourjdz.png	6	0	5
-66	Tabla de Asado medida de 60 cm	25000.00	200000.00	2	0				2024-12-02	3	f	2024-12-02 04:51:58.963955+00	image/upload/v1733115120/productos/x9u59rshqgqsld6suvyr.png	\N	8	10
 62	Repisa exhibidora	1000.00	10000.00	0	0				2024-12-01	0	f	2024-12-02 01:56:50.593215+00	image/upload/v1733104612/productos/kruwnqn8afw6ip1sqkkd.png	\N	10	10
 63	Repisa exhibidora	1000.00	10000.00	0	0				2024-12-01	1	f	2024-12-02 02:27:47.574031+00	image/upload/v1733114386/productos/pr52srho8ovds6opcrk1.png	\N	10	10
+66	Tabla de Asado medida de 60 cm	25000.00	75000.00	5	2				2024-12-02	6	f	2024-12-02 04:51:58.963955+00	image/upload/v1733115120/productos/x9u59rshqgqsld6suvyr.png	\N	3	10
 70	Portacinturon	10000.00	0.00	1	0	Personalizado Con grabado de academia y nombre\r\nGracias por la preferencia ❤️			2024-12-02	0	t	2024-12-02 05:25:15.593671+00	image/upload/v1733117124/productos/tjpy5ofxg13uodmo7ibj.png	\N	0	1
 \.
 
@@ -1434,7 +1437,10 @@ COPY public.dashboard_ventas (id, "NombreVenta", "CantidadVenta", "PrecioVenta",
 60	venta de talba de asado 	1	25000.00	25000.00	2024-12-06	2024-12-06 06:15:33.030918+00	66	1	\N	f
 61	talba de asado	1	20000.00	20000.00	2024-12-06	2024-12-06 06:16:03.953951+00	65	1	\N	f
 63	Venta de repisa	1	5.00	5.00	2024-12-06	2024-12-06 06:28:50.660502+00	67	1	\N	t
-65	Venta de tabla de asado medida 60cm	1	25000.00	25000.00	2024-12-06	2024-12-06 06:52:29.902589+00	66	1	10	f
+66	Venta de tabla de Asado	1	25000.00	25000.00	2024-12-08	2024-12-08 04:17:23.383096+00	66	\N	\N	f
+67	Venta de tabla de asado	1	25000.00	25000.00	2024-12-08	2024-12-08 04:23:41.488416+00	66	\N	\N	f
+68	Venta de repisa	1	25000.00	25000.00	2024-12-08	2024-12-08 04:25:48.545154+00	66	1	\N	f
+69	Venta de repisa	1	25000.00	25000.00	2024-12-08	2024-12-08 04:26:46.323557+00	66	\N	\N	f
 \.
 
 
@@ -1558,6 +1564,7 @@ COPY public.django_migrations (id, app, name, applied) FROM stdin;
 123	dashboard	0027_categoria_cantidadcategoriaperdida_and_more	2024-12-02 06:20:03.542191+00
 124	dashboard	0028_remove_categoria_dinerocategoriaperdida_and_more	2024-12-03 05:55:39.299713+00
 125	dashboard	0029_ventas_cliente_eliminado	2024-12-06 06:24:01.539264+00
+126	login	0005_alter_usuario_tipousuario	2024-12-06 18:14:31.494599+00
 \.
 
 
@@ -1645,12 +1652,16 @@ j8qcvn879ax6d8b7jf2a62rqe3pueagt	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsav
 qix7psf3mn2d2n73r5u7cjqe116p3yid	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGi89:Lf73BdKt3obXgBIu8PTid0omUnZHqj69pdcAtPQf69o	2024-12-12 17:16:41.17801+00
 167w7uh06cx0vapphbs5d2jkzefb9r0u	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tITc5:t5FCf6rBViSMtvOVXqJdEhlZlhy4fHogIk5UHPH511k	2024-12-17 14:10:53.277465+00
 jk8o80o0s31glxs7pa5xrjva84nipwiz	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tJGc5:LzKD2syjZ6tuOvb0IFRmTGLU4Q4NEq7rbnvqaEDB2Hk	2024-12-19 18:30:09.394482+00
+p02m0oa60fihyfv5lhaw3em47zy2lwba	.eJxVjMsOwiAUBf-FtSFQHtIu3fsN5AIXixpooE00xn9Xki50e2bOvIiFbZ3t1rDaFMhEODn8bg78DXMH4Qr5Uqgvea3J0a7QnTZ6LgHvp939C8zQ5u-bKS1QAioXIxotPZiBRym5BDFGjCJwGDwfRsGc5yowDaMw4I6ooxeG9WjD1lLJFh9Lqk8ysfcHnNw_YQ:1tKPVq:lyAUWVPeKsr8QSloHWoE_6AJ5RVR_MOB8rOklLxSkko	2024-12-22 22:12:26.530147+00
 uayoi9pspfb8q88nejvqedpvu3wtberc	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tDxVR:wechWPCW4xz0ffDbnwc_SrnHXqFeGZtvxYiE0IAyIsg	2024-12-05 03:05:21.515798+00
 1zjk1okus1fe8kppfko7yt1ia8l3ywck	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tG9Rk:7lT6IRQzmqy4-g6rqdu7kuYiA7yQaNvODMom0L_cHqQ	2024-12-11 04:14:36.903566+00
+2ntu0du6nbfn0ntnwm20vqzh1o7jkqh0	.eJxVjMsOwiAUBf-FtSFQHtIu3fsN5AIXixpooE00xn9Xki50e2bOvIiFbZ3t1rDaFMhEODn8bg78DXMH4Qr5Uqgvea3J0a7QnTZ6LgHvp939C8zQ5u-bKS1QAioXIxotPZiBRym5BDFGjCJwGDwfRsGc5yowDaMw4I6ooxeG9WjD1lLJFh9Lqk8ysfcHnNw_YQ:1tKLIg:QbGQU4xnCqMv1-p2QYLW4aMHQ85ovmhy7qwI4iu4W-Y	2024-12-22 17:42:34.749485+00
 pdxekuaesnln828u4fib1b9faqo5490y	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGiJV:z0CjmMaU--x_dGdKY1IcDOs1WWOLRuOlRKgpfizN-Zk	2024-12-12 17:28:25.926196+00
 femc6qgi4y24vcp8axdxlvlhl82iyml0	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tITxh:X4xjRcjYzwvjE7uwbmOMxU2V_njk_eoYVGp08tdFaPU	2024-12-17 14:33:13.789922+00
+h1qlz4lynprxu9an577ha21kyo18lqyb	.eJxVjMsOwiAUBf-FtSFQHtIu3fsN5AIXixpooE00xn9Xki50e2bOvIiFbZ3t1rDaFMhEODn8bg78DXMH4Qr5Uqgvea3J0a7QnTZ6LgHvp939C8zQ5u-bKS1QAioXIxotPZiBRym5BDFGjCJwGDwfRsGc5yowDaMw4I6ooxeG9WjD1lLJFh9Lqk8ysfcHnNw_YQ:1tKPdU:uWAnzyEWS0W7ivI1GMsgfDt-kTmeVFf8ENoa2gwO3Sk	2024-12-22 22:20:20.935238+00
 9x15jm93hy16y8gq4aclxmqjfbnnqq45	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tJM2z:KAmdvZsLx_GF26iI8Ozk9TOa4MBCMDbPKat9moNSfdU	2024-12-20 00:18:17.237443+00
 4cff5hyyalcs8usprxo1hvgjmuw7awv1	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGiVt:AzPO0bkZhjMakylln7uq5kQUz3pSWe0_KGmfrszMuNs	2024-12-12 17:41:13.182879+00
+ctiq8c8dc074iq7pumkbiq9by8yp6suj	.eJxVjMsOwiAUBf-FtSFQHtIu3fsN5AIXixpooE00xn9Xki50e2bOvIiFbZ3t1rDaFMhEODn8bg78DXMH4Qr5Uqgvea3J0a7QnTZ6LgHvp939C8zQ5u-bKS1QAioXIxotPZiBRym5BDFGjCJwGDwfRsGc5yowDaMw4I6ooxeG9WjD1lLJFh9Lqk8ysfcHnNw_YQ:1tKPrX:EybHLnAKQkTEJqrXb0DpAPo7KltqCpY5AxDEQPToudA	2024-12-22 22:34:51.120587+00
 rml5o0ayti5fx9ipg5pilz9jkbr1545f	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tIU1R:UjfcsXGzab_U3DVbQjCP63hSCzURaTZljIrml7DEP0c	2024-12-17 14:37:05.939346+00
 z9h428osegj1urknmaazd5mbhfnu4oh0	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tJNOL:-TpHN6_yvQtSX337E53J3ORYtpNurzu5ydHDoAH-Nl8	2024-12-20 01:44:25.705427+00
 ces59vllqdzjh4y53xxzrl0al6hpg1pk	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tEAHl:bg38IPP4574CQGY2ipaZfr-OmW7z4sipqXJYHdLqAWY	2024-12-05 16:44:05.469542+00
@@ -1659,6 +1670,7 @@ dycak9je2azl3iwuz1cylgca8sco31ta	.eJxVjEkOAiEUBe_C2pDPJODSvWcgDB8bNWCa7kRjvLuS9E
 ql0q7w4usjhw0hibal5jyx7vb499mrey	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tJNSV:L6gONH40ZLEKsjIc0G5_EarhPmg1l1xXkZ2p74pE6JY	2024-12-20 01:48:43.386308+00
 ldazgfbgj7npcfdptlhsd03tz39jizi6	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tEArc:geE-LvkF1UKpBB0Pxt4AI38MstOrxQKPycQW58V3cb4	2024-12-05 17:21:08.531447+00
 eiv6durgmskvp3xvg4i9su1dtrjexwe1	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGMBV:Q4H4p9Y-qqmpLCCBX-S0aaQCzOqSr8F_r273lZO-bAY	2024-12-11 17:50:41.765971+00
+emr1lu5sgiq3px712b7epq5cnbhiztps	.eJxVjMsOwiAUBf-FtSFQHtIu3fsN5AIXixpooE00xn9Xki50e2bOvIiFbZ3t1rDaFMhEODn8bg78DXMH4Qr5Uqgvea3J0a7QnTZ6LgHvp939C8zQ5u-bKS1QAioXIxotPZiBRym5BDFGjCJwGDwfRsGc5yowDaMw4I6ooxeG9WjD1lLJFh9Lqk8ysfcHnNw_YQ:1tKLzE:Wlw5BhWPimM8xXeDN9b7-2sRiahrIadYO9AniVDllJ4	2024-12-22 18:26:32.187205+00
 44a84qrqpcihzlykw82n10c80bjd350u	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGqGD:7KMEcldizEqYq-Xy0j6o7BC2Ib8gr0pC_NWtsbLfgak	2024-12-13 01:57:33.61016+00
 5ok1r00ohf1fg8rx7osdnajqdxwxbrr3	.eJxVjEkOAiEUBe_C2pDPJODSvWcgDB8bNWCa7kRjvLuS9EK3r-rVizi_LpNbO86uJHIgjOx-t-DjFesA6eLrudHY6jKXQIdCN9rpqSW8HTf3LzD5Pn3fYFAjZi0Nl0Jl1BBUFCYazYMSAazUgwNTObGUbeI-SGWFNgxBohjRjr2XVh0-7mV-kgPjYPcA7w8AmUAm:1tIgjz:sXVRdJaMe3NN_LmM7LA5QI_yMrKMV25WanSUTV_ncBE	2024-12-18 04:11:55.324701+00
 n7brcdtg3t3jnxf7d2n22yz8mai4xgnt	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tJPSf:0cxovuIm4ns2QJSbyn3ZX5ZwX4gDs7SIqUN2CJv727o	2024-12-20 03:57:01.108885+00
@@ -1671,20 +1683,21 @@ dz9jfnq6t1hg4lncbwwa1fodi1g2uzu3	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsav
 cqp3jci9x029yriprh1n79si7pyyxyxg	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGMZi:6YnIUDgMEq9Pw9_LO1xjAslRCUnO9xY-sWFaeOT4rww	2024-12-11 18:15:42.733796+00
 g4wt85vsia710vk5n9zz5lx9g86wipsb	.eJxVjEkOAiEUBe_C2pDPJODSvWcgDB8bNWCa7kRjvLuS9EK3r-rVizi_LpNbO86uJHIgjOx-t-DjFesA6eLrudHY6jKXQIdCN9rpqSW8HTf3LzD5Pn3fYFAjZi0Nl0Jl1BBUFCYazYMSAazUgwNTObGUbeI-SGWFNgxBohjRjr2XVh0-7mV-kgPjYPcA7w8AmUAm:1tH4u3:GhEkwQV66txbjsHghWSr4lNd2zmHO4Dk7aeaZQmkL5w	2024-12-13 17:35:39.054336+00
 i25qevtwjx4enckhy20k0czlsl33ezfq	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tJ1b7:0ys0_A0BCEPaQk463eixUTlprEoiTfBO8JB_rS_ueRo	2024-12-19 02:28:09.662294+00
-kma5ww4t6cip1ltncmo37gbjmiibfl4e	.eJxVjEkOAiEUBe_C2pDPJODSvWcgDB8bNWCa7kRjvLuS9EK3r-rVizi_LpNbO86uJHIgjOx-t-DjFesA6eLrudHY6jKXQIdCN9rpqSW8HTf3LzD5Pn3fYFAjZi0Nl0Jl1BBUFCYazYMSAazUgwNTObGUbeI-SGWFNgxBohjRjr2XVh0-7mV-kgPjYPcA7w8AmUAm:1tJbSl:RKkhbu_kailppSRONKeoLdwUixOc4UtZTLF4RFqiB_Q	2024-12-20 16:45:55.632214+00
 fq1j33uywmff9sv6e6wyw7hlxdwfvhgf	.eJxVjMEOwiAQBf-FsyEUqECP3v0GsmwXixpoSptojP-uJD3o9c28eTEP2zr5rdLi08gGJtnhdwuAN8oNjFfIl8Kx5HVJgTeF77Tycxnpftrdv8AEdfq-Vd93xhoClCZGE5UBGwRoESFoi6pXsnNRS3QOLYFQAbR20RxJogQFLVqp1lSyp8eclicbxPsDi0s_QA:1tECfq:09-dw8ZJnoQamve92w-woUaMF7H5epPxlEyubuTP428	2024-12-05 19:17:06.905119+00
 9leev4acxdkulo60b3d6odvaiy31fvoy	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGMew:XGZt-UM3BLpVe9B13GjLwastQ2ERvx828icc4KjnoxI	2024-12-11 18:21:06.636514+00
+19cjc8tqdgs1rllewaatyqakyi00en8s	.eJxVjEEOwiAQRe_C2hAptJQu3XsGMswMFjXQlDbRGO-uTbrQ7X_vv5fwsC6jXyvPPpEYhLLi8DsGwBvnjdAV8qVILHmZU5CbInda5bkQ30-7-xcYoY7fN_cE1MXotGkiaADEnpUGTc445chYoxBt07amUTEEih2StopRu2jBbdHKtaaSPT-mND_FcHx_APNaQEE:1tKMGW:0zwLXNsTCCV3rruxR0uNWptSbJuB68sPn4pZX1aVj-w	2024-12-22 18:44:24.131858+00
 u7gva4jf0j5r3d21qdpqxd06hiohmbpk	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tJ7oE:8D_aEx5A7Jpnc0bTCsnLrniCKq7vB-yY9U6erw9QUYU	2024-12-19 09:06:06.29981+00
-quycextjlzwuvkvwdhut2m1zv5jao6cq	.eJxVjEkOAiEUBe_C2pDPJODSvWcgDB8bNWCa7kRjvLuS9EK3r-rVizi_LpNbO86uJHIgjOx-t-DjFesA6eLrudHY6jKXQIdCN9rpqSW8HTf3LzD5Pn3fYFAjZi0Nl0Jl1BBUFCYazYMSAazUgwNTObGUbeI-SGWFNgxBohjRjr2XVh0-7mV-kgPjYPcA7w8AmUAm:1tJbhb:vzLnCDGPZ1Wn8LlxcgZWKkcTKpwz5vygjwG8EbWo0q8	2024-12-20 17:01:15.342106+00
 k8ey5gpgin74ts4ndmio7j736jmpnd1x	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGRBF:1cvUonWDVUopo4mXWkI-MZVKfqOmW4lTHMaLfrSiYWU	2024-12-11 23:10:45.203829+00
+ze5hlgaj0blzzr3i7in9403roq00roz5	.eJxVjEEOwiAQRe_C2hAptJQu3XsGMswMFjXQlDbRGO-uTbrQ7X_vv5fwsC6jXyvPPpEYhLLi8DsGwBvnjdAV8qVILHmZU5CbInda5bkQ30-7-xcYoY7fN_cE1MXotGkiaADEnpUGTc445chYoxBt07amUTEEih2StopRu2jBbdHKtaaSPT-mND_FcHx_APNaQEE:1tKMNN:3tDfQm0iROu2d4Wy1Pr_UIlagfHLpMKSQz89dnD9_G0	2024-12-22 18:51:29.799163+00
 5i97mx8hcva5fyoh2xb9pde3l5svtj69	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tJ83g:oN2XQLssHazXlA8-Ce_cxZkSamCID3Vq9OzwBUpPjVc	2024-12-19 09:22:04.788484+00
 373tym878hu87idy9vu2huczrn4w8jry	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tEMI1:6yeaQk32vaUESnSVFmUhvIN8RG-RhBapP7Ua8OnIDnI	2024-12-06 05:33:09.602867+00
 99jzj1gffpieuilu5vxadmg4nxyxx5br	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGV5A:MxCtdSJNkjSbVfXa-UXZHaRIC6C69w1gpsdEYjLn0Uo	2024-12-12 03:20:44.055527+00
-39lho18sspq67eg6gc8av1690axol8t3	.eJxVjEkOAiEUBe_C2pDPJODSvWcgDB8bNWCa7kRjvLuS9EK3r-rVizi_LpNbO86uJHIgjOx-t-DjFesA6eLrudHY6jKXQIdCN9rpqSW8HTf3LzD5Pn3fYFAjZi0Nl0Jl1BBUFCYazYMSAazUgwNTObGUbeI-SGWFNgxBohjRjr2XVh0-7mV-kgPjYPcA7w8AmUAm:1tHEPJ:52IJtBan4M3B47g1JOdFY6o_zzyZqfxjBuPGiwqVn4I	2024-12-14 03:44:33.874466+00
+s3pb82dl93gwfw46nbxjlx3nztjj3odt	.eJxVjEEOwiAQRe_C2hAptJQu3XsGMswMFjXQlDbRGO-uTbrQ7X_vv5fwsC6jXyvPPpEYhLLi8DsGwBvnjdAV8qVILHmZU5CbInda5bkQ30-7-xcYoY7fN_cE1MXotGkiaADEnpUGTc445chYoxBt07amUTEEih2StopRu2jBbdHKtaaSPT-mND_FcHx_APNaQEE:1tKMRL:gNa5gJVy_2PaLH05DkKT1Fuv4gFO2b9YqeoHeIEN074	2024-12-22 18:55:35.409002+00
 ab5lnotyj3kqsiv07b1hwxzvayz0b1lm	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tEMIJ:-4b-93L5x3BknI2EFtYOdek4Y2YLBEqPIs-2owlHTUY	2024-12-06 05:33:27.760941+00
 8hc7o60kiax4ivzxps9af1kvylcwlkpm	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tEa1m:Gj-rlQIVaoxgwNH5pVB30ylLRcWe3bhJJQIW7b0l-DQ	2024-12-06 20:13:18.758937+00
 sv446plvcnqm4kvu19av0sdiwxb6ea6y	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tGVPw:Ep2Fy-hwR3-imThDdL20SObIz2L_JYyqe27m57K2_zc	2024-12-12 03:42:12.333887+00
 ueq9s7hozbyzcna25pradmww21i32hwq	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tEdbv:BunLfLkXm3Zt2yoL4xeOSSLX7KvYynldEDWaX15MDww	2024-12-07 00:02:51.761708+00
+ehdb9pe3wsegeph01y4n1mkc1ucrwu8n	.eJxVjMsOwiAUBf-FtSFQHtIu3fsN5AIXixpooE00xn9Xki50e2bOvIiFbZ3t1rDaFMhEODn8bg78DXMH4Qr5Uqgvea3J0a7QnTZ6LgHvp939C8zQ5u-bKS1QAioXIxotPZiBRym5BDFGjCJwGDwfRsGc5yowDaMw4I6ooxeG9WjD1lLJFh9Lqk8ysfcHnNw_YQ:1tKMRu:Pi0oIl2lfZxjLsbshxlVUKlIKoDGLUkN3i1OiOEqbd8	2024-12-22 18:56:10.405992+00
 1brgdajakbt9fuzfnjrwree459p5cxj3	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tEdpg:qdp5Fv-e4CQ_4Q5_rdzqzCrXXnH38AS5XUYWI4ben0A	2024-12-07 00:17:04.84887+00
 1utiuk2glf8hrhjhq9lfozwgfm3883ul	.eJxVjMsKAiEYRt_FdYhX1Fm27xnEy29aoaEzUETvXsIsavud850Xsm5bs90GdFsiWhBFh9_Nu3CFOkG8uHpuOLS69uLxVPBOBz61CLfj7v4Fshv5-yYaFEBSQjPBZQJFvAxcB62Yl9wTI9TkhMoUaUwmMueFNFxpCkQAn9EBY5RWLTzupT_RQt4fhEY-9A:1tEhtE:emZ9y9VVaF-ehU4gNd9K4NcKGqhKSVbNJGfjx7bUwWE	2024-12-07 04:37:00.670962+00
 2d2dq30h8kac4m15mqoeh8wtir6ltd1p	.eJxVjEsOAiEQBe_C2hC-aXDp3jMQoBsZNZAMMyvj3ZVkFrp9VfVeLMR9q2EftIYF2ZlJdvrdUswPahPgPbZb57m3bV0Snwo_6ODXjvS8HO7fQY2jfmvhCIgKGKeMtoVAJJu1yw5UsjoJb2ByIW1BicWjislYr8FJEoY0e38A36Q3tw:1tFE4Z:hZVkiQDCsYWPydqoRyKlMcYavcfxoODs4YGc6rIOnUc	2024-12-08 14:58:51.274978+00
@@ -1722,8 +1735,8 @@ COPY public.login_tokenrecuperacion (id, token, created_at, expires_at, used, us
 --
 
 COPY public.login_usuario (id, "RutUsuario", "TipoUsuario", "EdadUsuario", "TelefonoUsuario", "FotoUsuario", user_id) FROM stdin;
-8	98765432-1	Cliente	25	987654321	\N	3
-7	12345678-9	Administrador	30		\N	2
+15	21.111.111-2	Colaborador	21	\N	\N	17
+14	21.111.111-1	Administrador	\N	\N	image/upload/v1733635283/usuarios/yfuysrxbndj5xy2lyeom.jpg	15
 \.
 
 
@@ -1819,7 +1832,7 @@ SELECT pg_catalog.setval('public.auth_user_groups_id_seq', 1, false);
 -- Name: auth_user_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.auth_user_id_seq', 9, true);
+SELECT pg_catalog.setval('public.auth_user_id_seq', 17, true);
 
 
 --
@@ -1846,7 +1859,7 @@ SELECT pg_catalog.setval('public.dashboard_categoria_id_seq', 6, true);
 -- Name: dashboard_cliente_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.dashboard_cliente_id_seq', 11, true);
+SELECT pg_catalog.setval('public.dashboard_cliente_id_seq', 12, true);
 
 
 --
@@ -1891,7 +1904,7 @@ SELECT pg_catalog.setval('public.dashboard_material_id_seq', 33, true);
 -- Name: dashboard_perdidas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.dashboard_perdidas_id_seq', 52, true);
+SELECT pg_catalog.setval('public.dashboard_perdidas_id_seq', 54, true);
 
 
 --
@@ -1927,7 +1940,7 @@ SELECT pg_catalog.setval('public.dashboard_proveedor_id_seq', 71, true);
 -- Name: dashboard_ventas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.dashboard_ventas_id_seq', 65, true);
+SELECT pg_catalog.setval('public.dashboard_ventas_id_seq', 69, true);
 
 
 --
@@ -1954,7 +1967,7 @@ SELECT pg_catalog.setval('public.django_content_type_id_seq', 30, true);
 -- Name: django_migrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.django_migrations_id_seq', 125, true);
+SELECT pg_catalog.setval('public.django_migrations_id_seq', 126, true);
 
 
 --
@@ -1972,7 +1985,7 @@ SELECT pg_catalog.setval('public.login_tokenrecuperacion_id_seq', 1, true);
 -- Name: login_usuario_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.login_usuario_id_seq', 8, true);
+SELECT pg_catalog.setval('public.login_usuario_id_seq', 15, true);
 
 
 --
@@ -3055,7 +3068,7 @@ ALTER TABLE ONLY public.social_auth_usersocialauth
     ADD CONSTRAINT social_auth_usersocialauth_user_id_17d28448_fk_auth_user_id FOREIGN KEY (user_id) REFERENCES public.auth_user(id) DEFERRABLE INITIALLY DEFERRED;
 
 
--- Completed on 2024-12-06 14:29:51
+-- Completed on 2024-12-08 21:11:28
 
 --
 -- PostgreSQL database dump complete

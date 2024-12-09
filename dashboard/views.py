@@ -7364,3 +7364,176 @@ def exportar_colaboradores_excel(request):
    response['Content-Disposition'] = f'attachment; filename="{filename}"'
    
    return response
+
+
+
+#---------------RUTA PARA DASHBOARDSSSS------------
+def get_categorias(request):
+    if request.method == 'GET':
+        try:
+            categorias = Categoria.objects.all()
+            data = []
+            for categoria in categorias:
+                data.append({
+                    'id': categoria.id,
+                    'NombreCategoria': categoria.NombreCategoria,
+                    'FotoCategoria': categoria.FotoCategoria.url if categoria.FotoCategoria else None,
+                    'DescripcionCategoria': categoria.DescripcionCategoria,
+                })
+            return JsonResponse(data, safe=False)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Método no permitido'}, status=405)
+@login_required
+def get_ventas_estadisticas(request):
+    try:
+        # Obtener todas las ventas
+        ventas = Ventas.objects.all()
+        
+        if ventas.exists():
+            # Calcular el mayor valor de venta
+            max_venta = ventas.order_by('-PrecioTotalVenta').first()
+            max_ventas = max_venta.PrecioTotalVenta if max_venta else 0
+
+            # Calcular el menor valor de venta
+            min_venta = ventas.order_by('PrecioTotalVenta').first()
+            min_ventas = min_venta.PrecioTotalVenta if min_venta else 0
+
+            # Calcular el promedio
+            promedio = ventas.aggregate(
+                promedio=models.Avg('PrecioTotalVenta')
+            )['promedio'] or 0
+
+            return JsonResponse({
+                'maxVentas': float(max_ventas),
+                'minVentas': float(min_ventas),
+                'promedioVentas': float(promedio)
+            })
+        else:
+            return JsonResponse({
+                'maxVentas': 0,
+                'minVentas': 0,
+                'promedioVentas': 0
+            })
+
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+@login_required
+def get_ventas_grafico(request):
+    try:
+        ventas = Ventas.objects.all().order_by('FechaVenta')
+        
+        data = []
+        for venta in ventas:
+            # Calculamos los valores para cada punto en el tiempo
+            max_venta = Ventas.objects.filter(FechaVenta__lte=venta.FechaVenta).aggregate(
+                max=models.Max('PrecioTotalVenta')
+            )['max'] or 0
+            
+            min_venta = Ventas.objects.filter(FechaVenta__lte=venta.FechaVenta).aggregate(
+                min=models.Min('PrecioTotalVenta')
+            )['min'] or 0
+            
+            promedio = Ventas.objects.filter(FechaVenta__lte=venta.FechaVenta).aggregate(
+                avg=models.Avg('PrecioTotalVenta')
+            )['avg'] or 0
+
+            data.append({
+                'fecha': venta.FechaVenta.strftime('%Y-%m-%d'),
+                'maxVentas': float(max_venta),
+                'promedioVentas': float(promedio),
+                'minVentas': float(min_venta)
+            })
+
+        return JsonResponse(data, safe=False)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+@login_required
+def get_productos_categorias_stats(request):
+    try:
+        # Obtener todos los productos con sus ventas y pérdidas
+        productos = Producto.objects.all()
+        categorias = Categoria.objects.all()
+        
+        # Calcular total de ventas y pérdidas
+        total_ventas = sum(p.CantidadProductoVendido for p in productos)
+        total_perdidas = sum(p.CantidadProductoDesechado for p in productos)
+
+        # Preparar datos para los gráficos circulares
+        datos_ventas = []
+        datos_perdidas = []
+        datos_categorias = []
+
+        # Procesar datos de productos
+        for producto in productos:
+            if producto.CantidadProductoVendido > 0:
+                datos_ventas.append({
+                    'name': producto.NombreProducto,
+                    'value': producto.CantidadProductoVendido,
+                    'percentage': round((producto.CantidadProductoVendido / total_ventas * 100), 2) if total_ventas > 0 else 0
+                })
+
+            if producto.CantidadProductoDesechado > 0:
+                datos_perdidas.append({
+                    'name': producto.NombreProducto,
+                    'value': producto.CantidadProductoDesechado,
+                    'percentage': round((producto.CantidadProductoDesechado / total_perdidas * 100), 2) if total_perdidas > 0 else 0
+                })
+
+        # Procesar datos por categoría
+        for categoria in categorias:
+            productos_categoria = productos.filter(Categoria=categoria)
+            
+            vendidos_categoria = sum(p.CantidadProductoVendido for p in productos_categoria)
+            perdidos_categoria = sum(p.CantidadProductoDesechado for p in productos_categoria)
+            
+            datos_categorias.append({
+                'name': categoria.NombreCategoria,
+                'porcentaje_vendidos': round((vendidos_categoria / total_ventas * 100), 2) if total_ventas > 0 else 0,
+                'porcentaje_perdidas': round((perdidos_categoria / total_perdidas * 100), 2) if total_perdidas > 0 else 0
+            })
+
+        return JsonResponse({
+            'ventas': datos_ventas,
+            'perdidas': datos_perdidas,
+            'categorias': datos_categorias,
+            'total_ventas': total_ventas,
+            'total_perdidas': total_perdidas
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e),
+            'ventas': [],
+            'perdidas': [],
+            'categorias': [],
+            'total_ventas': 0,
+            'total_perdidas': 0
+        }, status=500)
+@login_required
+def get_productos_stock(request):
+    try:
+        productos = Producto.objects.all()
+        
+        datos_productos = []
+        for producto in productos:
+            datos_productos.append({
+                'nombre': producto.NombreProducto,
+                'stockActual': producto.StockProductoActual,
+                'stockInicial': producto.StockProductoInicial,
+                'porcentajeStock': producto.porcentaje_stock_disponible,
+            })
+        
+        # Ordenar por porcentaje de stock de mayor a menor
+        datos_productos.sort(key=lambda x: x['porcentajeStock'], reverse=True)
+        
+        return JsonResponse({
+            'productos': datos_productos
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e),
+            'productos': []
+        }, status=500)

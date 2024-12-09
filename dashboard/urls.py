@@ -176,7 +176,19 @@ urlpatterns = [
 
     path('api/colaborador/<int:colaborador_id>/eliminar/', views.eliminar_colaborador, name='eliminar_colaborador'),
 
-    path('api/colaboradores/exportar-excel/', views.exportar_colaboradores_excel, name='exportar_colaboradores_excel')
+    path('api/colaboradores/exportar-excel/', views.exportar_colaboradores_excel, name='exportar_colaboradores_excel'),
+    
+    
+    #-------------------RUTAS PARA DASHBAORD-----------------
+    path('api/categorias/', views.get_categorias, name='get_categorias'),
+    path('api/ventas/estadisticas/', views.get_ventas_estadisticas, name='get_ventas_estadisticas'),
+    path('api/ventas/grafico/', views.get_ventas_grafico, name='get_ventas_grafico'),
+    path('api/stats/productos-categorias/', views.get_productos_categorias_stats, name='get_productos_categorias_stats'),
+    path('api/stats/productos-stock/', views.get_productos_stock, name='productos-stock'),
+
+
+
+
 ]
 
 
