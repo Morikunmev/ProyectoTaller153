@@ -8,6 +8,7 @@ from io import BytesIO
 from decimal import Decimal, InvalidOperation as DecimalException
 
 # Django imports
+from django.db.models import Sum, Avg  # Agregamos las importaciones necesarias
 from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -59,6 +60,8 @@ import os
 import mimetypes
 from django.db import connection
 from django.views.decorators.http import require_http_methods
+from xlsxwriter.utility import xl_cell_to_rowcol, xl_rowcol_to_cell
+import xlsxwriter
 
 #Import de permisos
 from django.core.exceptions import PermissionDenied
@@ -84,15 +87,15 @@ def admin_required(view_func):
     return _wrapped_view
 
 #Exportar proveedores a Excel
+@login_required(login_url='login')
+@ensure_csrf_cookie
 def exportar_proveedores_excel(request):
-    # Crear un buffer en memoria
     output = BytesIO()
-    
-    # Crear un nuevo archivo Excel con la opción remove_timezone
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    worksheet = workbook.add_worksheet('Proveedores')
-    
-    # Agregar formatos
+    worksheet = workbook.add_worksheet('Reporte Detallado')
+    ws_graficos = workbook.add_worksheet('Gráficos')
+
+    # Formatos
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': '#000000',
@@ -100,53 +103,171 @@ def exportar_proveedores_excel(request):
         'border': 1
     })
     
-    date_format = workbook.add_format({
-        'num_format': 'dd/mm/yyyy hh:mm',
+    proveedor_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#4472C4',
+        'font_color': 'white',
+        'border': 1
     })
     
-    # Definir encabezados
+    factura_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#70AD47',
+        'font_color': 'white',
+        'indent': 2,
+        'border': 1
+    })
+    
+    envio_format = workbook.add_format({
+        'bg_color': '#FFC000',
+        'indent': 4,
+        'border': 1
+    })
+    
+    date_format = workbook.add_format({
+        'num_format': 'dd/mm/yyyy',
+        'border': 1
+    })
+    
+    money_format = workbook.add_format({
+        'num_format': '$#,##0.00',
+        'border': 1
+    })
+
+    normal_format = workbook.add_format({
+        'border': 1
+    })
+
+    # Encabezados principales
     headers = [
-        'Nombre', 'RUT', 'Marca', 'Comentario', 'Ciudad', 
-        'Región', 'País', 'Teléfono', 'Fecha Creación', 
-        'Última Modificación'
+        'Tipo', 'ID', 'Nombre/Número', 'RUT/Fecha', 'Marca/Cantidad', 
+        'Precio Unitario', 'Total', 'Estado/Tipo', 'Días Transcurridos'
     ]
     
+    # Establecer anchos de columna
+    worksheet.set_column('A:A', 15)  # Tipo
+    worksheet.set_column('B:B', 8)   # ID
+    worksheet.set_column('C:C', 30)  # Nombre/Número
+    worksheet.set_column('D:D', 15)  # RUT/Fecha
+    worksheet.set_column('E:E', 20)  # Marca/Cantidad
+    worksheet.set_column('F:F', 15)  # Precio Unitario
+    worksheet.set_column('G:G', 15)  # Total
+    worksheet.set_column('H:H', 15)  # Estado/Tipo
+    worksheet.set_column('I:I', 18)  # Días Transcurridos
+
     # Escribir encabezados
     for col, header in enumerate(headers):
         worksheet.write(0, col, header, header_format)
-        worksheet.set_column(col, col, 15)  # Establecer ancho de columna
-    
-    # Obtener datos de proveedores
-    proveedores = Proveedor.objects.all().order_by('NombreProveedor')
-    
-    # Escribir datos
-    for row, proveedor in enumerate(proveedores, start=1):
-        # Convertir fechas a la zona horaria local y remover la información de zona horaria
-        fecha_creacion = timezone.localtime(proveedor.FechaCreacionProveedor).replace(tzinfo=None)
-        fecha_modificacion = timezone.localtime(proveedor.FechaModificacionProveedor).replace(tzinfo=None)
-        
-        worksheet.write(row, 0, proveedor.NombreProveedor)
-        worksheet.write(row, 1, proveedor.RutProveedor)
-        worksheet.write(row, 2, proveedor.MarcaProveedor)
-        worksheet.write(row, 3, proveedor.ComentarioProveedor or '')
-        worksheet.write(row, 4, proveedor.CiudadProveedor or '')
-        worksheet.write(row, 5, proveedor.RegionProveedor or '')
-        worksheet.write(row, 6, proveedor.PaisProveedor or '')
-        worksheet.write(row, 7, proveedor.TelefonoProveedor or '')
-        worksheet.write_datetime(row, 8, fecha_creacion, date_format)
-        worksheet.write_datetime(row, 9, fecha_modificacion, date_format)
 
-    # Ajustar anchos de columna automáticamente basado en el contenido
-    for col, header in enumerate(headers):
-        worksheet.set_column(col, col, len(header) + 2)
-    
+    current_row = 1
+    estadisticas = {
+        'proveedores_montos': {},
+        'tipos_envio': {'material': 0, 'herramienta': 0},
+        'estado_envios': {'Recibido': 0, 'En Tránsito': 0}
+    }
+
+    # Obtener y escribir datos
+    proveedores = Proveedor.objects.prefetch_related(
+        'factura_set',
+        'factura_set__envios'
+    ).all()
+
+    for proveedor in proveedores:
+        # Escribir datos del proveedor
+        worksheet.write(current_row, 0, "PROVEEDOR", proveedor_format)
+        worksheet.write(current_row, 1, proveedor.id, proveedor_format)
+        worksheet.write(current_row, 2, proveedor.NombreProveedor, proveedor_format)
+        worksheet.write(current_row, 3, proveedor.RutProveedor, proveedor_format)
+        worksheet.write(current_row, 4, proveedor.MarcaProveedor, proveedor_format)
+        current_row += 1
+
+        total_proveedor = 0
+        facturas = proveedor.factura_set.all()
+        
+        for factura in facturas:
+            # Escribir datos de la factura
+            worksheet.write(current_row, 0, "FACTURA", factura_format)
+            worksheet.write(current_row, 1, factura.id, factura_format)
+            worksheet.write(current_row, 2, factura.NumeroFactura, factura_format)
+            worksheet.write(current_row, 3, factura.FechaEmision, date_format)
+            current_row += 1
+
+            total_factura = 0
+            envios = factura.envios.all()
+            
+            for envio in envios:
+                # Escribir datos del envío
+                worksheet.write(current_row, 0, "ENVÍO", envio_format)
+                worksheet.write(current_row, 1, envio.id, normal_format)
+                worksheet.write(current_row, 2, envio.NombreEnvio, normal_format)
+                worksheet.write(current_row, 3, envio.FechaCompraEnvio, date_format)
+                worksheet.write(current_row, 4, envio.CantidadEnvio, normal_format)
+                worksheet.write(current_row, 5, float(envio.PrecioEnvio), money_format)
+                worksheet.write(current_row, 6, float(envio.TotalEnvio), money_format)
+                worksheet.write(current_row, 7, envio.TipoEnvio, normal_format)
+                worksheet.write(current_row, 8, envio.DiasTranscurridos, normal_format)
+                
+                # Actualizar estadísticas
+                total_factura += float(envio.TotalEnvio)
+                estadisticas['tipos_envio'][envio.TipoEnvio] += 1
+                if envio.EnvioRecibido:
+                    estadisticas['estado_envios']['Recibido'] += 1
+                else:
+                    estadisticas['estado_envios']['En Tránsito'] += 1
+                
+                current_row += 1
+
+            # Escribir total de la factura
+            worksheet.write(current_row, 5, "Total Factura:", factura_format)
+            worksheet.write(current_row, 6, total_factura, money_format)
+            current_row += 1
+            total_proveedor += total_factura
+
+        # Escribir total del proveedor
+        worksheet.write(current_row, 5, "Total Proveedor:", proveedor_format)
+        worksheet.write(current_row, 6, total_proveedor, money_format)
+        estadisticas['proveedores_montos'][proveedor.NombreProveedor] = total_proveedor
+        current_row += 2  # Dejar una línea en blanco entre proveedores
+
+    # Crear gráficos en la hoja de gráficos
+    # Gráfico de columnas: Montos por proveedor
+    chart_montos = workbook.add_chart({'type': 'column'})
+    row_data = 1
+    for proveedor, monto in estadisticas['proveedores_montos'].items():
+        ws_graficos.write(row_data, 0, proveedor)
+        ws_graficos.write(row_data, 1, monto)
+        row_data += 1
+
+    chart_montos.add_series({
+        'name': 'Monto Total',
+        'categories': f'=Gráficos!$A$1:$A${row_data-1}',
+        'values': f'=Gráficos!$B$1:$B${row_data-1}',
+        'data_labels': {'value': True}
+    })
+    chart_montos.set_title({'name': 'Montos Totales por Proveedor'})
+    chart_montos.set_size({'width': 500, 'height': 300})
+    ws_graficos.insert_chart('D2', chart_montos)
+
+    # Gráfico circular: Tipos de envío
+    chart_tipos = workbook.add_chart({'type': 'pie'})
+    ws_graficos.write_column('A15', ['Material', 'Herramienta'])
+    ws_graficos.write_column('B15', [estadisticas['tipos_envio']['material'], 
+                                    estadisticas['tipos_envio']['herramienta']])
+
+    chart_tipos.add_series({
+        'name': 'Tipos de Envío',
+        'categories': '=Gráficos!$A$15:$A$16',
+        'values': '=Gráficos!$B$15:$B$16',
+        'data_labels': {'percentage': True}
+    })
+    chart_tipos.set_title({'name': 'Distribución de Tipos de Envío'})
+    chart_tipos.set_size({'width': 500, 'height': 300})
+    ws_graficos.insert_chart('D20', chart_tipos)
+
     workbook.close()
-    
-    # Preparar la respuesta
     output.seek(0)
     
-    # Generar nombre del archivo con la fecha actual
-    filename = f'Proveedores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    filename = f'Reporte_Proveedores_Detallado_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
     response = HttpResponse(
         output.read(),
@@ -155,140 +276,157 @@ def exportar_proveedores_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
-
-def exportar_facturas_excel(request):
-    # Crear un buffer en memoria
-    output = BytesIO()
+ 
     
-    # Crear un nuevo archivo Excel con la opción remove_timezone
+@login_required(login_url='login')
+@ensure_csrf_cookie
+def exportar_facturas_excel(request):
+    output = BytesIO()
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    # Hoja para los datos
-    worksheet_data = workbook.add_worksheet('Facturas')
-    # Hojas para los gráficos
+    
+    # Hojas
+    worksheet_data = workbook.add_worksheet('Facturas Detallado')
     worksheet_charts = workbook.add_worksheet('Gráficos')
-    # Agregar formatos
+    
+    # Formatos
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': '#000000',
         'font_color': 'white',
         'border': 1
     })
+    
+    factura_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#4472C4',
+        'font_color': 'white',
+        'border': 1
+    })
+    
+    envio_format = workbook.add_format({
+        'bg_color': '#A5D6A7',
+        'indent': 2,
+        'border': 1
+    })
+    
     date_format = workbook.add_format({
         'num_format': 'dd/mm/yyyy',
+        'border': 1
+    })
+    
+    money_format = workbook.add_format({
+        'num_format': '$#,##0.00',
+        'border': 1
     })
 
-    # Definir encabezados
+    # Configurar anchos de columna
+    worksheet_data.set_column('A:A', 8)   # ID
+    worksheet_data.set_column('B:B', 15)  # N° Factura
+    worksheet_data.set_column('C:C', 15)  # Fecha
+    worksheet_data.set_column('D:D', 25)  # Proveedor
+    worksheet_data.set_column('E:E', 15)  # RUT
+    worksheet_data.set_column('F:F', 20)  # Marca
+    worksheet_data.set_column('G:G', 20)  # Nombre Envío
+    worksheet_data.set_column('H:H', 12)  # Cantidad
+    worksheet_data.set_column('I:I', 15)  # Precio
+    worksheet_data.set_column('J:J', 15)  # Total
+    worksheet_data.set_column('K:K', 15)  # Tipo
+    worksheet_data.set_column('L:L', 15)  # Días
+
+    # Encabezados principales
     headers = [
-        'ID',
-        'N° Factura',
-        'Fecha Emisión',
-        'Nombre Proveedor',
-        'RUT Proveedor',
-        'Marca Proveedor'
+        'ID', 'N° Factura', 'Fecha Emisión', 'Proveedor', 'RUT', 'Marca',
+        'Nombre Envío', 'Cantidad', 'Precio Unit.', 'Total', 'Tipo', 'Días'
     ]
-    # Escribir encabezados en hoja de datos
+    
     for col, header in enumerate(headers):
         worksheet_data.write(0, col, header, header_format)
-        worksheet_data.set_column(col, col, 15)
 
-    # Obtener datos de facturas
-    facturas = Factura.objects.all().select_related('Proveedor').order_by('-FechaEmision')
+    # Obtener datos
+    facturas = Factura.objects.all().select_related('Proveedor').prefetch_related('envios').order_by('-FechaEmision')
 
-    # Escribir datos
-    for row, factura in enumerate(facturas, start=1):
-        worksheet_data.write(row, 0, factura.id)
-        worksheet_data.write(row, 1, factura.NumeroFactura)
-        worksheet_data.write_datetime(row, 2, factura.FechaEmision, date_format)
-        worksheet_data.write(row, 3, factura.Proveedor.NombreProveedor)
-        worksheet_data.write(row, 4, factura.Proveedor.RutProveedor)
-        worksheet_data.write(row, 5, factura.Proveedor.MarcaProveedor)
+    current_row = 1
+    estadisticas = {
+        'proveedores_dict': {},
+        'tipos_envio': {'material': 0, 'herramienta': 0},
+        'envios_por_mes': {},
+        'montos_por_proveedor': {},
+        'estado_envios': {'Recibido': 0, 'En Tránsito': 0}
+    }
 
-    # Ajustar anchos de columna
-    worksheet_data.set_column('A:A', 8)  # ID
-    worksheet_data.set_column('B:B', 15)  # N° Factura
-    worksheet_data.set_column('C:F', 20)  # Resto de columnas
-
-    # Preparar datos para los gráficos
-    proveedores_dict = {}
     for factura in facturas:
+        # Escribir datos de la factura
+        worksheet_data.write(current_row, 0, factura.id, factura_format)
+        worksheet_data.write(current_row, 1, factura.NumeroFactura, factura_format)
+        worksheet_data.write_datetime(current_row, 2, factura.FechaEmision, date_format)
+        worksheet_data.write(current_row, 3, factura.Proveedor.NombreProveedor, factura_format)
+        worksheet_data.write(current_row, 4, factura.Proveedor.RutProveedor, factura_format)
+        worksheet_data.write(current_row, 5, factura.Proveedor.MarcaProveedor, factura_format)
+        
+        # Actualizar estadísticas del proveedor
         proveedor = factura.Proveedor.NombreProveedor
-        proveedores_dict[proveedor] = proveedores_dict.get(proveedor, 0) + 1
+        estadisticas['proveedores_dict'][proveedor] = estadisticas['proveedores_dict'].get(proveedor, 0) + 1
+        
+        current_row += 1
+        total_factura = 0
 
-    # Escribir datos para gráficos en hoja de gráficos
-    worksheet_charts.write_row('A1', ['Proveedor'], header_format)
-    worksheet_charts.write_row('B1', ['Cantidad de Facturas'], header_format)
+        # Escribir envíos asociados
+        for envio in factura.envios.all():
+            worksheet_data.write(current_row, 0, "", envio_format)
+            worksheet_data.write(current_row, 1, "", envio_format)
+            worksheet_data.write(current_row, 2, "", envio_format)
+            worksheet_data.write(current_row, 3, "", envio_format)
+            worksheet_data.write(current_row, 4, "", envio_format)
+            worksheet_data.write(current_row, 5, "", envio_format)
+            worksheet_data.write(current_row, 6, envio.NombreEnvio, envio_format)
+            worksheet_data.write(current_row, 7, envio.CantidadEnvio, envio_format)
+            worksheet_data.write(current_row, 8, float(envio.PrecioEnvio), money_format)
+            worksheet_data.write(current_row, 9, float(envio.TotalEnvio), money_format)
+            worksheet_data.write(current_row, 10, envio.TipoEnvio, envio_format)
+            worksheet_data.write(current_row, 11, envio.DiasTranscurridos, envio_format)
+
+            # Actualizar estadísticas
+            total_factura += float(envio.TotalEnvio)
+            estadisticas['tipos_envio'][envio.TipoEnvio] += 1
+            
+            mes = envio.FechaCompraEnvio.strftime('%Y-%m')
+            estadisticas['envios_por_mes'][mes] = estadisticas['envios_por_mes'].get(mes, 0) + 1
+            
+            if envio.EnvioRecibido:
+                estadisticas['estado_envios']['Recibido'] += 1
+            else:
+                estadisticas['estado_envios']['En Tránsito'] += 1
+
+            current_row += 1
+
+        # Actualizar monto total del proveedor
+        estadisticas['montos_por_proveedor'][proveedor] = estadisticas['montos_por_proveedor'].get(proveedor, 0) + total_factura
+        
+        # Agregar línea de total por factura
+        worksheet_data.write(current_row, 8, "Total Factura:", factura_format)
+        worksheet_data.write(current_row, 9, total_factura, money_format)
+        current_row += 2  # Dejar una línea en blanco entre facturas
+
+    # Crear gráficos
+    # 1. Gráfico de Columnas: Facturas por Proveedor
+    crear_grafico_columnas(workbook, worksheet_charts, estadisticas['proveedores_dict'], 'D2')
     
-    for i, (proveedor, cantidad) in enumerate(proveedores_dict.items(), start=2):
-        worksheet_charts.write(f'A{i}', proveedor)
-        worksheet_charts.write(f'B{i}', cantidad)
-
-    # Crear y añadir gráficos
-    # 1. Gráfico de Columnas
-    column_chart = workbook.add_chart({'type': 'column'})
-    column_chart.add_series({
-        'name': 'Facturas por Proveedor',
-        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
-        'data_labels': {'value': True},
-    })
-    column_chart.set_title({'name': 'Facturas por Proveedor (Columnas)'})
-    column_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('D2', column_chart)
-
-    # 2. Gráfico de Pie
-    pie_chart = workbook.add_chart({'type': 'pie'})
-    pie_chart.add_series({
-        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
-        'data_labels': {'percentage': True},
-    })
-    pie_chart.set_title({'name': 'Distribución de Facturas (%)'})
-    pie_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('D18', pie_chart)
-
-    # 3. Gráfico de Barras
-    bar_chart = workbook.add_chart({'type': 'bar'})
-    bar_chart.add_series({
-        'name': 'Facturas por Proveedor',
-        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
-        'data_labels': {'value': True},
-    })
-    bar_chart.set_title({'name': 'Facturas por Proveedor (Barras)'})
-    bar_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('D34', bar_chart)
-
-    # 4. Gráfico de Línea
-    line_chart = workbook.add_chart({'type': 'line'})
-    line_chart.add_series({
-        'name': 'Facturas por Proveedor',
-        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
-        'data_labels': {'value': True},
-        'marker': {'type': 'circle', 'size': 8},
-    })
-    line_chart.set_title({'name': 'Tendencia de Facturas por Proveedor'})
-    line_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('K2', line_chart)
-
-    # 5. Gráfico de Área
-    area_chart = workbook.add_chart({'type': 'area'})
-    area_chart.add_series({
-        'name': 'Facturas por Proveedor',
-        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
-        'data_labels': {'value': True},
-    })
-    area_chart.set_title({'name': 'Acumulación de Facturas por Proveedor'})
-    area_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('K18', area_chart)
+    # 2. Gráfico Circular: Distribución de Facturas
+    crear_grafico_circular(workbook, worksheet_charts, estadisticas['proveedores_dict'], 'D18')
+    
+    # 3. Gráfico de Barras: Montos por Proveedor
+    crear_grafico_barras(workbook, worksheet_charts, estadisticas['montos_por_proveedor'], 'D34')
+    
+    # 4. Gráfico Circular: Tipos de Envío
+    crear_grafico_circular_tipos(workbook, worksheet_charts, estadisticas['tipos_envio'], 'K2')
+    
+    # 5. Gráfico de Área: Estado de Envíos
+    crear_grafico_area(workbook, worksheet_charts, estadisticas['estado_envios'], 'K18')
 
     workbook.close()
-
-    # Preparar la respuesta
     output.seek(0)
-    filename = f'Facturas_con_graficos_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
+    filename = f'Facturas_Detallado_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -297,7 +435,75 @@ def exportar_facturas_excel(request):
     
     return response
 
+def crear_grafico_columnas(workbook, worksheet, data, posicion):
+    chart = workbook.add_chart({'type': 'column'})
+    escribir_datos_grafico(worksheet, data, 'A2', 'Facturas por Proveedor')
+    chart.add_series({
+        'name': 'Cantidad de Facturas',
+        'categories': f'=Gráficos!$A$2:$A${len(data)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(data)+1}',
+        'data_labels': {'value': True},
+    })
+    chart.set_title({'name': 'Facturas por Proveedor'})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(posicion, chart)
 
+def crear_grafico_circular(workbook, worksheet, data, posicion):
+    chart = workbook.add_chart({'type': 'pie'})
+    chart.add_series({
+        'categories': f'=Gráficos!$A$2:$A${len(data)+1}',
+        'values': f'=Gráficos!$B$2:$B${len(data)+1}',
+        'data_labels': {'percentage': True},
+    })
+    chart.set_title({'name': 'Distribución de Facturas (%)'})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(posicion, chart)
+
+def crear_grafico_barras(workbook, worksheet, data, posicion):
+    chart = workbook.add_chart({'type': 'bar'})
+    escribir_datos_grafico(worksheet, data, 'D2', 'Montos por Proveedor')
+    chart.add_series({
+        'name': 'Monto Total',
+        'categories': f'=Gráficos!$D$2:$D${len(data)+1}',
+        'values': f'=Gráficos!$E$2:$E${len(data)+1}',
+        'data_labels': {'value': True},
+    })
+    chart.set_title({'name': 'Montos por Proveedor'})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(posicion, chart)
+
+def crear_grafico_circular_tipos(workbook, worksheet, data, posicion):
+    chart = workbook.add_chart({'type': 'pie'})
+    escribir_datos_grafico(worksheet, data, 'G2', 'Tipos de Envío')
+    chart.add_series({
+        'categories': '=Gráficos!$G$2:$G$3',
+        'values': '=Gráficos!$H$2:$H$3',
+        'data_labels': {'percentage': True},
+    })
+    chart.set_title({'name': 'Distribución de Tipos de Envío'})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(posicion, chart)
+
+def crear_grafico_area(workbook, worksheet, data, posicion):
+    chart = workbook.add_chart({'type': 'area'})
+    escribir_datos_grafico(worksheet, data, 'J2', 'Estado de Envíos')
+    chart.add_series({
+        'name': 'Cantidad',
+        'categories': '=Gráficos!$J$2:$J$3',
+        'values': '=Gráficos!$K$2:$K$3',
+        'data_labels': {'value': True},
+    })
+    chart.set_title({'name': 'Estado de Envíos'})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(posicion, chart)
+
+def escribir_datos_grafico(worksheet, data, celda_inicio, titulo):
+    row, col = xl_cell_to_rowcol(celda_inicio)
+    worksheet.write(row-1, col, titulo)
+    worksheet.write(row-1, col+1, 'Valor')
+    for i, (key, value) in enumerate(data.items()):
+        worksheet.write(row+i, col, key)
+        worksheet.write(row+i, col+1, value)
 #--------------------------LOGICA PARA MOSTRAR USUARIO --------------------------------
 
 @login_required(login_url='login')
@@ -1978,89 +2184,208 @@ def actualizar_envio(request, envio_id):
         'success': False,
         'errors': {'general': 'Método no permitido'}
     }, status=405)
-
+@ensure_csrf_cookie
+@login_required(login_url='login')
 def exportar_envios_excel(request):
-    # Crear un buffer en memoria
     output = BytesIO()
-    
-    # Crear un nuevo archivo Excel con la opción remove_timezone
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    worksheet = workbook.add_worksheet('Envíos')
     
-    # Agregar formatos
+    # Crear hojas
+    ws_data = workbook.add_worksheet('Envíos')
+    ws_charts = workbook.add_worksheet('Gráficos')
+    
+    # Formatos
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': '#000000',
         'font_color': 'white',
-        'border': 1
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter'
     })
     
     date_format = workbook.add_format({
         'num_format': 'dd/mm/yyyy',
+        'border': 1,
+        'align': 'center'
     })
 
     currency_format = workbook.add_format({
         'num_format': '$#,##0.00',
+        'border': 1,
+        'align': 'right'
     })
     
-    # Definir encabezados actualizados
+    cell_format = workbook.add_format({
+        'border': 1,
+        'align': 'center'
+    })
+    
+    recibido_format = workbook.add_format({
+        'border': 1,
+        'align': 'center',
+        'bg_color': '#C6EFCE',
+        'font_color': '#006100'
+    })
+    
+    pendiente_format = workbook.add_format({
+        'border': 1,
+        'align': 'center',
+        'bg_color': '#FFEB9C',
+        'font_color': '#9C6500'
+    })
+
+    # Encabezados
     headers = [
+        'ID',
         'Nombre Envío',
         'Tipo',
         'Cantidad',
-        'Precio',
+        'Precio Unit.',
         'Total',
         'Estado',
         'Fecha Compra',
-        'Días Transcurridos',  # Nuevo campo
+        'Días',
         'Descripción',
-        'Nombre Proveedor',
-        'RUT Proveedor',
-        'Marca Proveedor'
+        'N° Factura',
+        'Proveedor',
+        'RUT',
+        'Marca'
     ]
     
+    # Configurar anchos de columna
+    columnas = {
+        'A:A': 8,    # ID
+        'B:B': 30,   # Nombre Envío
+        'C:C': 15,   # Tipo
+        'D:D': 12,   # Cantidad
+        'E:E': 15,   # Precio Unit.
+        'F:F': 15,   # Total
+        'G:G': 12,   # Estado
+        'H:H': 15,   # Fecha
+        'I:I': 8,    # Días
+        'J:J': 40,   # Descripción
+        'K:K': 15,   # N° Factura
+        'L:L': 25,   # Proveedor
+        'M:M': 15,   # RUT
+        'N:N': 20,   # Marca
+    }
+    
+    for col_range, width in columnas.items():
+        ws_data.set_column(col_range, width)
+
     # Escribir encabezados
     for col, header in enumerate(headers):
-        worksheet.write(0, col, header, header_format)
-        worksheet.set_column(col, col, 15)  # Establecer ancho de columna
-    
-    # Obtener datos de envíos con sus proveedores relacionados
-    envios = Envio.objects.all().select_related('Proveedor').order_by('-FechaCompraEnvio')
+        ws_data.write(0, col, header, header_format)
+
+    # Estadísticas
+    estadisticas = {
+        'tipos': {'material': 0, 'herramienta': 0},
+        'estados': {'Recibido': 0, 'Pendiente': 0},
+        'proveedores': {},
+        'envios_por_mes': {},
+        'montos_por_proveedor': {},
+        'dias_promedio': []
+    }
+
+    # Obtener datos
+    envios = Envio.objects.all().select_related('Proveedor', 'Factura').order_by('-FechaCompraEnvio')
     
     # Escribir datos
     for row, envio in enumerate(envios, start=1):
-        worksheet.write(row, 0, envio.NombreEnvio)
-        worksheet.write(row, 1, 'Material' if envio.TipoEnvio == 'material' else 'Herramienta')
-        worksheet.write(row, 2, envio.CantidadEnvio)
-        worksheet.write_number(row, 3, float(envio.PrecioEnvio), currency_format)
-        worksheet.write_number(row, 4, float(envio.TotalEnvio), currency_format)
-        worksheet.write(row, 5, 'Recibido' if envio.EnvioRecibido else 'Pendiente')
+        estado = 'Recibido' if envio.EnvioRecibido else 'Pendiente'
+        estado_format = recibido_format if envio.EnvioRecibido else pendiente_format
         
-        if envio.FechaCompraEnvio:
-            worksheet.write_datetime(row, 6, envio.FechaCompraEnvio, date_format)
-        else:
-            worksheet.write(row, 6, '')
-            
-        # Escribir días transcurridos
-        worksheet.write_number(row, 7, envio.dias_transcurridos_actual)
-            
-        worksheet.write(row, 8, envio.DescripcionEnvio or '')
-        worksheet.write(row, 9, envio.Proveedor.NombreProveedor)
-        worksheet.write(row, 10, envio.Proveedor.RutProveedor)
-        worksheet.write(row, 11, envio.Proveedor.MarcaProveedor)
+        ws_data.write(row, 0, envio.id, cell_format)
+        ws_data.write(row, 1, envio.NombreEnvio, cell_format)
+        ws_data.write(row, 2, envio.TipoEnvio.capitalize(), cell_format)
+        ws_data.write(row, 3, envio.CantidadEnvio, cell_format)
+        ws_data.write_number(row, 4, float(envio.PrecioEnvio), currency_format)
+        ws_data.write_number(row, 5, float(envio.TotalEnvio), currency_format)
+        ws_data.write(row, 6, estado, estado_format)
+        ws_data.write_datetime(row, 7, envio.FechaCompraEnvio, date_format)
+        ws_data.write(row, 8, envio.dias_transcurridos_actual, cell_format)
+        ws_data.write(row, 9, envio.DescripcionEnvio or '', cell_format)
+        ws_data.write(row, 10, envio.Factura.NumeroFactura if envio.Factura else 'Sin Factura', cell_format)
+        ws_data.write(row, 11, envio.Proveedor.NombreProveedor, cell_format)
+        ws_data.write(row, 12, envio.Proveedor.RutProveedor, cell_format)
+        ws_data.write(row, 13, envio.Proveedor.MarcaProveedor, cell_format)
 
-    # Ajustar anchos de columna automáticamente basado en el contenido
-    for col, header in enumerate(headers):
-        worksheet.set_column(col, col, len(header) + 2)
-    
+        # Actualizar estadísticas
+        estadisticas['tipos'][envio.TipoEnvio] += 1
+        estadisticas['estados'][estado] += 1
+        
+        proveedor = envio.Proveedor.NombreProveedor
+        estadisticas['proveedores'][proveedor] = estadisticas['proveedores'].get(proveedor, 0) + 1
+        estadisticas['montos_por_proveedor'][proveedor] = estadisticas['montos_por_proveedor'].get(proveedor, 0) + float(envio.TotalEnvio)
+        
+        mes = envio.FechaCompraEnvio.strftime('%Y-%m')
+        estadisticas['envios_por_mes'][mes] = estadisticas['envios_por_mes'].get(mes, 0) + 1
+        
+        estadisticas['dias_promedio'].append(envio.dias_transcurridos_actual)
+
+    # Crear gráficos
+    # 1. Gráfico circular: Tipos de envío
+    pie_chart = workbook.add_chart({'type': 'pie'})
+    write_chart_data(ws_charts, 'A2', 'Tipos de Envío', 
+                    list(estadisticas['tipos'].items()))
+    pie_chart.add_series({
+        'name': 'Tipos de Envío',
+        'categories': '=Gráficos!$A$3:$A$4',
+        'values': '=Gráficos!$B$3:$B$4',
+        'data_labels': {'percentage': True}
+    })
+    pie_chart.set_title({'name': 'Distribución por Tipo'})
+    pie_chart.set_size({'width': 500, 'height': 300})
+    ws_charts.insert_chart('D2', pie_chart)
+
+    # 2. Gráfico de columnas: Envíos por proveedor
+    column_chart = workbook.add_chart({'type': 'column'})
+    write_chart_data(ws_charts, 'A7', 'Envíos por Proveedor', 
+                    list(estadisticas['proveedores'].items()))
+    column_chart.add_series({
+        'name': 'Cantidad de Envíos',
+        'categories': f'=Gráficos!$A$8:$A${7+len(estadisticas["proveedores"])}',
+        'values': f'=Gráficos!$B$8:$B${7+len(estadisticas["proveedores"])}',
+        'data_labels': {'value': True}
+    })
+    column_chart.set_title({'name': 'Envíos por Proveedor'})
+    column_chart.set_size({'width': 500, 'height': 300})
+    ws_charts.insert_chart('D20', column_chart)
+
+    # 3. Gráfico de barras: Montos por proveedor
+    bar_chart = workbook.add_chart({'type': 'bar'})
+    write_chart_data(ws_charts, 'E7', 'Montos por Proveedor', 
+                    list(estadisticas['montos_por_proveedor'].items()))
+    bar_chart.add_series({
+        'name': 'Monto Total',
+        'categories': f'=Gráficos!$E$8:$E${7+len(estadisticas["montos_por_proveedor"])}',
+        'values': f'=Gráficos!$F$8:$F${7+len(estadisticas["montos_por_proveedor"])}',
+        'data_labels': {'value': True}
+    })
+    bar_chart.set_title({'name': 'Montos por Proveedor'})
+    bar_chart.set_size({'width': 500, 'height': 300})
+    ws_charts.insert_chart('K2', bar_chart)
+
+    # 4. Gráfico de línea: Evolución mensual
+    line_chart = workbook.add_chart({'type': 'line'})
+    meses_ordenados = sorted(estadisticas['envios_por_mes'].items())
+    write_chart_data(ws_charts, 'E2', 'Envíos por Mes', meses_ordenados)
+    line_chart.add_series({
+        'name': 'Cantidad de Envíos',
+        'categories': f'=Gráficos!$E$3:$E${2+len(meses_ordenados)}',
+        'values': f'=Gráficos!$F$3:$F${2+len(meses_ordenados)}',
+        'marker': {'type': 'automatic'},
+        'data_labels': {'value': True}
+    })
+    line_chart.set_title({'name': 'Evolución Mensual de Envíos'})
+    line_chart.set_size({'width': 500, 'height': 300})
+    ws_charts.insert_chart('K20', line_chart)
+
     workbook.close()
-    
-    # Preparar la respuesta
     output.seek(0)
     
-    # Generar nombre del archivo con la fecha actual
-    filename = f'Envios_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
-    
+    filename = f'Reporte_Envios_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -2069,6 +2394,18 @@ def exportar_envios_excel(request):
     
     return response
 
+def write_chart_data(worksheet, start_cell, title, data):
+    """Función auxiliar para escribir datos de gráficos"""
+    row, col = xl_cell_to_rowcol(start_cell)
+    
+    # Escribir título
+    worksheet.write(row, col, title)
+    worksheet.write(row, col + 1, 'Valor')
+    
+    # Escribir datos
+    for i, (label, value) in enumerate(data, start=1):
+        worksheet.write(row + i, col, label)
+        worksheet.write(row + i, col + 1, value)
 @csrf_exempt
 @require_http_methods(["GET"])
 def obtener_tiempo_detallado(request, envio_id):
@@ -2836,127 +3173,211 @@ def listar_materiales(request):
         'success': False, 
         'message': 'Método no permitido'
     }, status=405)
-@login_required(login_url='login')
 @ensure_csrf_cookie
+@login_required(login_url='login')
 def exportar_materiales_excel(request):
-    # Crear un buffer en memoria
     output = BytesIO()
-    
-    # Crear un nuevo archivo Excel con la opción remove_timezone
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    # Hoja para los datos
-    worksheet_data = workbook.add_worksheet('Materiales')
-    # Hojas para los gráficos
-    worksheet_charts = workbook.add_worksheet('Gráficos')
-    # Agregar formatos
+    
+    # Crear hojas
+    ws_data = workbook.add_worksheet('Materiales')
+    ws_charts = workbook.add_worksheet('Gráficos')
+    
+    # Formatos
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': '#000000',
         'font_color': 'white',
-        'border': 1
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter'
     })
+    
     date_format = workbook.add_format({
         'num_format': 'dd/mm/yyyy',
+        'border': 1,
+        'align': 'center'
+    })
+    
+    money_format = workbook.add_format({
+        'num_format': '$#,##0.00',
+        'border': 1,
+        'align': 'right'
+    })
+    
+    percent_format = workbook.add_format({
+        'num_format': '0.00%',
+        'border': 1,
+        'align': 'center'
+    })
+    
+    stock_warning_format = workbook.add_format({
+        'bg_color': '#FFEB9C',
+        'border': 1,
+        'align': 'center'
+    })
+    
+    stock_critical_format = workbook.add_format({
+        'bg_color': '#FFC7CE',
+        'border': 1,
+        'align': 'center'
+    })
+    
+    stock_ok_format = workbook.add_format({
+        'bg_color': '#C6EFCE',
+        'border': 1,
+        'align': 'center'
     })
 
-    # Definir encabezados
+    # Headers
     headers = [
         'ID',
         'Nombre Material',
-        'Stock',
-        'Precio',
+        'Stock Actual',
+        'Stock Original',
+        'Stock Usado',
+        '% Disponible',
+        'Precio Unit.',
         'Total',
         'Estado',
         'Ubicación',
         'Fecha Compra',
         'Proveedor',
-        'Registro Factura'
+        'N° Factura',
+        'Color',
+        'Peso',
+        'Dimensiones',
+        'Detalle',
+        'Descripción'
     ]
     
-    # Escribir encabezados en hoja de datos
-    for col, header in enumerate(headers):
-        worksheet_data.write(0, col, header, header_format)
-        worksheet_data.set_column(col, col, 15)
+    # Configurar anchos de columna
+    columnas = {
+        'A:A': 8,     # ID
+        'B:B': 30,    # Nombre
+        'C:E': 12,    # Stocks
+        'F:F': 12,    # Porcentaje
+        'G:H': 15,    # Precios
+        'I:I': 15,    # Estado
+        'J:J': 20,    # Ubicación
+        'K:K': 15,    # Fecha
+        'L:L': 25,    # Proveedor
+        'M:M': 15,    # N° Factura
+        'N:P': 15,    # Color, Peso, Dimensiones
+        'Q:R': 40,    # Detalle y Descripción
+    }
+    
+    for col_range, width in columnas.items():
+        ws_data.set_column(col_range, width)
 
-    # Obtener datos de materiales
-    materiales = Material.objects.all().select_related('Proveedor').order_by('-FechaCompraMaterial')
+    # Escribir headers
+    for col, header in enumerate(headers):
+        ws_data.write(0, col, header, header_format)
+
+    # Obtener datos
+    materiales = Material.objects.select_related('Proveedor', 'Envio').all()
+
+    # Estadísticas
+    estadisticas = {
+        'proveedores': {},
+        'estados': {},
+        'ubicaciones': {},
+        'stock_ranges': {
+            'Crítico (0-20%)': 0,
+            'Bajo (21-50%)': 0,
+            'Normal (51-80%)': 0,
+            'Óptimo (>80%)': 0
+        },
+        'valor_por_proveedor': {},
+        'materiales_por_mes': {}
+    }
 
     # Escribir datos
     for row, material in enumerate(materiales, start=1):
-        worksheet_data.write(row, 0, material.id)
-        worksheet_data.write(row, 1, material.NombreMaterial)
-        worksheet_data.write(row, 2, material.StockMaterial)
-        worksheet_data.write(row, 3, float(material.PrecioMaterial))
-        worksheet_data.write(row, 4, float(material.TotalMaterial))
-        worksheet_data.write(row, 5, material.EstadoMaterial)
-        worksheet_data.write(row, 6, material.UbicacionMaterial)
-        worksheet_data.write_datetime(row, 7, material.FechaCompraMaterial, date_format)
-        worksheet_data.write(row, 8, material.Proveedor.NombreProveedor if material.Proveedor else 'Sin proveedor')
-        worksheet_data.write(row, 9, material.RegistroFacturaMaterial)
-
-    # Ajustar anchos de columna
-    worksheet_data.set_column('A:A', 8)   # ID
-    worksheet_data.set_column('B:B', 30)  # Nombre Material
-    worksheet_data.set_column('C:D', 15)  # Stock y Precio
-    worksheet_data.set_column('E:E', 20)  # Total
-    worksheet_data.set_column('F:J', 18)  # Resto de columnas
-
-    # Preparar datos para los gráficos
-    proveedores_dict = {}
-    estados_dict = {}
-    for material in materiales:
-        # Conteo por proveedor
-        proveedor = material.Proveedor.NombreProveedor if material.Proveedor else 'Sin proveedor'
-        proveedores_dict[proveedor] = proveedores_dict.get(proveedor, 0) + 1
+        porcentaje_stock = material.porcentaje_stock_disponible / 100  # Convertir a decimal
         
-        # Conteo por estado
-        estado = material.EstadoMaterial
-        estados_dict[estado] = estados_dict.get(estado, 0) + 1
+        # Determinar formato de stock basado en porcentaje
+        if porcentaje_stock <= 0.2:
+            stock_format = stock_critical_format
+            stock_range = 'Crítico (0-20%)'
+        elif porcentaje_stock <= 0.5:
+            stock_format = stock_warning_format
+            stock_range = 'Bajo (21-50%)'
+        elif porcentaje_stock <= 0.8:
+            stock_format = None
+            stock_range = 'Normal (51-80%)'
+        else:
+            stock_format = stock_ok_format
+            stock_range = 'Óptimo (>80%)'
+            
+        estadisticas['stock_ranges'][stock_range] += 1
 
-    # Escribir datos para gráficos
-    # Datos de proveedores
-    worksheet_charts.write_row('A1', ['Proveedor', 'Cantidad'], header_format)
-    for i, (proveedor, cantidad) in enumerate(proveedores_dict.items(), start=2):
-        worksheet_charts.write(f'A{i}', proveedor)
-        worksheet_charts.write(f'B{i}', cantidad)
+        # Escribir datos principales
+        ws_data.write(row, 0, material.id)
+        ws_data.write(row, 1, material.NombreMaterial)
+        ws_data.write(row, 2, material.StockMaterial, stock_format or None)
+        ws_data.write(row, 3, material.StockOriginal)
+        ws_data.write(row, 4, material.stock_usado)
+        ws_data.write(row, 5, porcentaje_stock, percent_format)
+        ws_data.write_number(row, 6, float(material.PrecioMaterial), money_format)
+        ws_data.write_number(row, 7, float(material.TotalMaterial), money_format)
+        ws_data.write(row, 8, material.EstadoMaterial or 'No especificado')
+        ws_data.write(row, 9, material.UbicacionMaterial or 'No especificado')
+        ws_data.write_datetime(row, 10, material.FechaCompraMaterial, date_format)
+        
+        # Datos de proveedor y factura
+        proveedor_nombre = material.Proveedor.NombreProveedor if material.Proveedor else 'Sin proveedor'
+        ws_data.write(row, 11, proveedor_nombre)
+        
+        if material.Envio and material.Envio.Factura:
+            ws_data.write(row, 12, material.Envio.Factura.NumeroFactura)
+        else:
+            ws_data.write(row, 12, 'Sin factura')
+        
+        # Datos adicionales
+        ws_data.write(row, 13, material.ColorMaterial or '')
+        ws_data.write(row, 14, material.PesoMaterial or '')
+        ws_data.write(row, 15, material.DimensionesMaterial or '')
+        ws_data.write(row, 16, material.DetalleMaterial or '')
+        ws_data.write(row, 17, material.DescripcionMaterial or '')
 
-    # Datos de estados
-    worksheet_charts.write_row('D1', ['Estado', 'Cantidad'], header_format)
-    for i, (estado, cantidad) in enumerate(estados_dict.items(), start=2):
-        worksheet_charts.write(f'D{i}', estado)
-        worksheet_charts.write(f'E{i}', cantidad)
+        # Actualizar estadísticas
+        estadisticas['proveedores'][proveedor_nombre] = estadisticas['proveedores'].get(proveedor_nombre, 0) + 1
+        estadisticas['estados'][material.EstadoMaterial or 'No especificado'] = estadisticas['estados'].get(material.EstadoMaterial or 'No especificado', 0) + 1
+        estadisticas['ubicaciones'][material.UbicacionMaterial or 'No especificado'] = estadisticas['ubicaciones'].get(material.UbicacionMaterial or 'No especificado', 0) + 1
+        
+        # Valor por proveedor
+        estadisticas['valor_por_proveedor'][proveedor_nombre] = estadisticas['valor_por_proveedor'].get(proveedor_nombre, 0) + float(material.TotalMaterial)
+        
+        # Materiales por mes
+        mes = material.FechaCompraMaterial.strftime('%Y-%m')
+        estadisticas['materiales_por_mes'][mes] = estadisticas['materiales_por_mes'].get(mes, 0) + 1
 
     # Crear gráficos
-    # 1. Gráfico de columnas (Materiales por Proveedor)
-    column_chart = workbook.add_chart({'type': 'column'})
-    column_chart.add_series({
-        'name': 'Materiales por Proveedor',
-        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
-        'data_labels': {'value': True},
-    })
-    column_chart.set_title({'name': 'Distribución de Materiales por Proveedor'})
-    column_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('G2', column_chart)
-
-    # 2. Gráfico de pie (Estados de Materiales)
-    pie_chart = workbook.add_chart({'type': 'pie'})
-    pie_chart.add_series({
-        'name': 'Estados de Materiales',
-        'categories': f'=Gráficos!$D$2:$D${len(estados_dict)+1}',
-        'values': f'=Gráficos!$E$2:$E${len(estados_dict)+1}',
-        'data_labels': {'percentage': True},
-    })
-    pie_chart.set_title({'name': 'Distribución por Estado (%)'})
-    pie_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('G18', pie_chart)
+    # 1. Gráfico de columnas: Materiales por proveedor
+    crear_grafico_columnas(workbook, ws_charts, estadisticas['proveedores'], 
+                          'D2', 'Materiales por Proveedor')
+    
+    # 2. Gráfico circular: Estado de stock
+    crear_grafico_circular(workbook, ws_charts, estadisticas['stock_ranges'],
+                          'D20', 'Distribución de Stock')
+    
+    # 3. Gráfico de barras: Valor por proveedor
+    crear_grafico_barras(workbook, ws_charts, estadisticas['valor_por_proveedor'],
+                        'K2', 'Valor Total por Proveedor ($)')
+    
+    # 4. Gráfico de línea: Materiales por mes
+    crear_grafico_linea(workbook, ws_charts, dict(sorted(estadisticas['materiales_por_mes'].items())),
+                       'K20', 'Evolución de Materiales por Mes')
+    
+    # 5. Gráfico circular: Ubicaciones
+    crear_grafico_circular(workbook, ws_charts, estadisticas['ubicaciones'],
+                         'D38', 'Distribución por Ubicación')
 
     workbook.close()
-
-    # Preparar la respuesta
     output.seek(0)
-    filename = f'Materiales_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
+    filename = f'Reporte_Materiales_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -2965,6 +3386,74 @@ def exportar_materiales_excel(request):
     
     return response
 
+def crear_grafico_columnas(workbook, worksheet, data, posicion, titulo):
+    chart = workbook.add_chart({'type': 'column'})
+    escribir_datos_grafico(worksheet, data, posicion, titulo)
+    
+    range_len = len(data)
+    chart.add_series({
+        'name': titulo,
+        'categories': f'=Gráficos!${posicion[0]}${int(posicion[1])+1}:${posicion[0]}${int(posicion[1])+range_len}',
+        'values': f'=Gráficos!${chr(ord(posicion[0])+1)}${int(posicion[1])+1}:${chr(ord(posicion[0])+1)}${int(posicion[1])+range_len}',
+        'data_labels': {'value': True}
+    })
+    chart.set_title({'name': titulo})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(f'{chr(ord(posicion[0])+3)}{posicion[1]}', chart)
+
+def crear_grafico_circular(workbook, worksheet, data, posicion, titulo):
+    chart = workbook.add_chart({'type': 'pie'})
+    escribir_datos_grafico(worksheet, data, posicion, titulo)
+    
+    chart.add_series({
+        'name': titulo,
+        'categories': f'=Gráficos!${posicion[0]}${int(posicion[1])+1}:${posicion[0]}${int(posicion[1])+len(data)}',
+        'values': f'=Gráficos!${chr(ord(posicion[0])+1)}${int(posicion[1])+1}:${chr(ord(posicion[0])+1)}${int(posicion[1])+len(data)}',
+        'data_labels': {'percentage': True}
+    })
+    chart.set_title({'name': titulo})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(f'{chr(ord(posicion[0])+3)}{posicion[1]}', chart)
+
+def crear_grafico_barras(workbook, worksheet, data, posicion, titulo):
+    chart = workbook.add_chart({'type': 'bar'})
+    escribir_datos_grafico(worksheet, data, posicion, titulo)
+    
+    chart.add_series({
+        'name': titulo,
+        'categories': f'=Gráficos!${posicion[0]}${int(posicion[1])+1}:${posicion[0]}${int(posicion[1])+len(data)}',
+        'values': f'=Gráficos!${chr(ord(posicion[0])+1)}${int(posicion[1])+1}:${chr(ord(posicion[0])+1)}${int(posicion[1])+len(data)}',
+        'data_labels': {'value': True}
+    })
+    chart.set_title({'name': titulo})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(f'{chr(ord(posicion[0])+3)}{posicion[1]}', chart)
+
+def crear_grafico_linea(workbook, worksheet, data, posicion, titulo):
+    chart = workbook.add_chart({'type': 'line'})
+    escribir_datos_grafico(worksheet, data, posicion, titulo)
+    
+    chart.add_series({
+        'name': titulo,
+        'categories': f'=Gráficos!${posicion[0]}${int(posicion[1])+1}:${posicion[0]}${int(posicion[1])+len(data)}',
+        'values': f'=Gráficos!${chr(ord(posicion[0])+1)}${int(posicion[1])+1}:${chr(ord(posicion[0])+1)}${int(posicion[1])+len(data)}',
+        'marker': {'type': 'automatic'},
+        'data_labels': {'value': True}
+    })
+    chart.set_title({'name': titulo})
+    chart.set_size({'width': 500, 'height': 300})
+    worksheet.insert_chart(f'{chr(ord(posicion[0])+3)}{posicion[1]}', chart)
+
+def escribir_datos_grafico(worksheet, data, posicion, titulo):
+    row = int(posicion[1])
+    col = ord(posicion[0]) - ord('A')
+    
+    worksheet.write(row-1, col, titulo)
+    worksheet.write(row-1, col+1, 'Valor')
+    
+    for i, (key, value) in enumerate(data.items(), start=0):
+        worksheet.write(row+i, col, key)
+        worksheet.write(row+i, col+1, value)
 @login_required(login_url='login')
 def obtener_detalles_material(request, material_id):
     if request.method == 'GET':
@@ -3562,129 +4051,190 @@ def obtener_detalles_herramienta(request, herramienta_id):
         'success': False, 
         'message': 'Método no permitido'
     }, status=405)
-@login_required(login_url='login')
 @ensure_csrf_cookie
+@login_required(login_url='login')
 def exportar_herramientas_excel(request):
-    # Crear un buffer en memoria
     output = BytesIO()
-    
-    # Crear un nuevo archivo Excel con la opción remove_timezone
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    # Hoja para los datos
-    worksheet_data = workbook.add_worksheet('Herramientas')
-    # Hojas para los gráficos
-    worksheet_charts = workbook.add_worksheet('Gráficos')
-    # Agregar formatos
+    
+    # Crear hojas
+    ws_data = workbook.add_worksheet('Herramientas')
+    ws_charts = workbook.add_worksheet('Gráficos')
+    
+    # Formatos
     header_format = workbook.add_format({
         'bold': True,
         'bg_color': '#000000',
         'font_color': 'white',
-        'border': 1
+        'border': 1,
+        'align': 'center',
+        'valign': 'vcenter'
     })
+    
+    subheader_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#4472C4',
+        'font_color': 'white',
+        'border': 1,
+        'align': 'center'
+    })
+    
+    envio_format = workbook.add_format({
+        'bg_color': '#E2EFDA',
+        'border': 1,
+        'indent': 2
+    })
+    
     date_format = workbook.add_format({
         'num_format': 'dd/mm/yyyy',
+        'border': 1,
+        'align': 'center'
+    })
+    
+    money_format = workbook.add_format({
+        'num_format': '$#,##0.00',
+        'border': 1,
+        'align': 'right'
     })
 
-    # Definir encabezados
+    # Headers
     headers = [
         'ID',
         'Nombre Herramienta',
         'Stock',
-        'Precio',
+        'Precio Unit.',
         'Total',
         'Marca',
         'Modelo',
         'Ubicación',
         'Fecha Compra',
+        'Descripción',
+        'Estado',
+        # Datos del Envío
+        'ID Envío',
+        'Nombre Envío',
+        'Cantidad Envío',
+        'Fecha Envío',
+        'Días Transcurridos',
+        # Datos de la Factura
+        'N° Factura',
+        'Fecha Factura',
+        # Datos del Proveedor
         'Proveedor',
-        'Registro Factura'
+        'RUT Proveedor',
+        'Marca Proveedor',
+        'Ciudad',
+        'Teléfono'
     ]
-    
-    # Escribir encabezados en hoja de datos
+
+    # Configurar anchos de columna
     for col, header in enumerate(headers):
-        worksheet_data.write(0, col, header, header_format)
-        worksheet_data.set_column(col, col, 15)
+        width = 30 if 'Nombre' in header or 'Descripción' in header else 15
+        ws_data.set_column(col, col, width)
 
-    # Obtener datos de herramientas
-    herramientas = Herramienta.objects.all().select_related('Proveedor').order_by('-FechaCompraHerramienta')
+    # Escribir headers
+    for col, header in enumerate(headers):
+        ws_data.write(0, col, header, header_format)
 
-    # Escribir datos
-    for row, herramienta in enumerate(herramientas, start=1):
-        worksheet_data.write(row, 0, herramienta.id)
-        worksheet_data.write(row, 1, herramienta.NombreHerramienta)
-        worksheet_data.write(row, 2, herramienta.StockHerramienta)
-        worksheet_data.write(row, 3, float(herramienta.PrecioHerramienta))
-        worksheet_data.write(row, 4, float(herramienta.TotalHerramienta))
-        worksheet_data.write(row, 5, herramienta.MarcaHerramienta or 'No especificada')
-        worksheet_data.write(row, 6, herramienta.ModeloHerramienta or 'No especificado')
-        worksheet_data.write(row, 7, herramienta.UbicacionHerramienta)
-        worksheet_data.write_datetime(row, 8, herramienta.FechaCompraHerramienta, date_format)
-        worksheet_data.write(row, 9, herramienta.Proveedor.NombreProveedor if herramienta.Proveedor else 'Sin proveedor')
-        worksheet_data.write(row, 10, herramienta.RegistroFacturaHerramienta)
+    # Obtener datos
+    herramientas = Herramienta.objects.select_related(
+        'Proveedor',
+        'Envio',
+        'Envio__Factura'
+    ).all().order_by('-FechaCompraHerramienta')
 
-    # Ajustar anchos de columna
-    worksheet_data.set_column('A:A', 8)   # ID
-    worksheet_data.set_column('B:B', 30)  # Nombre Herramienta
-    worksheet_data.set_column('C:D', 15)  # Stock y Precio
-    worksheet_data.set_column('E:E', 20)  # Total
-    worksheet_data.set_column('F:K', 18)  # Resto de columnas
+    # Estadísticas
+    estadisticas = {
+        'proveedores': {},
+        'marcas': {},
+        'ubicaciones': {},
+        'envios_por_mes': {},
+        'valor_por_proveedor': {},
+        'estado_registro': {'Con Factura': 0, 'Sin Factura': 0}
+    }
 
-    # Preparar datos para los gráficos
-    proveedores_dict = {}
-    marcas_dict = {}
+    current_row = 1
+    
     for herramienta in herramientas:
-        # Conteo por proveedor
-        proveedor = herramienta.Proveedor.NombreProveedor if herramienta.Proveedor else 'Sin proveedor'
-        proveedores_dict[proveedor] = proveedores_dict.get(proveedor, 0) + 1
+        # Escribir datos de la herramienta
+        ws_data.write(current_row, 0, herramienta.id, subheader_format)
+        ws_data.write(current_row, 1, herramienta.NombreHerramienta, subheader_format)
+        ws_data.write(current_row, 2, herramienta.StockHerramienta)
+        ws_data.write_number(current_row, 3, float(herramienta.PrecioHerramienta), money_format)
+        ws_data.write_number(current_row, 4, float(herramienta.TotalHerramienta), money_format)
+        ws_data.write(current_row, 5, herramienta.MarcaHerramienta or 'No especificada')
+        ws_data.write(current_row, 6, herramienta.ModeloHerramienta or 'No especificado')
+        ws_data.write(current_row, 7, herramienta.UbicacionHerramienta or 'No especificada')
+        ws_data.write_datetime(current_row, 8, herramienta.FechaCompraHerramienta, date_format)
+        ws_data.write(current_row, 9, herramienta.DescripcionHerramienta or '')
         
-        # Conteo por marca
+        # Datos del Envío
+        if herramienta.Envio:
+            envio = herramienta.Envio
+            ws_data.write(current_row, 11, envio.id, envio_format)
+            ws_data.write(current_row, 12, envio.NombreEnvio, envio_format)
+            ws_data.write(current_row, 13, envio.CantidadEnvio, envio_format)
+            ws_data.write_datetime(current_row, 14, envio.FechaCompraEnvio, date_format)
+            ws_data.write(current_row, 15, envio.dias_transcurridos_actual, envio_format)
+            
+            # Datos de la Factura
+            if envio.Factura:
+                ws_data.write(current_row, 16, envio.Factura.NumeroFactura)
+                ws_data.write_datetime(current_row, 17, envio.Factura.FechaEmision, date_format)
+                estadisticas['estado_registro']['Con Factura'] += 1
+            else:
+                ws_data.write(current_row, 16, 'Sin factura')
+                estadisticas['estado_registro']['Sin Factura'] += 1
+        
+        # Datos del Proveedor
+        if herramienta.Proveedor:
+            proveedor = herramienta.Proveedor
+            ws_data.write(current_row, 18, proveedor.NombreProveedor)
+            ws_data.write(current_row, 19, proveedor.RutProveedor)
+            ws_data.write(current_row, 20, proveedor.MarcaProveedor)
+            ws_data.write(current_row, 21, proveedor.CiudadProveedor or '')
+            ws_data.write(current_row, 22, proveedor.TelefonoProveedor or '')
+            
+            # Actualizar estadísticas
+            estadisticas['proveedores'][proveedor.NombreProveedor] = estadisticas['proveedores'].get(proveedor.NombreProveedor, 0) + 1
+            estadisticas['valor_por_proveedor'][proveedor.NombreProveedor] = estadisticas['valor_por_proveedor'].get(proveedor.NombreProveedor, 0) + float(herramienta.TotalHerramienta)
+        
+        # Actualizar otras estadísticas
         marca = herramienta.MarcaHerramienta or 'Sin marca'
-        marcas_dict[marca] = marcas_dict.get(marca, 0) + 1
-
-    # Escribir datos para gráficos
-    # Datos de proveedores
-    worksheet_charts.write_row('A1', ['Proveedor', 'Cantidad'], header_format)
-    for i, (proveedor, cantidad) in enumerate(proveedores_dict.items(), start=2):
-        worksheet_charts.write(f'A{i}', proveedor)
-        worksheet_charts.write(f'B{i}', cantidad)
-
-    # Datos de marcas
-    worksheet_charts.write_row('D1', ['Marca', 'Cantidad'], header_format)
-    for i, (marca, cantidad) in enumerate(marcas_dict.items(), start=2):
-        worksheet_charts.write(f'D{i}', marca)
-        worksheet_charts.write(f'E{i}', cantidad)
+        ubicacion = herramienta.UbicacionHerramienta or 'Sin ubicación'
+        mes = herramienta.FechaCompraHerramienta.strftime('%Y-%m')
+        
+        estadisticas['marcas'][marca] = estadisticas['marcas'].get(marca, 0) + 1
+        estadisticas['ubicaciones'][ubicacion] = estadisticas['ubicaciones'].get(ubicacion, 0) + 1
+        estadisticas['envios_por_mes'][mes] = estadisticas['envios_por_mes'].get(mes, 0) + 1
+        
+        current_row += 1
 
     # Crear gráficos
-    # 1. Gráfico de columnas (Herramientas por Proveedor)
-    column_chart = workbook.add_chart({'type': 'column'})
-    column_chart.add_series({
-        'name': 'Herramientas por Proveedor',
-        'categories': f'=Gráficos!$A$2:$A${len(proveedores_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(proveedores_dict)+1}',
-        'data_labels': {'value': True},
-    })
-    column_chart.set_title({'name': 'Distribución de Herramientas por Proveedor'})
-    column_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('G2', column_chart)
-
-    # 2. Gráfico de pie (Marcas de Herramientas)
-    pie_chart = workbook.add_chart({'type': 'pie'})
-    pie_chart.add_series({
-        'name': 'Marcas de Herramientas',
-        'categories': f'=Gráficos!$D$2:$D${len(marcas_dict)+1}',
-        'values': f'=Gráficos!$E$2:$E${len(marcas_dict)+1}',
-        'data_labels': {'percentage': True},
-    })
-    pie_chart.set_title({'name': 'Distribución por Marca (%)'})
-    pie_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('G18', pie_chart)
+    crear_grafico(workbook, ws_charts, 'column', 
+                 estadisticas['proveedores'], 'D2', 
+                 'Herramientas por Proveedor')
+    
+    crear_grafico(workbook, ws_charts, 'pie', 
+                 estadisticas['marcas'], 'D20', 
+                 'Distribución por Marca')
+    
+    crear_grafico(workbook, ws_charts, 'bar', 
+                 estadisticas['valor_por_proveedor'], 'K2', 
+                 'Valor Total por Proveedor')
+    
+    crear_grafico(workbook, ws_charts, 'line', 
+                 dict(sorted(estadisticas['envios_por_mes'].items())), 'K20', 
+                 'Evolución Mensual')
+    
+    crear_grafico(workbook, ws_charts, 'pie', 
+                 estadisticas['estado_registro'], 'D38', 
+                 'Estado de Registro de Facturas')
 
     workbook.close()
-
-    # Preparar la respuesta
     output.seek(0)
-    filename = f'Herramientas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
+    filename = f'Reporte_Herramientas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -3692,6 +4242,39 @@ def exportar_herramientas_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
+
+def crear_grafico(workbook, worksheet, tipo, data, posicion, titulo):
+    """Función auxiliar para crear gráficos"""
+    chart = workbook.add_chart({'type': tipo})
+    
+    # Escribir datos
+    col_letra = posicion[0]
+    fila_inicio = int(posicion[1])
+    
+    worksheet.write(fila_inicio-1, ord(col_letra)-ord('A'), 'Categoría')
+    worksheet.write(fila_inicio-1, ord(col_letra)-ord('A')+1, 'Valor')
+    
+    for i, (key, value) in enumerate(data.items()):
+        worksheet.write(fila_inicio+i, ord(col_letra)-ord('A'), key)
+        worksheet.write(fila_inicio+i, ord(col_letra)-ord('A')+1, value)
+    
+    # Configurar serie
+    serie_config = {
+        'name': titulo,
+        'categories': f'=Gráficos!${col_letra}${fila_inicio+1}:${col_letra}${fila_inicio+len(data)}',
+        'values': f'=Gráficos!${chr(ord(col_letra)+1)}${fila_inicio+1}:${chr(ord(col_letra)+1)}${fila_inicio+len(data)}'
+    }
+    
+    if tipo == 'pie':
+        serie_config['data_labels'] = {'percentage': True}
+    else:
+        serie_config['data_labels'] = {'value': True}
+    
+    chart.add_series(serie_config)
+    chart.set_title({'name': titulo})
+    chart.set_size({'width': 500, 'height': 300})
+    
+    worksheet.insert_chart(f'{chr(ord(col_letra)+3)}{fila_inicio}', chart)
 
 #-------------MODULO PARA PRODUCTO----------------------
 
@@ -4476,187 +5059,149 @@ def exportar_productos_excel(request):
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
     
     # Formatos
-    header_format = workbook.add_format({
-        'bold': True, 'bg_color': '#000000', 'font_color': 'white', 'border': 1
-    })
-    date_format = workbook.add_format({'num_format': 'dd/mm/yyyy'})
-    money_format = workbook.add_format({'num_format': '$#,##0.00'})
-    percent_format = workbook.add_format({'num_format': '0.00%'})
-    
-    # Hojas de trabajo
-    worksheet_productos = workbook.add_worksheet('Productos')
-    worksheet_ventas = workbook.add_worksheet('Ventas')
-    worksheet_perdidas = workbook.add_worksheet('Pérdidas')
-    worksheet_graficos = workbook.add_worksheet('Gráficos')
-
-    # Hoja de Productos
-    headers_productos = [
-        'ID', 'Nombre', 'Stock Inicial', 'Stock Actual', 'Precio Unitario',
-        'Precio Total', 'Categoría', 'Vendidos', 'Desechados', 'Fecha Creación',
-        'Días', 'Estado', 'Ubicación', '% Stock'
-    ]
-    for col, header in enumerate(headers_productos):
-        worksheet_productos.write(0, col, header, header_format)
-        worksheet_productos.set_column(col, col, 15)
-
-    productos = Producto.objects.select_related('Categoria').prefetch_related(
-        'ventas', 'perdidas'
-    ).all()
-
-    for row, p in enumerate(productos, start=1):
-        worksheet_productos.write(row, 0, p.id)
-        worksheet_productos.write(row, 1, p.NombreProducto)
-        worksheet_productos.write(row, 2, p.StockProductoInicial)
-        worksheet_productos.write(row, 3, p.StockProductoActual)
-        worksheet_productos.write(row, 4, float(p.PrecioUnitarioProducto), money_format)
-        worksheet_productos.write(row, 5, float(p.PrecioTotalProducto), money_format)
-        worksheet_productos.write(row, 6, p.Categoria.NombreCategoria if p.Categoria else 'Sin categoría')
-        worksheet_productos.write(row, 7, p.CantidadProductoVendido)
-        worksheet_productos.write(row, 8, p.CantidadProductoDesechado)
-        worksheet_productos.write_datetime(row, 9, p.FechaProducto, date_format)
-        worksheet_productos.write(row, 10, p.DiasProducto)
-        worksheet_productos.write(row, 11, p.EstadoProducto or 'No especificado')
-        worksheet_productos.write(row, 12, p.UbicacionProducto or 'No especificada')
-        worksheet_productos.write(row, 13, p.porcentaje_stock_disponible/100, percent_format)
-
-    # Hoja de Ventas
-    headers_ventas = [
-        'ID Venta', 'Producto', 'Cliente', 'Cantidad', 'Precio Unitario',
-        'Total', 'Fecha'
-    ]
-    for col, header in enumerate(headers_ventas):
-        worksheet_ventas.write(0, col, header, header_format)
-        worksheet_ventas.set_column(col, col, 15)
-
-    ventas = Ventas.objects.select_related('Producto', 'cliente').all()
-    for row, v in enumerate(ventas, start=1):
-        worksheet_ventas.write(row, 0, v.id)
-        worksheet_ventas.write(row, 1, v.Producto.NombreProducto)
-        worksheet_ventas.write(row, 2, str(v.cliente) if v.cliente else 'Sin cliente')
-        worksheet_ventas.write(row, 3, v.CantidadVenta)
-        worksheet_ventas.write(row, 4, float(v.PrecioVenta), money_format)
-        worksheet_ventas.write(row, 5, float(v.PrecioTotalVenta), money_format)
-        worksheet_ventas.write_datetime(row, 6, v.FechaVenta, date_format)
-
-    # Hoja de Pérdidas
-    headers_perdidas = [
-        'ID', 'Producto', 'Cantidad', 'Valor Unitario', 'Valor Total',
-        'Motivo', 'Fecha'
-    ]
-    for col, header in enumerate(headers_perdidas):
-        worksheet_perdidas.write(0, col, header, header_format)
-        worksheet_perdidas.set_column(col, col, 15)
-
-    perdidas = Perdidas.objects.select_related('Producto').all()
-    for row, p in enumerate(perdidas, start=1):
-        worksheet_perdidas.write(row, 0, p.id)
-        worksheet_perdidas.write(row, 1, p.Producto.NombreProducto)
-        worksheet_perdidas.write(row, 2, p.CantidadPerdida)
-        worksheet_perdidas.write(row, 3, float(p.ValorUnitarioPerdida), money_format)
-        worksheet_perdidas.write(row, 4, float(p.ValorTotalPerdida), money_format)
-        worksheet_perdidas.write(row, 5, p.get_MotivoPerdida_display())
-        worksheet_perdidas.write_datetime(row, 6, p.FechaPerdida, date_format)
-
-    # Datos para gráficos
-    data_for_charts = {
-        'ventas_por_mes': {},
-        'perdidas_por_motivo': {},
-        'productos_por_categoria': {},
-        'stock_status': {'Con Stock': 0, 'Sin Stock': 0}
+    formats = {
+        'header': workbook.add_format({
+            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 
+            'border': 1, 'align': 'center'
+        }),
+        'subheader': workbook.add_format({
+            'bold': True, 'bg_color': '#4472C4', 'font_color': 'white',
+            'border': 1, 'align': 'center'
+        }),
+        'material': workbook.add_format({
+            'bg_color': '#E2EFDA', 'indent': 2,
+            'border': 1
+        }),
+        'date': workbook.add_format({'num_format': 'dd/mm/yyyy'}),
+        'money': workbook.add_format({'num_format': '$#,##0.00'}),
+        'percent': workbook.add_format({'num_format': '0.00%'})
     }
 
-    # Recopilar datos para gráficos
-    for v in ventas:
-        mes = v.FechaVenta.strftime('%Y-%m')
-        data_for_charts['ventas_por_mes'][mes] = data_for_charts['ventas_por_mes'].get(mes, 0) + float(v.PrecioTotalVenta)
+    # Crear hojas
+    ws_productos = workbook.add_worksheet('Productos y Materiales')
+    ws_stats = workbook.add_worksheet('Estadísticas')
 
-    for p in perdidas:
-        motivo = p.get_MotivoPerdida_display()
-        data_for_charts['perdidas_por_motivo'][motivo] = data_for_charts['perdidas_por_motivo'].get(motivo, 0) + p.CantidadPerdida
+    # Headers productos
+    headers = [
+        'ID Producto', 'Nombre Producto', 'Stock Inicial', 'Stock Actual',
+        'Precio Unit.', 'Total', 'Categoría', 'Estado', 'Ubicación',
+        'Fecha Creación', '% Stock', 
+        # Headers materiales
+        'ID Material', 'Nombre Material', 'Cantidad Usada', 
+        'Stock Original Material', 'Stock Actual Material',
+        'Descripción Uso', 'Fecha Registro'
+    ]
 
-    for p in productos:
-        if p.Categoria:
-            cat = p.Categoria.NombreCategoria
-            data_for_charts['productos_por_categoria'][cat] = data_for_charts['productos_por_categoria'].get(cat, 0) + 1
-        if p.StockProductoActual > 0:
-            data_for_charts['stock_status']['Con Stock'] += 1
+    # Configurar anchos de columna
+    for col, header in enumerate(headers):
+        ws_productos.write(0, col, header, formats['header'])
+        ws_productos.set_column(col, col, len(header) + 2)
+
+    # Obtener productos con sus materiales
+    productos = Producto.objects.prefetch_related(
+        'materiales_usados__Material',
+        'Categoria'
+    ).all()
+
+    # Estadísticas
+    stats = {
+        'materiales_mas_usados': {},
+        'productos_por_categoria': {},
+        'productos_por_estado': {},
+        'uso_material_por_mes': {}
+    }
+
+    row = 1
+    for producto in productos:
+        materiales = producto.materiales_usados.all()
+        
+        if materiales.exists():
+            for material_usado in materiales:
+                # Datos del producto
+                ws_productos.write(row, 0, producto.id, formats['subheader'])
+                ws_productos.write(row, 1, producto.NombreProducto, formats['subheader'])
+                ws_productos.write(row, 2, producto.StockProductoInicial)
+                ws_productos.write(row, 3, producto.StockProductoActual)
+                ws_productos.write(row, 4, float(producto.PrecioUnitarioProducto), formats['money'])
+                ws_productos.write(row, 5, float(producto.PrecioTotalProducto), formats['money'])
+                ws_productos.write(row, 6, producto.Categoria.NombreCategoria if producto.Categoria else 'Sin categoría')
+                ws_productos.write(row, 7, producto.EstadoProducto or 'No especificado')
+                ws_productos.write(row, 8, producto.UbicacionProducto or 'No especificada')
+                ws_productos.write(row, 9, producto.FechaProducto, formats['date'])
+                ws_productos.write(row, 10, producto.porcentaje_stock_disponible/100, formats['percent'])
+
+                # Datos del material usado
+                ws_productos.write(row, 11, material_usado.Material.id, formats['material'])
+                ws_productos.write(row, 12, material_usado.Material.NombreMaterial, formats['material'])
+                ws_productos.write(row, 13, material_usado.CantidadUsada, formats['material'])
+                ws_productos.write(row, 14, material_usado.Material.StockOriginal, formats['material'])
+                ws_productos.write(row, 15, material_usado.Material.StockMaterial, formats['material'])
+                ws_productos.write(row, 16, material_usado.DescripcionUso or '', formats['material'])
+                ws_productos.write(row, 17, material_usado.FechaRegistro.strftime('%Y-%m-%d'), formats['material'])
+
+                # Actualizar estadísticas
+                stats['materiales_mas_usados'][material_usado.Material.NombreMaterial] = \
+                    stats['materiales_mas_usados'].get(material_usado.Material.NombreMaterial, 0) + \
+                    material_usado.CantidadUsada
+
+                mes = material_usado.FechaRegistro.strftime('%Y-%m')
+                stats['uso_material_por_mes'][mes] = \
+                    stats['uso_material_por_mes'].get(mes, 0) + material_usado.CantidadUsada
+
+                row += 1
         else:
-            data_for_charts['stock_status']['Sin Stock'] += 1
+            # Producto sin materiales
+            ws_productos.write(row, 0, producto.id)
+            ws_productos.write(row, 1, producto.NombreProducto)
+            ws_productos.write(row, 2, producto.StockProductoInicial)
+            ws_productos.write(row, 3, producto.StockProductoActual)
+            ws_productos.write(row, 4, float(producto.PrecioUnitarioProducto), formats['money'])
+            ws_productos.write(row, 5, float(producto.PrecioTotalProducto), formats['money'])
+            ws_productos.write(row, 6, producto.Categoria.NombreCategoria if producto.Categoria else 'Sin categoría')
+            ws_productos.write(row, 7, producto.EstadoProducto or 'No especificado')
+            ws_productos.write(row, 8, producto.UbicacionProducto or 'No especificada')
+            ws_productos.write(row, 9, producto.FechaProducto, formats['date'])
+            ws_productos.write(row, 10, producto.porcentaje_stock_disponible/100, formats['percent'])
+            ws_productos.write(row, 11, 'Sin materiales asociados', formats['material'])
+            row += 1
 
-    # Crear gráficos
-    chart_row = 1
-    
-    # 1. Ventas por mes (líneas)
-    ventas_chart = workbook.add_chart({'type': 'line'})
-    worksheet_graficos.write_column('A1', ['Mes'] + list(data_for_charts['ventas_por_mes'].keys()))
-    worksheet_graficos.write_column('B1', ['Total'] + list(data_for_charts['ventas_por_mes'].values()))
-    ventas_chart.add_series({
-        'name': 'Ventas Mensuales',
-        'categories': f'=Gráficos!$A$2:$A${len(data_for_charts["ventas_por_mes"])+1}',
-        'values': f'=Gráficos!$B$2:$B${len(data_for_charts["ventas_por_mes"])+1}',
-    })
-    ventas_chart.set_title({'name': 'Ventas por Mes'})
-    worksheet_graficos.insert_chart('D1', ventas_chart)
+        # Actualizar estadísticas generales
+        if producto.Categoria:
+            stats['productos_por_categoria'][producto.Categoria.NombreCategoria] = \
+                stats['productos_por_categoria'].get(producto.Categoria.NombreCategoria, 0) + 1
 
-    # 2. Pérdidas por motivo (pie)
-    perdidas_chart = workbook.add_chart({'type': 'pie'})
-    worksheet_graficos.write_column('E1', ['Motivo'] + list(data_for_charts['perdidas_por_motivo'].keys()))
-    worksheet_graficos.write_column('F1', ['Cantidad'] + list(data_for_charts['perdidas_por_motivo'].values()))
-    perdidas_chart.add_series({
-        'name': 'Pérdidas por Motivo',
-        'categories': f'=Gráficos!$E$2:$E${len(data_for_charts["perdidas_por_motivo"])+1}',
-        'values': f'=Gráficos!$F$2:$F${len(data_for_charts["perdidas_por_motivo"])+1}',
-        'data_labels': {'percentage': True}
-    })
-    perdidas_chart.set_title({'name': 'Distribución de Pérdidas'})
-    worksheet_graficos.insert_chart('D15', perdidas_chart)
+        estado = producto.EstadoProducto or 'No especificado'
+        stats['productos_por_estado'][estado] = \
+            stats['productos_por_estado'].get(estado, 0) + 1
 
-    # 3. Stock Status (donut)
-    stock_chart = workbook.add_chart({'type': 'doughnut'})
-    worksheet_graficos.write_column('H1', ['Estado'] + list(data_for_charts['stock_status'].keys()))
-    worksheet_graficos.write_column('I1', ['Cantidad'] + list(data_for_charts['stock_status'].values()))
-    stock_chart.add_series({
-        'name': 'Estado del Stock',
-        'categories': f'=Gráficos!$H$2:$H${len(data_for_charts["stock_status"])+1}',
-        'values': f'=Gráficos!$I$2:$I${len(data_for_charts["stock_status"])+1}',
-        'data_labels': {'percentage': True}
-    })
-    stock_chart.set_title({'name': 'Estado del Stock'})
-    worksheet_graficos.insert_chart('K1', stock_chart)
+    # Crear gráficos en hoja de estadísticas
+    charts = [
+        ('column', 'Materiales más utilizados', stats['materiales_mas_usados'], 'D2'),
+        ('pie', 'Productos por Categoría', stats['productos_por_categoria'], 'D18'),
+        ('line', 'Uso de Materiales por Mes', dict(sorted(stats['uso_material_por_mes'].items())), 'K2'),
+        ('pie', 'Estados de Productos', stats['productos_por_estado'], 'K18')
+    ]
 
-    # 4. Añadir gráfico de ventas vs pérdidas
-    ventas_perdidas_chart = workbook.add_chart({'type': 'pie'})
-    
-    # Calcular totales
-    total_ventas = sum(v.PrecioTotalVenta for v in ventas)
-    total_perdidas = sum(p.ValorTotalPerdida for p in perdidas)
-    
-    worksheet_graficos.write_column('K1', ['Tipo', 'Ventas', 'Pérdidas'])
-    worksheet_graficos.write_column('L1', ['Cantidad', float(total_ventas), float(total_perdidas)])
+    for i, (chart_type, title, data, position) in enumerate(charts):
+        chart = workbook.add_chart({'type': chart_type})
+        
+        # Escribir datos
+        col_base = i * 3
+        for row, (key, value) in enumerate(data.items(), start=1):
+            ws_stats.write(row, col_base, key)
+            ws_stats.write(row, col_base + 1, value)
+        
+        chart.add_series({
+            'name': title,
+            'categories': f'=Estadísticas!${chr(65+col_base)}$2:${chr(65+col_base)}${len(data)+1}',
+            'values': f'=Estadísticas!${chr(66+col_base)}$2:${chr(66+col_base)}${len(data)+1}',
+            'data_labels': {'percentage': True} if chart_type == 'pie' else {'value': True}
+        })
+        
+        chart.set_title({'name': title})
+        chart.set_size({'width': 380, 'height': 250})
+        ws_stats.insert_chart(position, chart)
 
-    ventas_perdidas_chart.add_series({
-        'name': 'Ventas vs Pérdidas',
-        'categories': '=Gráficos!$K$2:$K$3',
-        'values': '=Gráficos!$L$2:$L$3',
-        'data_labels': {
-            'percentage': True,
-            'value': True,
-            'category': True
-        }
-    })
-    ventas_perdidas_chart.set_title({'name': 'Distribución Ventas vs Pérdidas'})
-    worksheet_graficos.insert_chart('K15', ventas_perdidas_chart)
-
-    # Añadir totales en la hoja
-    bold_format = workbook.add_format({'bold': True})
-    worksheet_graficos.write('K30', 'Total Ventas:', bold_format)
-    worksheet_graficos.write('L30', float(total_ventas), money_format)
-    worksheet_graficos.write('K31', 'Total Pérdidas:', bold_format)
-    worksheet_graficos.write('L31', float(total_perdidas), money_format)
-    worksheet_graficos.write('K32', 'Total General:', bold_format)
-    worksheet_graficos.write('L32', float(total_ventas + total_perdidas), money_format)
-
-    # Ahora sí cerramos el workbook
     workbook.close()
     output.seek(0)
     
@@ -4664,9 +5209,10 @@ def exportar_productos_excel(request):
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
-    response['Content-Disposition'] = f'attachment; filename="Reporte_Productos_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="Productos_y_Materiales_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx"'
     
     return response
+
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def registrar_venta(request, producto_id):
@@ -5161,59 +5707,178 @@ def eliminar_categoria(request, categoria_id):
         }, status=500)
 
 @login_required(login_url='login')
+@ensure_csrf_cookie
 def exportar_categorias_excel(request):
-    try:
-        output = BytesIO()
-        workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-        
-        # Formatos
-        header_format = workbook.add_format({
-            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 'border': 1
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    
+    # Formatos
+    formats = {
+        'header': workbook.add_format({
+            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 
+            'border': 1, 'align': 'center'
+        }),
+        'categoria': workbook.add_format({
+            'bold': True, 'bg_color': '#4472C4', 'font_color': 'white',
+            'border': 1
+        }),
+        'producto': workbook.add_format({
+            'bg_color': '#D9E1F2', 'indent': 2,
+            'border': 1
+        }),
+        'venta': workbook.add_format({
+            'bg_color': '#E2EFDA', 'indent': 4,
+            'border': 1
+        }),
+        'perdida': workbook.add_format({
+            'bg_color': '#FCE4D6', 'indent': 4,
+            'border': 1
+        }),
+        'money': workbook.add_format({
+            'num_format': '$#,##0.00', 'border': 1, 'align': 'right'
+        }),
+        'date': workbook.add_format({
+            'num_format': 'dd/mm/yyyy', 'border': 1, 'align': 'center'
+        }),
+        'percent': workbook.add_format({
+            'num_format': '0.00%', 'border': 1, 'align': 'center'
         })
-        money_format = workbook.add_format({'num_format': '$#,##0'})
+    }
+
+    # Crear hojas
+    ws_detail = workbook.add_worksheet('Detalle Categorías')
+    ws_summary = workbook.add_worksheet('Resumen')
+    ws_charts = workbook.add_worksheet('Gráficos')
+
+    # Headers para la hoja de detalle
+    headers = [
+        'Tipo', 'ID', 'Nombre', 'Cantidad', 'Precio Unit.',
+        'Total', 'Fecha', 'Estado/Motivo', 'Stock/Cliente'
+    ]
+
+    for col, header in enumerate(headers):
+        ws_detail.write(0, col, header, formats['header'])
+        ws_detail.set_column(col, col, len(header) + 5)
+
+    # Obtener datos
+    categorias = Categoria.objects.prefetch_related(
+        'productos__ventas__cliente',
+        'productos__perdidas',
+    ).all()
+
+    # Estadísticas
+    stats = {
+        'ventas_por_categoria': {},
+        'perdidas_por_categoria': {},
+        'ventas_por_mes': {},
+        'motivos_perdida': {},
+        'productos_vendidos': {},
+        'productos_perdidos': {}
+    }
+
+    row = 1
+    for categoria in categorias:
+        # Escribir categoría
+        ws_detail.write(row, 0, 'CATEGORÍA', formats['categoria'])
+        ws_detail.write(row, 1, categoria.id, formats['categoria'])
+        ws_detail.write(row, 2, categoria.NombreCategoria, formats['categoria'])
+        ws_detail.write(row, 3, categoria.StockCategoria, formats['categoria'])
+        ws_detail.write(row, 5, float(categoria.TotalCategoriaVenta), formats['money'])
+        row += 1
+
+        for producto in categoria.productos.all():
+            # Escribir producto
+            ws_detail.write(row, 0, 'PRODUCTO', formats['producto'])
+            ws_detail.write(row, 1, producto.id, formats['producto'])
+            ws_detail.write(row, 2, producto.NombreProducto, formats['producto'])
+            ws_detail.write(row, 3, producto.StockProductoActual, formats['producto'])
+            ws_detail.write(row, 4, float(producto.PrecioUnitarioProducto), formats['money'])
+            ws_detail.write(row, 5, float(producto.PrecioTotalProducto), formats['money'])
+            ws_detail.write(row, 7, producto.EstadoProducto or 'No especificado', formats['producto'])
+            row += 1
+
+            # Ventas del producto
+            for venta in producto.ventas.all():
+                ws_detail.write(row, 0, 'VENTA', formats['venta'])
+                ws_detail.write(row, 1, venta.id, formats['venta'])
+                ws_detail.write(row, 2, venta.NombreVenta, formats['venta'])
+                ws_detail.write(row, 3, venta.CantidadVenta, formats['venta'])
+                ws_detail.write(row, 4, float(venta.PrecioVenta), formats['money'])
+                ws_detail.write(row, 5, float(venta.PrecioTotalVenta), formats['money'])
+                ws_detail.write(row, 6, venta.FechaVenta, formats['date'])
+                ws_detail.write(row, 8, str(venta.cliente) if venta.cliente else 'Sin cliente', formats['venta'])
+                
+                # Actualizar estadísticas
+                mes = venta.FechaVenta.strftime('%Y-%m')
+                stats['ventas_por_mes'][mes] = stats['ventas_por_mes'].get(mes, 0) + float(venta.PrecioTotalVenta)
+                stats['productos_vendidos'][producto.NombreProducto] = \
+                    stats['productos_vendidos'].get(producto.NombreProducto, 0) + venta.CantidadVenta
+                
+                row += 1
+
+            # Pérdidas del producto
+            for perdida in producto.perdidas.all():
+                ws_detail.write(row, 0, 'PÉRDIDA', formats['perdida'])
+                ws_detail.write(row, 1, perdida.id, formats['perdida'])
+                ws_detail.write(row, 2, perdida.NombrePerdida, formats['perdida'])
+                ws_detail.write(row, 3, perdida.CantidadPerdida, formats['perdida'])
+                ws_detail.write(row, 4, float(perdida.ValorUnitarioPerdida), formats['money'])
+                ws_detail.write(row, 5, float(perdida.ValorTotalPerdida), formats['money'])
+                ws_detail.write(row, 6, perdida.FechaPerdida, formats['date'])
+                ws_detail.write(row, 7, perdida.get_MotivoPerdida_display(), formats['perdida'])
+                
+                # Actualizar estadísticas
+                stats['motivos_perdida'][perdida.get_MotivoPerdida_display()] = \
+                    stats['motivos_perdida'].get(perdida.get_MotivoPerdida_display(), 0) + perdida.CantidadPerdida
+                stats['productos_perdidos'][producto.NombreProducto] = \
+                    stats['productos_perdidos'].get(producto.NombreProducto, 0) + perdida.CantidadPerdida
+                
+                row += 1
+
+        # Actualizar estadísticas de categoría
+        stats['ventas_por_categoria'][categoria.NombreCategoria] = float(categoria.TotalCategoriaVenta)
+        stats['perdidas_por_categoria'][categoria.NombreCategoria] = float(categoria.TotalCategoriaPerdida)
         
-        # Hoja principal de categorías
-        worksheet = workbook.add_worksheet('Categorías')
+        row += 1  # Espacio entre categorías
+
+    # Crear gráficos
+    charts = [
+        ('column', 'Ventas por Categoría', stats['ventas_por_categoria'], 'D2'),
+        ('line', 'Ventas Mensuales', dict(sorted(stats['ventas_por_mes'].items())), 'D18'),
+        ('pie', 'Motivos de Pérdida', stats['motivos_perdida'], 'K2'),
+        ('bar', 'Top 10 Productos más Vendidos', 
+         dict(sorted(stats['productos_vendidos'].items(), key=lambda x: x[1], reverse=True)[:10]), 'K18'),
+    ]
+
+    for tipo, titulo, datos, posicion in charts:
+        chart = workbook.add_chart({'type': tipo})
         
-        # Headers
-        headers = [
-            'ID', 'Nombre', 'Descripción', 'Stock', 
-            'Productos Perdidos', 'Productos Vendidos',
-            'Total Ventas', 'Total Pérdidas'
-        ]
+        # Escribir datos para el gráfico
+        for i, (key, value) in enumerate(datos.items(), start=1):
+            ws_charts.write(f'A{i}', key)
+            ws_charts.write(f'B{i}', value)
         
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header, header_format)
-            worksheet.set_column(col, col, 15)
+        chart.add_series({
+            'name': titulo,
+            'categories': f'=Gráficos!$A$1:$A${len(datos)}',
+            'values': f'=Gráficos!$B$1:$B${len(datos)}',
+            'data_labels': {'percentage': True} if tipo == 'pie' else {'value': True}
+        })
         
-        # Datos
-        categorias = Categoria.objects.all()
-        for row, categoria in enumerate(categorias, start=1):
-            worksheet.write(row, 0, categoria.id)
-            worksheet.write(row, 1, categoria.NombreCategoria)
-            worksheet.write(row, 2, categoria.DescripcionCategoria or 'Sin descripción')
-            worksheet.write(row, 3, categoria.StockCategoria)
-            worksheet.write(row, 4, categoria.CantidadCategoriaPerdida)
-            worksheet.write(row, 5, categoria.CantidadCategoriaVenta)
-            worksheet.write(row, 6, float(categoria.TotalCategoriaVenta), money_format)
-            worksheet.write(row, 7, float(categoria.TotalCategoriaPerdida), money_format)
-        
-        workbook.close()
-        output.seek(0)
-        
-        response = HttpResponse(
-            output.read(),
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-        response['Content-Disposition'] = f'attachment; filename="Categorias_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx"'
-        
-        return response
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+        chart.set_title({'name': titulo})
+        chart.set_size({'width': 400, 'height': 300})
+        ws_charts.insert_chart(posicion, chart)
+
+    workbook.close()
+    output.seek(0)
+    
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="Categorias_Detallado_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx"'
+    
+    return response
 
 
 @login_required(login_url='login')
@@ -5658,109 +6323,169 @@ def listar_perdidas(request):
             'success': False,
             'error': str(e)
         }, status=500)
+@login_required(login_url='login')
 def exportar_perdidas_excel(request):
     output = BytesIO()
-    
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    worksheet_data = workbook.add_worksheet('Pérdidas')
-    worksheet_charts = workbook.add_worksheet('Gráficos')
+    
+    # Hojas
+    ws_perdidas = workbook.add_worksheet('Pérdidas')
+    ws_resumen = workbook.add_worksheet('Resumen')
+    ws_charts = workbook.add_worksheet('Gráficos')
     
     # Formatos
-    header_format = workbook.add_format({
-        'bold': True,
-        'bg_color': '#000000',
-        'font_color': 'white',
-        'border': 1
-    })
+    formats = {
+        'header': workbook.add_format({
+            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 
+            'border': 1, 'align': 'center'
+        }),
+        'date': workbook.add_format({
+            'num_format': 'dd/mm/yyyy', 'border': 1, 'align': 'center'
+        }),
+        'money': workbook.add_format({
+            'num_format': '$#,##0.00', 'border': 1, 'align': 'right'
+        }),
+        'number': workbook.add_format({
+            'border': 1, 'align': 'center'
+        }),
+        'text': workbook.add_format({
+            'border': 1, 'text_wrap': True
+        })
+    }
     
-    date_format = workbook.add_format({
-        'num_format': 'dd/mm/yyyy',
-    })
-    
-    # Encabezados
+    # Headers principales
     headers = [
-        'ID',
-        'Nombre Pérdida',
-        'Producto',
-        'Cantidad',
-        'Valor Unitario',
-        'Valor Total',
-        'Motivo',
-        'Descripción',
-        'Fecha Pérdida',
-        'Usuario',
-        'Fecha Registro'
+        'ID', 'Nombre Pérdida', 'Producto', 'Categoría',
+        'Cantidad', 'Valor Unit.', 'Valor Total',
+        'Motivo', 'Descripción', 'Fecha Pérdida',
+        'Usuario', 'Stock Original', 'Stock Actual',
+        'Impacto en Stock (%)', 'Días desde pérdida'
     ]
     
-    # Escribir encabezados
+    # Configurar columnas
     for col, header in enumerate(headers):
-        worksheet_data.write(0, col, header, header_format)
-        worksheet_data.set_column(col, col, 15)
+        ws_perdidas.write(0, col, header, formats['header'])
+        ws_perdidas.set_column(col, col, len(header) + 2)
+    
+    # Estadísticas
+    stats = {
+        'perdidas_por_motivo': {},
+        'perdidas_por_mes': {},
+        'perdidas_por_categoria': {},
+        'top_productos': {},
+        'impacto_financiero': {},
+        'usuarios_registro': {}
+    }
     
     # Obtener datos
-    perdidas = Perdidas.objects.select_related('Producto', 'Usuario').order_by('-FechaPerdida')
+    perdidas = Perdidas.objects.select_related(
+        'Producto', 'Producto__Categoria', 'Usuario'
+    ).order_by('-FechaPerdida')
     
-    # Escribir datos
+    # Escribir datos y recopilar estadísticas
     for row, perdida in enumerate(perdidas, start=1):
-        worksheet_data.write(row, 0, perdida.id)
-        worksheet_data.write(row, 1, perdida.NombrePerdida)
-        worksheet_data.write(row, 2, perdida.Producto.NombreProducto)
-        worksheet_data.write(row, 3, perdida.CantidadPerdida)
-        worksheet_data.write(row, 4, float(perdida.ValorUnitarioPerdida))
-        worksheet_data.write(row, 5, float(perdida.ValorTotalPerdida))
-        worksheet_data.write(row, 6, perdida.get_MotivoPerdida_display())
-        worksheet_data.write(row, 7, perdida.DescripcionPerdida or '')
-        worksheet_data.write_datetime(row, 8, perdida.FechaPerdida, date_format)
-        worksheet_data.write(row, 9, f"{perdida.Usuario.first_name} {perdida.Usuario.last_name}" if perdida.Usuario else "")
-        worksheet_data.write_datetime(row, 10, timezone.localtime(perdida.FechaRegistro).replace(tzinfo=None), date_format)
-    
-    # Preparar datos para gráficos
-    motivos_dict = {}
-    for perdida in perdidas:
+        # Calcular días transcurridos
+        dias_transcurridos = (date.today() - perdida.FechaPerdida).days
+        
+        # Calcular impacto en stock
+        impacto_stock = (perdida.CantidadPerdida / perdida.Producto.StockProductoInicial * 100) \
+            if perdida.Producto.StockProductoInicial > 0 else 0
+        
+        # Escribir datos principales
+        ws_perdidas.write(row, 0, perdida.id)
+        ws_perdidas.write(row, 1, perdida.NombrePerdida)
+        ws_perdidas.write(row, 2, perdida.Producto.NombreProducto)
+        ws_perdidas.write(row, 3, perdida.Producto.Categoria.NombreCategoria if perdida.Producto.Categoria else 'Sin categoría')
+        ws_perdidas.write(row, 4, perdida.CantidadPerdida, formats['number'])
+        ws_perdidas.write(row, 5, float(perdida.ValorUnitarioPerdida), formats['money'])
+        ws_perdidas.write(row, 6, float(perdida.ValorTotalPerdida), formats['money'])
+        ws_perdidas.write(row, 7, perdida.get_MotivoPerdida_display())
+        ws_perdidas.write(row, 8, perdida.DescripcionPerdida or '', formats['text'])
+        ws_perdidas.write(row, 9, perdida.FechaPerdida, formats['date'])
+        ws_perdidas.write(row, 10, f"{perdida.Usuario.get_full_name()}" if perdida.Usuario else "Sistema")
+        ws_perdidas.write(row, 11, perdida.Producto.StockProductoInicial, formats['number'])
+        ws_perdidas.write(row, 12, perdida.Producto.StockProductoActual, formats['number'])
+        ws_perdidas.write(row, 13, impacto_stock, formats['number'])
+        ws_perdidas.write(row, 14, dias_transcurridos, formats['number'])
+        
+        # Actualizar estadísticas
         motivo = perdida.get_MotivoPerdida_display()
-        motivos_dict[motivo] = motivos_dict.get(motivo, 0) + 1
+        mes = perdida.FechaPerdida.strftime('%Y-%m')
+        categoria = perdida.Producto.Categoria.NombreCategoria if perdida.Producto.Categoria else 'Sin categoría'
+        producto = perdida.Producto.NombreProducto
+        usuario = perdida.Usuario.get_full_name() if perdida.Usuario else "Sistema"
+        
+        stats['perdidas_por_motivo'][motivo] = \
+            stats['perdidas_por_motivo'].get(motivo, 0) + perdida.CantidadPerdida
+        
+        stats['perdidas_por_mes'][mes] = \
+            stats['perdidas_por_mes'].get(mes, 0) + float(perdida.ValorTotalPerdida)
+        
+        stats['perdidas_por_categoria'][categoria] = \
+            stats['perdidas_por_categoria'].get(categoria, 0) + float(perdida.ValorTotalPerdida)
+        
+        stats['top_productos'][producto] = \
+            stats['top_productos'].get(producto, 0) + perdida.CantidadPerdida
+        
+        stats['impacto_financiero'][motivo] = \
+            stats['impacto_financiero'].get(motivo, 0) + float(perdida.ValorTotalPerdida)
+        
+        stats['usuarios_registro'][usuario] = \
+            stats['usuarios_registro'].get(usuario, 0) + 1
     
-    # Escribir datos para gráficos
-    worksheet_charts.write_row('A1', ['Motivo'], header_format)
-    worksheet_charts.write_row('B1', ['Cantidad de Pérdidas'], header_format)
+    # Crear gráficos
+    charts = [
+        ('column', 'Pérdidas por Motivo', stats['perdidas_por_motivo'], 'D2'),
+        ('line', 'Evolución Mensual de Pérdidas', 
+         dict(sorted(stats['perdidas_por_mes'].items())), 'D18'),
+        ('pie', 'Distribución por Categoría', stats['perdidas_por_categoria'], 'K2'),
+        ('bar', 'Top 10 Productos con más Pérdidas',
+         dict(sorted(stats['top_productos'].items(), 
+                    key=lambda x: x[1], reverse=True)[:10]), 'K18'),
+        ('column', 'Impacto Financiero por Motivo', 
+         stats['impacto_financiero'], 'R2'),
+        ('pie', 'Registro por Usuario', stats['usuarios_registro'], 'R18')
+    ]
+
+    for tipo, titulo, datos, posicion in charts:
+        chart = workbook.add_chart({'type': tipo})
+        
+        # Escribir datos
+        col_base = ord(posicion[0]) - ord('A')
+        row_base = int(posicion[1])
+        
+        for i, (key, value) in enumerate(datos.items(), start=1):
+            ws_charts.write(row_base + i - 1, col_base, key)
+            ws_charts.write(row_base + i - 1, col_base + 1, value)
+        
+        chart.add_series({
+            'name': titulo,
+            'categories': f'=Gráficos!${chr(65+col_base)}${row_base}:${chr(65+col_base)}${row_base+len(datos)-1}',
+            'values': f'=Gráficos!${chr(66+col_base)}${row_base}:${chr(66+col_base)}${row_base+len(datos)-1}',
+            'data_labels': {'percentage': True} if tipo == 'pie' else {'value': True}
+        })
+        
+        chart.set_title({'name': titulo})
+        chart.set_size({'width': 400, 'height': 300})
+        ws_charts.insert_chart(posicion, chart)
     
-    for i, (motivo, cantidad) in enumerate(motivos_dict.items(), start=2):
-        worksheet_charts.write(f'A{i}', motivo)
-        worksheet_charts.write(f'B{i}', cantidad)
+    # Escribir resumen
+    headers_resumen = [
+        'Tipo de Estadística', 'Valor',
+        'Pérdida Total', f"${sum(stats['perdidas_por_mes'].values()):,.2f}",
+        'Total Unidades Perdidas', sum(stats['perdidas_por_motivo'].values()),
+        'Motivo más Común', max(stats['perdidas_por_motivo'].items(), key=lambda x: x[1])[0],
+        'Categoría más Afectada', max(stats['perdidas_por_categoria'].items(), key=lambda x: x[1])[0],
+        'Producto más Afectado', max(stats['top_productos'].items(), key=lambda x: x[1])[0]
+    ]
     
-    # Gráfico de Columnas
-    column_chart = workbook.add_chart({'type': 'column'})
-    column_chart.add_series({
-        'name': 'Pérdidas por Motivo',
-        'categories': f'=Gráficos!$A$2:$A${len(motivos_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(motivos_dict)+1}',
-        'data_labels': {'value': True},
-    })
-    column_chart.set_title({'name': 'Pérdidas por Motivo (Columnas)'})
-    column_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('D2', column_chart)
-    
-    # Gráfico de Pie
-    pie_chart = workbook.add_chart({'type': 'pie'})
-    pie_chart.add_series({
-        'categories': f'=Gráficos!$A$2:$A${len(motivos_dict)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(motivos_dict)+1}',
-        'data_labels': {'percentage': True},
-    })
-    pie_chart.set_title({'name': 'Distribución de Pérdidas por Motivo (%)'})
-    pie_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('D18', pie_chart)
-    
-    # Ajustar anchos de columna automáticamente
-    for i, header in enumerate(headers):
-        worksheet_data.set_column(i, i, len(header) + 2)
+    for i, valor in enumerate(headers_resumen):
+        ws_resumen.write(i // 2, i % 2, valor, formats['header' if i % 2 == 0 else 'text'])
     
     workbook.close()
-    
-    # Preparar respuesta
     output.seek(0)
-    filename = f'Perdidas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
+    filename = f'Reporte_Perdidas_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx'
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -5970,111 +6695,192 @@ def actualizar_venta(request, venta_id):
             'success': False,
             'errors': {'general': str(e)}
         }, status=500)
-
+@login_required(login_url='login')
 def exportar_ventas_excel(request):
     output = BytesIO()
-    
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    worksheet_data = workbook.add_worksheet('Ventas')
-    worksheet_charts = workbook.add_worksheet('Gráficos')
+    
+    # Hojas
+    ws_ventas = workbook.add_worksheet('Ventas')
+    ws_resumen = workbook.add_worksheet('Resumen')
+    ws_charts = workbook.add_worksheet('Gráficos')
     
     # Formatos
-    header_format = workbook.add_format({
-        'bold': True,
-        'bg_color': '#000000',
-        'font_color': 'white',
-        'border': 1
-    })
+    formats = {
+        'header': workbook.add_format({
+            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 
+            'border': 1, 'align': 'center'
+        }),
+        'date': workbook.add_format({
+            'num_format': 'dd/mm/yyyy', 'border': 1, 'align': 'center'
+        }),
+        'money': workbook.add_format({
+            'num_format': '$#,##0.00', 'border': 1, 'align': 'right'
+        }),
+        'number': workbook.add_format({
+            'border': 1, 'align': 'center'
+        }),
+        'percent': workbook.add_format({
+            'num_format': '0.00%', 'border': 1, 'align': 'center'
+        })
+    }
     
-    date_format = workbook.add_format({
-        'num_format': 'dd/mm/yyyy',
-    })
-    
-    # Encabezados
+    # Headers
     headers = [
-        'ID',
-        'Nombre Venta',
-        'Producto',
-        'Cliente',
-        'Cantidad',
-        'Precio Unitario',
-        'Total',
-        'Fecha Venta',
-        'Usuario',
-        'Fecha Registro'
+        'ID Venta', 'Nombre Venta', 
+        # Producto
+        'Producto', 'Categoría', 'Stock Inicial Producto', 'Stock Actual',
+        # Cliente
+        'Cliente', 'Tipo Cliente', 'RUT Cliente', 'Total Historial Cliente',
+        # Detalles venta
+        'Cantidad', 'Precio Unit.', 'Total Venta',
+        'Fecha Venta', 'Vendedor', 'Material Principal',
+        'Materiales Usados', '% Stock Restante'
     ]
     
-    # Escribir encabezados
+    # Configurar columnas
     for col, header in enumerate(headers):
-        worksheet_data.write(0, col, header, header_format)
-        worksheet_data.set_column(col, col, 15)
+        ws_ventas.write(0, col, header, formats['header'])
+        ws_ventas.set_column(col, col, len(header) + 2)
+    
+    # Estadísticas
+    stats = {
+        'ventas_por_mes': {},
+        'ventas_por_categoria': {},
+        'ventas_por_cliente': {},
+        'ventas_por_tipo_cliente': {'particular': 0, 'empresa': 0},
+        'productos_mas_vendidos': {},
+        'vendedores': {},
+        'materiales_vendidos': {}
+    }
     
     # Obtener datos
-    ventas = Ventas.objects.select_related('Producto', 'Usuario', 'cliente').order_by('-FechaVenta')
+    ventas = Ventas.objects.select_related(
+        'Producto', 'Producto__Categoria',
+        'cliente', 'Usuario'
+    ).prefetch_related(
+        'Producto__materiales_usados__Material'
+    ).order_by('-FechaVenta')
     
-    # Escribir datos
-    for row, venta in enumerate(ventas, start=1):
-        worksheet_data.write(row, 0, venta.id)
-        worksheet_data.write(row, 1, venta.NombreVenta)
-        worksheet_data.write(row, 2, venta.Producto.NombreProducto)
-        worksheet_data.write(row, 3, str(venta.cliente) if venta.cliente else "Cliente no especificado")
-        worksheet_data.write(row, 4, venta.CantidadVenta)
-        worksheet_data.write(row, 5, float(venta.PrecioVenta))
-        worksheet_data.write(row, 6, float(venta.PrecioTotalVenta))
-        worksheet_data.write_datetime(row, 7, venta.FechaVenta, date_format)
-        worksheet_data.write(row, 8, f"{venta.Usuario.first_name} {venta.Usuario.last_name}" if venta.Usuario else "")
-        worksheet_data.write_datetime(row, 9, timezone.localtime(venta.FechaRegistro).replace(tzinfo=None), date_format)
-    
-    # Gráficos y análisis adicional
-    ventas_por_mes = {}
+    row = 1
     for venta in ventas:
+        producto = venta.Producto
+        materiales = producto.materiales_usados.all()
+        material_principal = materiales.first().Material if materiales.exists() else None
+        materiales_str = ", ".join([f"{m.Material.NombreMaterial}({m.CantidadUsada})" 
+                                  for m in materiales]) if materiales.exists() else "Sin materiales"
+        
+        # Escribir datos principales
+        ws_ventas.write(row, 0, venta.id)
+        ws_ventas.write(row, 1, venta.NombreVenta)
+        
+        # Datos del producto
+        ws_ventas.write(row, 2, producto.NombreProducto)
+        ws_ventas.write(row, 3, producto.Categoria.NombreCategoria if producto.Categoria else 'Sin categoría')
+        ws_ventas.write(row, 4, producto.StockProductoInicial)
+        ws_ventas.write(row, 5, producto.StockProductoActual)
+        
+        # Datos del cliente
+        if venta.cliente:
+            ws_ventas.write(row, 6, str(venta.cliente))
+            ws_ventas.write(row, 7, venta.cliente.get_TipoCliente_display())
+            ws_ventas.write(row, 8, venta.cliente.RutCliente)
+            ws_ventas.write(row, 9, float(venta.cliente.TotalDineroCompras), formats['money'])
+        else:
+            ws_ventas.write(row, 6, "Cliente no especificado")
+            ws_ventas.write_row(row, 7, ["N/A", "N/A", 0])
+        
+        # Detalles de venta
+        ws_ventas.write(row, 10, venta.CantidadVenta)
+        ws_ventas.write(row, 11, float(venta.PrecioVenta), formats['money'])
+        ws_ventas.write(row, 12, float(venta.PrecioTotalVenta), formats['money'])
+        ws_ventas.write(row, 13, venta.FechaVenta, formats['date'])
+        ws_ventas.write(row, 14, venta.Usuario.get_full_name() if venta.Usuario else "Sistema")
+        ws_ventas.write(row, 15, material_principal.NombreMaterial if material_principal else "N/A")
+        ws_ventas.write(row, 16, materiales_str)
+        ws_ventas.write(row, 17, producto.porcentaje_stock_disponible/100, formats['percent'])
+        
+        # Actualizar estadísticas
         mes = venta.FechaVenta.strftime('%Y-%m')
-        if mes not in ventas_por_mes:
-            ventas_por_mes[mes] = {
-                'cantidad': 0,
-                'total': 0
-            }
-        ventas_por_mes[mes]['cantidad'] += venta.CantidadVenta
-        ventas_por_mes[mes]['total'] += float(venta.PrecioTotalVenta)
+        categoria = producto.Categoria.NombreCategoria if producto.Categoria else 'Sin categoría'
+        vendedor = venta.Usuario.get_full_name() if venta.Usuario else "Sistema"
+        
+        stats['ventas_por_mes'][mes] = stats['ventas_por_mes'].get(mes, 0) + float(venta.PrecioTotalVenta)
+        stats['ventas_por_categoria'][categoria] = stats['ventas_por_categoria'].get(categoria, 0) + float(venta.PrecioTotalVenta)
+        stats['productos_mas_vendidos'][producto.NombreProducto] = stats['productos_mas_vendidos'].get(producto.NombreProducto, 0) + venta.CantidadVenta
+        stats['vendedores'][vendedor] = stats['vendedores'].get(vendedor, 0) + float(venta.PrecioTotalVenta)
+        
+        if venta.cliente:
+            cliente_nombre = str(venta.cliente)
+            stats['ventas_por_cliente'][cliente_nombre] = stats['ventas_por_cliente'].get(cliente_nombre, 0) + float(venta.PrecioTotalVenta)
+            stats['ventas_por_tipo_cliente'][venta.cliente.TipoCliente] += float(venta.PrecioTotalVenta)
+        
+        if materiales.exists():
+            for material_usado in materiales:
+                material_nombre = material_usado.Material.NombreMaterial
+                stats['materiales_vendidos'][material_nombre] = stats['materiales_vendidos'].get(material_nombre, 0) + (material_usado.CantidadUsada * venta.CantidadVenta)
+        
+        row += 1
     
-    # Escribir datos para gráficos
-    worksheet_charts.write_row('A1', ['Mes', 'Cantidad', 'Total'], header_format)
+    # Crear gráficos
+    charts = [
+        ('line', 'Evolución de Ventas', 
+         dict(sorted(stats['ventas_por_mes'].items())), 'D2'),
+        ('pie', 'Ventas por Categoría', 
+         stats['ventas_por_categoria'], 'D18'),
+        ('column', 'Top 10 Productos más Vendidos',
+         dict(sorted(stats['productos_mas_vendidos'].items(), 
+                    key=lambda x: x[1], reverse=True)[:10]), 'K2'),
+        ('bar', 'Top 10 Clientes',
+         dict(sorted(stats['ventas_por_cliente'].items(), 
+                    key=lambda x: x[1], reverse=True)[:10]), 'K18'),
+        ('doughnut', 'Ventas por Tipo de Cliente',
+         stats['ventas_por_tipo_cliente'], 'R2'),
+        ('column', 'Rendimiento de Vendedores',
+         stats['vendedores'], 'R18')
+    ]
+
+    for tipo, titulo, datos, posicion in charts:
+        chart = workbook.add_chart({'type': tipo})
+        
+        # Escribir datos
+        col_base = ord(posicion[0]) - ord('A')
+        row_base = int(posicion[1])
+        
+        for i, (key, value) in enumerate(datos.items(), start=1):
+            ws_charts.write(row_base + i - 1, col_base, key)
+            ws_charts.write(row_base + i - 1, col_base + 1, value)
+        
+        chart.add_series({
+            'name': titulo,
+            'categories': f'=Gráficos!${chr(65+col_base)}${row_base}:${chr(65+col_base)}${row_base+len(datos)-1}',
+            'values': f'=Gráficos!${chr(66+col_base)}${row_base}:${chr(66+col_base)}${row_base+len(datos)-1}',
+            'data_labels': {'percentage': True} if tipo in ['pie', 'doughnut'] else {'value': True}
+        })
+        
+        chart.set_title({'name': titulo})
+        chart.set_size({'width': 400, 'height': 300})
+        ws_charts.insert_chart(posicion, chart)
     
-    for i, (mes, datos) in enumerate(ventas_por_mes.items(), start=2):
-        worksheet_charts.write(f'A{i}', mes)
-        worksheet_charts.write(f'B{i}', datos['cantidad'])
-        worksheet_charts.write(f'C{i}', datos['total'])
+    # Escribir resumen
+    ws_resumen.set_column('A:B', 30)
+    summary_data = [
+        ('Total Ventas', f"${sum(stats['ventas_por_mes'].values()):,.2f}"),
+        ('Total Unidades Vendidas', sum(stats['productos_mas_vendidos'].values())),
+        ('Producto Más Vendido', max(stats['productos_mas_vendidos'].items(), key=lambda x: x[1])[0]),
+        ('Mejor Categoría', max(stats['ventas_por_categoria'].items(), key=lambda x: x[1])[0]),
+        ('Mejor Cliente', max(stats['ventas_por_cliente'].items(), key=lambda x: x[1])[0]),
+        ('Mejor Vendedor', max(stats['vendedores'].items(), key=lambda x: x[1])[0])
+    ]
     
-    # Gráfico de columnas para ventas mensuales
-    column_chart = workbook.add_chart({'type': 'column'})
-    column_chart.add_series({
-        'name': 'Cantidad de Ventas',
-        'categories': f'=Gráficos!$A$2:$A${len(ventas_por_mes)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(ventas_por_mes)+1}',
-        'data_labels': {'value': True},
-    })
-    column_chart.set_title({'name': 'Ventas Mensuales'})
-    column_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('E2', column_chart)
-    
-    # Gráfico de línea para ingresos mensuales
-    line_chart = workbook.add_chart({'type': 'line'})
-    line_chart.add_series({
-        'name': 'Ingresos Totales',
-        'categories': f'=Gráficos!$A$2:$A${len(ventas_por_mes)+1}',
-        'values': f'=Gráficos!$C$2:$C${len(ventas_por_mes)+1}',
-        'data_labels': {'value': True},
-    })
-    line_chart.set_title({'name': 'Ingresos Mensuales'})
-    line_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('E18', line_chart)
+    for i, (label, value) in enumerate(summary_data):
+        ws_resumen.write(i, 0, label, formats['header'])
+        ws_resumen.write(i, 1, value)
     
     workbook.close()
-    
-    # Preparar respuesta
     output.seek(0)
-    filename = f'Ventas_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
+    filename = f'Reporte_Ventas_Completo_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx'
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -6082,7 +6888,6 @@ def exportar_ventas_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
-
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def eliminar_venta(request, venta_id):
@@ -6284,88 +7089,200 @@ def actualizar_cliente(request, cliente_id):
         }, status=500)
 
 @login_required(login_url='login')
+@ensure_csrf_cookie
 def exportar_clientes_excel(request):
     output = BytesIO()
     workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-    worksheet_data = workbook.add_worksheet('Clientes')
-    worksheet_charts = workbook.add_worksheet('Gráficos')
     
-    header_format = workbook.add_format({
-        'bold': True,
-        'bg_color': '#000000',
-        'font_color': 'white',
-        'border': 1
-    })
+    # Crear hojas
+    ws_clientes = workbook.add_worksheet('Clientes')
+    ws_resumen = workbook.add_worksheet('Resumen')
+    ws_charts = workbook.add_worksheet('Gráficos')
     
-    date_format = workbook.add_format({
-        'num_format': 'dd/mm/yyyy',
-    })
+    # Formatos
+    formats = {
+        'header': workbook.add_format({
+            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 
+            'border': 1, 'align': 'center'
+        }),
+        'date': workbook.add_format({
+            'num_format': 'dd/mm/yyyy', 'border': 1, 'align': 'center'
+        }),
+        'money': workbook.add_format({
+            'num_format': '$#,##0.00', 'border': 1, 'align': 'right'
+        }),
+        'number': workbook.add_format({
+            'border': 1, 'align': 'center'
+        }),
+        'percent': workbook.add_format({
+            'num_format': '0.00%', 'border': 1, 'align': 'center'
+        })
+    }
     
+    # Headers principales
     headers = [
-        'ID',
-        'Nombre',
-        'Apellido',
-        'RUT',
-        'Tipo',
-        'Compañía',
-        'Total Compras',
-        'Total Dinero',
-        'Teléfono',
-        'Fecha Registro'
+        'ID', 'Nombre', 'Apellido', 'RUT', 'Tipo', 
+        'Compañía', 'Teléfono', 'Fecha Registro',
+        # Datos de compras
+        'Total Compras', 'Total Dinero',
+        'Última Compra', 'Primera Compra',
+        'Promedio por Compra', '% del Total',
+        # Productos
+        'Productos Diferentes', 'Producto Más Comprado',
+        'Frecuencia de Compra (días)'
     ]
     
+    # Configurar columnas
     for col, header in enumerate(headers):
-        worksheet_data.write(0, col, header, header_format)
-        worksheet_data.set_column(col, col, 15)
+        ws_clientes.write(0, col, header, formats['header'])
+        ws_clientes.set_column(col, col, len(header) + 2)
     
-    clientes = Cliente.objects.all().order_by('NombreCliente')
+    # Obtener datos
+    clientes = Cliente.objects.prefetch_related(
+        'ventas__Producto'
+    ).all().order_by('NombreCliente')
     
+    # Estadísticas
+    stats = {
+        'ventas_por_tipo': {'particular': 0, 'empresa': 0},
+        'clientes_por_mes': {},
+        'compras_por_mes': {},
+        'productos_populares': {},
+        'rangos_compra': {
+            '0-50k': 0,
+            '50k-100k': 0,
+            '100k-500k': 0,
+            '500k+': 0
+        }
+    }
+    
+    total_ventas = sum(float(c.TotalDineroCompras) for c in clientes)
+    
+    # Escribir datos
     for row, cliente in enumerate(clientes, start=1):
-        worksheet_data.write(row, 0, cliente.id)
-        worksheet_data.write(row, 1, cliente.NombreCliente)
-        worksheet_data.write(row, 2, cliente.ApellidoCliente)
-        worksheet_data.write(row, 3, cliente.RutCliente)
-        worksheet_data.write(row, 4, cliente.get_TipoCliente_display())
-        worksheet_data.write(row, 5, cliente.NombreCompañia or '')
-        worksheet_data.write(row, 6, cliente.CantidadTotalCompras)
-        worksheet_data.write(row, 7, float(cliente.TotalDineroCompras))
-        worksheet_data.write(row, 8, cliente.TelefonoCliente or '')
-        worksheet_data.write_datetime(row, 9, timezone.localtime(cliente.FechaRegistro).replace(tzinfo=None), date_format)
+        ventas = cliente.ventas.all()
+        productos_comprados = {}
+        for venta in ventas:
+            productos_comprados[venta.Producto.NombreProducto] = \
+                productos_comprados.get(venta.Producto.NombreProducto, 0) + venta.CantidadVenta
+        
+        producto_favorito = max(productos_comprados.items(), key=lambda x: x[1])[0] \
+            if productos_comprados else "Sin compras"
+        
+        fechas_compra = sorted([v.FechaVenta for v in ventas]) if ventas else []
+        promedio_compra = float(cliente.TotalDineroCompras) / cliente.CantidadTotalCompras \
+            if cliente.CantidadTotalCompras > 0 else 0
+        
+        # Calcular frecuencia de compra
+        if len(fechas_compra) >= 2:
+            dias_entre_compras = (fechas_compra[-1] - fechas_compra[0]).days / (len(fechas_compra) - 1)
+        else:
+            dias_entre_compras = 0
+        
+        # Escribir datos del cliente
+        ws_clientes.write(row, 0, cliente.id)
+        ws_clientes.write(row, 1, cliente.NombreCliente)
+        ws_clientes.write(row, 2, cliente.ApellidoCliente)
+        ws_clientes.write(row, 3, cliente.RutCliente)
+        ws_clientes.write(row, 4, cliente.get_TipoCliente_display())
+        ws_clientes.write(row, 5, cliente.NombreCompañia or '')
+        ws_clientes.write(row, 6, cliente.TelefonoCliente or '')
+        ws_clientes.write_datetime(row, 7, timezone.localtime(cliente.FechaRegistro).replace(tzinfo=None), formats['date'])
+        ws_clientes.write(row, 8, cliente.CantidadTotalCompras, formats['number'])
+        ws_clientes.write(row, 9, float(cliente.TotalDineroCompras), formats['money'])
+        
+        if fechas_compra:
+            ws_clientes.write(row, 10, fechas_compra[-1], formats['date'])
+            ws_clientes.write(row, 11, fechas_compra[0], formats['date'])
+        
+        ws_clientes.write(row, 12, promedio_compra, formats['money'])
+        ws_clientes.write(row, 13, float(cliente.TotalDineroCompras)/total_ventas if total_ventas > 0 else 0, formats['percent'])
+        ws_clientes.write(row, 14, len(productos_comprados), formats['number'])
+        ws_clientes.write(row, 15, producto_favorito)
+        ws_clientes.write(row, 16, round(dias_entre_compras, 1), formats['number'])
+        
+        # Actualizar estadísticas
+        stats['ventas_por_tipo'][cliente.TipoCliente] += float(cliente.TotalDineroCompras)
+        
+        mes_registro = cliente.FechaRegistro.strftime('%Y-%m')
+        stats['clientes_por_mes'][mes_registro] = stats['clientes_por_mes'].get(mes_registro, 0) + 1
+        
+        for venta in ventas:
+            mes_venta = venta.FechaVenta.strftime('%Y-%m')
+            stats['compras_por_mes'][mes_venta] = \
+                stats['compras_por_mes'].get(mes_venta, 0) + float(venta.PrecioTotalVenta)
+            
+            stats['productos_populares'][venta.Producto.NombreProducto] = \
+                stats['productos_populares'].get(venta.Producto.NombreProducto, 0) + venta.CantidadVenta
+        
+        # Clasificar por rango de compra
+        total_compras = float(cliente.TotalDineroCompras)
+        if total_compras <= 50000:
+            stats['rangos_compra']['0-50k'] += 1
+        elif total_compras <= 100000:
+            stats['rangos_compra']['50k-100k'] += 1
+        elif total_compras <= 500000:
+            stats['rangos_compra']['100k-500k'] += 1
+        else:
+            stats['rangos_compra']['500k+'] += 1
     
-    # Gráficos
-    clientes_por_tipo = {}
-    for cliente in clientes:
-        tipo = cliente.get_TipoCliente_display()
-        if tipo not in clientes_por_tipo:
-            clientes_por_tipo[tipo] = {
-                'cantidad': 0,
-                'total_compras': 0
-            }
-        clientes_por_tipo[tipo]['cantidad'] += 1
-        clientes_por_tipo[tipo]['total_compras'] += float(cliente.TotalDineroCompras)
+    # Crear gráficos
+    charts = [
+        ('pie', 'Distribución por Tipo de Cliente', 
+         stats['ventas_por_tipo'], 'D2'),
+        ('line', 'Evolución de Clientes', 
+         dict(sorted(stats['clientes_por_mes'].items())), 'D18'),
+        ('column', 'Ventas Mensuales', 
+         dict(sorted(stats['compras_por_mes'].items())), 'K2'),
+        ('pie', 'Rangos de Compra', 
+         stats['rangos_compra'], 'K18'),
+        ('bar', 'Top 10 Productos más Comprados',
+         dict(sorted(stats['productos_populares'].items(), 
+                    key=lambda x: x[1], reverse=True)[:10]), 'R2')
+    ]
+
+    for tipo, titulo, datos, posicion in charts:
+        chart = workbook.add_chart({'type': tipo})
+        
+        # Escribir datos
+        col_base = ord(posicion[0]) - ord('A')
+        row_base = int(posicion[1])
+        
+        for i, (key, value) in enumerate(datos.items(), start=1):
+            ws_charts.write(row_base + i - 1, col_base, key)
+            ws_charts.write(row_base + i - 1, col_base + 1, value)
+        
+        chart.add_series({
+            'name': titulo,
+            'categories': f'=Gráficos!${chr(65+col_base)}${row_base}:${chr(65+col_base)}${row_base+len(datos)-1}',
+            'values': f'=Gráficos!${chr(66+col_base)}${row_base}:${chr(66+col_base)}${row_base+len(datos)-1}',
+            'data_labels': {'percentage': True} if tipo == 'pie' else {'value': True}
+        })
+        
+        chart.set_title({'name': titulo})
+        chart.set_size({'width': 400, 'height': 300})
+        ws_charts.insert_chart(posicion, chart)
     
-    worksheet_charts.write_row('A1', ['Tipo Cliente', 'Cantidad', 'Total Compras'], header_format)
+    # Resumen
+    ws_resumen.set_column('A:B', 30)
+    resumen_data = [
+        ('Total Clientes', len(clientes)),
+        ('Clientes Particulares', sum(1 for c in clientes if c.TipoCliente == 'particular')),
+        ('Clientes Empresa', sum(1 for c in clientes if c.TipoCliente == 'empresa')),
+        ('Total Ventas', f"${total_ventas:,.2f}"),
+        ('Promedio por Cliente', f"${total_ventas/len(clientes):,.2f}" if clientes else "$0"),
+        ('Cliente con Mayor Compra', max((c.TotalDineroCompras, str(c)) for c in clientes)[1] if clientes else "N/A"),
+        ('Producto Más Vendido', max(stats['productos_populares'].items(), key=lambda x: x[1])[0] if stats['productos_populares'] else "N/A")
+    ]
     
-    for i, (tipo, datos) in enumerate(clientes_por_tipo.items(), start=2):
-        worksheet_charts.write(f'A{i}', tipo)
-        worksheet_charts.write(f'B{i}', datos['cantidad'])
-        worksheet_charts.write(f'C{i}', datos['total_compras'])
-    
-    pie_chart = workbook.add_chart({'type': 'pie'})
-    pie_chart.add_series({
-        'name': 'Distribución de Clientes',
-        'categories': f'=Gráficos!$A$2:$A${len(clientes_por_tipo)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(clientes_por_tipo)+1}',
-        'data_labels': {'percentage': True},
-    })
-    pie_chart.set_title({'name': 'Distribución por Tipo de Cliente'})
-    pie_chart.set_size({'width': 500, 'height': 300})
-    worksheet_charts.insert_chart('E2', pie_chart)
+    for i, (label, value) in enumerate(resumen_data):
+        ws_resumen.write(i, 0, label, formats['header'])
+        ws_resumen.write(i, 1, value)
     
     workbook.close()
     output.seek(0)
     
-    filename = f'Clientes_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    filename = f'Reporte_Clientes_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx'
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -6373,8 +7290,6 @@ def exportar_clientes_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
-
-
 @login_required(login_url='login')
 @ensure_csrf_cookie
 def eliminar_cliente(request, cliente_id):
@@ -6753,178 +7668,225 @@ def eliminar_administrador(request, administrador_id):
     
 
 def exportar_administradores_excel(request):
-   output = BytesIO()
-   workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-   
-   # Formatos
-   header_format = workbook.add_format({
-       'bold': True,
-       'bg_color': '#000000',
-       'font_color': 'white',
-       'border': 1
-   })
-   
-   date_format = workbook.add_format({'num_format': 'dd/mm/yyyy'})
-   
-   # Hoja principal de datos
-   worksheet_data = workbook.add_worksheet('Administradores')
-   
-   # Encabezados ampliados para incluir ventas
-   headers = [
-       'ID',
-       'Username', 
-       'Email',
-       'RUT',
-       'Teléfono',
-       'Edad',
-       'Fecha Registro',
-       'Última Modificación',
-       'Clientes Registrados',
-       'Pérdidas Registradas',
-       'Ventas Registradas',
-       'Total Ventas ($)',
-       'Total Pérdidas ($)',
-       'Promedio por Venta ($)',
-       'Promedio por Pérdida ($)'
-   ]
-   
-   # Escribir encabezados
-   for col, header in enumerate(headers):
-       worksheet_data.write(0, col, header, header_format)
-       worksheet_data.set_column(col, col, 15)
-   
-   # Obtener datos
-   administradores = Usuario.objects.filter(TipoUsuario='Administrador').select_related('user')
-   
-   # Escribir datos
-   for row, admin in enumerate(administradores, start=1):
-       clientes = Cliente.objects.filter(Usuario=admin.user)
-       perdidas = Perdidas.objects.filter(Usuario=admin.user)
-       ventas = Ventas.objects.filter(Usuario=admin.user)
-       
-       # Calcular totales y promedios
-       total_ventas = sum(v.PrecioTotalVenta for v in ventas)
-       total_perdidas = sum(p.ValorTotalPerdida for p in perdidas)
-       promedio_venta = total_ventas / ventas.count() if ventas.count() > 0 else 0
-       promedio_perdida = total_perdidas / perdidas.count() if perdidas.count() > 0 else 0
-       
-       worksheet_data.write(row, 0, admin.id)
-       worksheet_data.write(row, 1, admin.user.username)
-       worksheet_data.write(row, 2, admin.user.email)
-       worksheet_data.write(row, 3, admin.RutUsuario)
-       worksheet_data.write(row, 4, admin.TelefonoUsuario or '')
-       worksheet_data.write(row, 5, admin.EdadUsuario or '')
-       worksheet_data.write_datetime(row, 6, timezone.localtime(admin.user.date_joined).replace(tzinfo=None), date_format)
-       worksheet_data.write_datetime(row, 7, timezone.localtime(admin.user.last_login).replace(tzinfo=None), date_format) if admin.user.last_login else worksheet_data.write(row, 7, '')
-       worksheet_data.write(row, 8, clientes.count())
-       worksheet_data.write(row, 9, perdidas.count())
-       worksheet_data.write(row, 10, ventas.count())
-       worksheet_data.write(row, 11, float(total_ventas))
-       worksheet_data.write(row, 12, float(total_perdidas))
-       worksheet_data.write(row, 13, float(promedio_venta))
-       worksheet_data.write(row, 14, float(promedio_perdida))
-   
-   # Hoja de estadísticas
-   worksheet_stats = workbook.add_worksheet('Estadísticas')
-   
-   # Datos para estadísticas
-   estadisticas = {
-       'total_admins': administradores.count(),
-       'promedio_edad': administradores.filter(EdadUsuario__isnull=False).aggregate(Avg('EdadUsuario'))['EdadUsuario__avg'] or 0,
-       'clientes_por_admin': {},
-       'perdidas_por_admin': {},
-       'ventas_por_admin': {},
-       'total_ventas_por_admin': {},
-       'total_perdidas_por_admin': {}
-   }
-   
-   for admin in administradores:
-       username = admin.user.username
-       ventas = Ventas.objects.filter(Usuario=admin.user)
-       perdidas = Perdidas.objects.filter(Usuario=admin.user)
-       
-       estadisticas['clientes_por_admin'][username] = Cliente.objects.filter(Usuario=admin.user).count()
-       estadisticas['perdidas_por_admin'][username] = perdidas.count()
-       estadisticas['ventas_por_admin'][username] = ventas.count()
-       estadisticas['total_ventas_por_admin'][username] = sum(v.PrecioTotalVenta for v in ventas)
-       estadisticas['total_perdidas_por_admin'][username] = sum(p.ValorTotalPerdida for p in perdidas)
-   
-   # Escribir estadísticas generales
-   worksheet_stats.write('A1', 'Estadísticas Generales', header_format)
-   worksheet_stats.write('A2', 'Total Administradores')
-   worksheet_stats.write('B2', estadisticas['total_admins'])
-   worksheet_stats.write('A3', 'Promedio de Edad')
-   worksheet_stats.write('B3', round(estadisticas['promedio_edad'], 2))
-   
-   # Datos para gráficos
-   worksheet_stats.write('A5', 'Administrador', header_format)
-   worksheet_stats.write('B5', 'Clientes Registrados', header_format)
-   worksheet_stats.write('C5', 'Pérdidas Registradas', header_format)
-   worksheet_stats.write('D5', 'Ventas Registradas', header_format)
-   worksheet_stats.write('E5', 'Total Ventas ($)', header_format)
-   worksheet_stats.write('F5', 'Total Pérdidas ($)', header_format)
-   
-   row = 6
-   for username in estadisticas['clientes_por_admin'].keys():
-       worksheet_stats.write(f'A{row}', username)
-       worksheet_stats.write(f'B{row}', estadisticas['clientes_por_admin'][username])
-       worksheet_stats.write(f'C{row}', estadisticas['perdidas_por_admin'][username])
-       worksheet_stats.write(f'D{row}', estadisticas['ventas_por_admin'][username])
-       worksheet_stats.write(f'E{row}', float(estadisticas['total_ventas_por_admin'][username]))
-       worksheet_stats.write(f'F{row}', float(estadisticas['total_perdidas_por_admin'][username]))
-       row += 1
-   
-   # Gráficos
-   # Gráfico de clientes
-   chart_clientes = workbook.add_chart({'type': 'column'})
-   chart_clientes.add_series({
-       'name': 'Clientes Registrados',
-       'categories': f'=Estadísticas!$A$6:$A${row-1}',
-       'values': f'=Estadísticas!$B$6:$B${row-1}',
-       'data_labels': {'value': True}
-   })
-   chart_clientes.set_title({'name': 'Clientes Registrados por Administrador'})
-   chart_clientes.set_size({'width': 500, 'height': 300})
-   worksheet_stats.insert_chart('H2', chart_clientes)
-   
-   # Gráfico de pérdidas
-   chart_perdidas = workbook.add_chart({'type': 'column'})
-   chart_perdidas.add_series({
-       'name': 'Pérdidas Registradas',
-       'categories': f'=Estadísticas!$A$6:$A${row-1}',
-       'values': f'=Estadísticas!$C$6:$C${row-1}',
-       'data_labels': {'value': True}
-   })
-   chart_perdidas.set_title({'name': 'Pérdidas Registradas por Administrador'})
-   chart_perdidas.set_size({'width': 500, 'height': 300})
-   worksheet_stats.insert_chart('H18', chart_perdidas)
-   
-   # Gráfico de ventas
-   chart_ventas = workbook.add_chart({'type': 'column'})
-   chart_ventas.add_series({
-       'name': 'Ventas Registradas',
-       'categories': f'=Estadísticas!$A$6:$A${row-1}',
-       'values': f'=Estadísticas!$D$6:$D${row-1}',
-       'data_labels': {'value': True}
-   })
-   chart_ventas.set_title({'name': 'Ventas Registradas por Administrador'})
-   chart_ventas.set_size({'width': 500, 'height': 300})
-   worksheet_stats.insert_chart('H34', chart_ventas)
-   
-   workbook.close()
-   
-   # Preparar respuesta
-   output.seek(0)
-   filename = f'Administradores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
-   
-   response = HttpResponse(
-       output.read(),
-       content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-   )
-   response['Content-Disposition'] = f'attachment; filename="{filename}"'
-   
-   return response
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    
+    # Crear hojas
+    ws_admin = workbook.add_worksheet('Administradores')
+    ws_comparativa = workbook.add_worksheet('Comparativa')
+    ws_graficos = workbook.add_worksheet('Gráficos')
+    
+    # Formatos
+    formats = {
+        'header': workbook.add_format({
+            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 
+            'border': 1, 'align': 'center'
+        }),
+        'date': workbook.add_format({
+            'num_format': 'dd/mm/yyyy', 'border': 1, 'align': 'center'
+        }),
+        'money': workbook.add_format({
+            'num_format': '$#,##0.00', 'border': 1, 'align': 'right'
+        }),
+        'percent': workbook.add_format({
+            'num_format': '0.00%', 'border': 1, 'align': 'center'
+        }),
+        'top_performer': workbook.add_format({
+            'bg_color': '#C6EFCE', 'border': 1
+        }),
+        'low_performer': workbook.add_format({
+            'bg_color': '#FFC7CE', 'border': 1
+        })
+    }
+    
+    # Headers principales
+    headers = [
+        'ID', 'Username', 'Email', 'RUT', 'Teléfono', 'Edad', 
+        'Fecha Registro', 'Última Actividad',
+        # Clientes
+        'Clientes Registrados', '% del Total Clientes',
+        'Clientes Particulares', 'Clientes Empresa',
+        'Cliente más Activo', 'Total Compras Clientes',
+        # Pérdidas
+        'Pérdidas Registradas', '% del Total Pérdidas',
+        'Pérdidas por Caducidad', 'Pérdidas por Daño',
+        'Pérdidas por Robo', 'Pérdidas por Error',
+        'Monto Total Pérdidas', 'Promedio por Pérdida',
+        # Ventas
+        'Ventas Registradas', '% del Total Ventas',
+        'Monto Total Ventas', 'Promedio por Venta',
+        'Mejor Mes de Ventas', 'Peor Mes de Ventas'
+    ]
+    
+    # Configurar columnas
+    for col, header in enumerate(headers):
+        ws_admin.write(0, col, header, formats['header'])
+        ws_admin.set_column(col, col, len(header) + 2)
+    
+    # Obtener datos
+    administradores = Usuario.objects.filter(TipoUsuario='Administrador').select_related('user')
+    
+    # Estadísticas globales
+    total_clientes = Cliente.objects.count()
+    total_perdidas = Perdidas.objects.count()
+    total_ventas = Ventas.objects.count()
+    
+    # Diccionarios para rankings y comparativas
+    rankings = {
+        'clientes': [],
+        'perdidas': [],
+        'ventas': [],
+        'montos_venta': [],
+        'montos_perdida': []
+    }
+    
+    # Procesar datos
+    row = 1
+    for admin in administradores:
+        # Obtener datos relacionados
+        clientes = Cliente.objects.filter(Usuario=admin.user)
+        perdidas = Perdidas.objects.filter(Usuario=admin.user)
+        ventas = Ventas.objects.filter(Usuario=admin.user)
+        
+        # Análisis de clientes
+        num_clientes = clientes.count()
+        clientes_particulares = clientes.filter(TipoCliente='particular').count()
+        clientes_empresa = clientes.filter(TipoCliente='empresa').count()
+        mejor_cliente = clientes.order_by('-TotalDineroCompras').first()
+        total_compras_clientes = sum(c.TotalDineroCompras for c in clientes)
+        
+        # Análisis de pérdidas
+        num_perdidas = perdidas.count()
+        perdidas_por_tipo = {
+            'caducidad': perdidas.filter(MotivoPerdida='caducidad').count(),
+            'daño': perdidas.filter(MotivoPerdida='daño').count(),
+            'robo': perdidas.filter(MotivoPerdida='robo').count(),
+            'error_inventario': perdidas.filter(MotivoPerdida='error_inventario').count()
+        }
+        total_perdidas_monto = sum(p.ValorTotalPerdida for p in perdidas)
+        promedio_perdida = total_perdidas_monto / num_perdidas if num_perdidas > 0 else 0
+        
+        # Análisis de ventas
+        num_ventas = ventas.count()
+        total_ventas_monto = sum(v.PrecioTotalVenta for v in ventas)
+        promedio_venta = total_ventas_monto / num_ventas if num_ventas > 0 else 0
+        
+        # Análisis mensual de ventas
+        ventas_por_mes = {}
+        for venta in ventas:
+            mes = venta.FechaVenta.strftime('%Y-%m')
+            ventas_por_mes[mes] = ventas_por_mes.get(mes, 0) + float(venta.PrecioTotalVenta)
+        
+        mejor_mes = max(ventas_por_mes.items(), key=lambda x: x[1])[0] if ventas_por_mes else 'N/A'
+        peor_mes = min(ventas_por_mes.items(), key=lambda x: x[1])[0] if ventas_por_mes else 'N/A'
+        
+        # Escribir datos
+        col = 0
+        ws_admin.write(row, col, admin.id); col += 1
+        ws_admin.write(row, col, admin.user.username); col += 1
+        ws_admin.write(row, col, admin.user.email); col += 1
+        ws_admin.write(row, col, admin.RutUsuario); col += 1
+        ws_admin.write(row, col, admin.TelefonoUsuario or ''); col += 1
+        ws_admin.write(row, col, admin.EdadUsuario or ''); col += 1
+        ws_admin.write(row, col, admin.user.date_joined, formats['date']); col += 1
+        ws_admin.write(row, col, admin.user.last_login or '', formats['date']); col += 1
+        
+        # Datos de clientes
+        ws_admin.write(row, col, num_clientes); col += 1
+        ws_admin.write(row, col, num_clientes/total_clientes if total_clientes > 0 else 0, formats['percent']); col += 1
+        ws_admin.write(row, col, clientes_particulares); col += 1
+        ws_admin.write(row, col, clientes_empresa); col += 1
+        ws_admin.write(row, col, str(mejor_cliente) if mejor_cliente else 'N/A'); col += 1
+        ws_admin.write(row, col, float(total_compras_clientes), formats['money']); col += 1
+        
+        # Datos de pérdidas
+        ws_admin.write(row, col, num_perdidas); col += 1
+        ws_admin.write(row, col, num_perdidas/total_perdidas if total_perdidas > 0 else 0, formats['percent']); col += 1
+        ws_admin.write(row, col, perdidas_por_tipo['caducidad']); col += 1
+        ws_admin.write(row, col, perdidas_por_tipo['daño']); col += 1
+        ws_admin.write(row, col, perdidas_por_tipo['robo']); col += 1
+        ws_admin.write(row, col, perdidas_por_tipo['error_inventario']); col += 1
+        ws_admin.write(row, col, float(total_perdidas_monto), formats['money']); col += 1
+        ws_admin.write(row, col, float(promedio_perdida), formats['money']); col += 1
+        
+        # Datos de ventas
+        ws_admin.write(row, col, num_ventas); col += 1
+        ws_admin.write(row, col, num_ventas/total_ventas if total_ventas > 0 else 0, formats['percent']); col += 1
+        ws_admin.write(row, col, float(total_ventas_monto), formats['money']); col += 1
+        ws_admin.write(row, col, float(promedio_venta), formats['money']); col += 1
+        ws_admin.write(row, col, mejor_mes); col += 1
+        ws_admin.write(row, col, peor_mes)
+        
+        # Guardar datos para rankings
+        rankings['clientes'].append((admin.user.username, num_clientes))
+        rankings['perdidas'].append((admin.user.username, num_perdidas))
+        rankings['ventas'].append((admin.user.username, num_ventas))
+        rankings['montos_venta'].append((admin.user.username, float(total_ventas_monto)))
+        rankings['montos_perdida'].append((admin.user.username, float(total_perdidas_monto)))
+        
+        row += 1
 
+    # Crear gráficos comparativos
+    charts = [
+        ('column', 'Clientes Registrados por Administrador', 
+         dict(sorted(rankings['clientes'], key=lambda x: x[1], reverse=True)), 'D2'),
+        ('column', 'Pérdidas Registradas por Administrador',
+         dict(sorted(rankings['perdidas'], key=lambda x: x[1], reverse=True)), 'D18'),
+        ('column', 'Ventas Registradas por Administrador',
+         dict(sorted(rankings['ventas'], key=lambda x: x[1], reverse=True)), 'K2'),
+        ('pie', 'Distribución de Montos de Venta',
+         dict(sorted(rankings['montos_venta'], key=lambda x: x[1], reverse=True)), 'K18'),
+        ('pie', 'Distribución de Montos de Pérdida',
+         dict(sorted(rankings['montos_perdida'], key=lambda x: x[1], reverse=True)), 'R2')
+    ]
+
+    for tipo, titulo, datos, posicion in charts:
+        chart = workbook.add_chart({'type': tipo})
+        
+        # Escribir datos
+        col_base = ord(posicion[0]) - ord('A')
+        row_base = int(posicion[1])
+        
+        for i, (key, value) in enumerate(datos.items(), start=1):
+            ws_graficos.write(row_base + i - 1, col_base, key)
+            ws_graficos.write(row_base + i - 1, col_base + 1, value)
+        
+        chart.add_series({
+            'name': titulo,
+            'categories': f'=Gráficos!${chr(65+col_base)}${row_base}:${chr(65+col_base)}${row_base+len(datos)-1}',
+            'values': f'=Gráficos!${chr(66+col_base)}${row_base}:${chr(66+col_base)}${row_base+len(datos)-1}',
+            'data_labels': {'percentage': True} if tipo == 'pie' else {'value': True}
+        })
+        
+        chart.set_title({'name': titulo})
+        chart.set_size({'width': 400, 'height': 300})
+        ws_graficos.insert_chart(posicion, chart)
+
+    # Escribir rankings en hoja comparativa
+    headers_comp = ['Ranking', 'Administrador', 'Valor']
+    for col, header in enumerate(headers_comp):
+        ws_comparativa.write(0, col, header, formats['header'])
+    
+    row = 1
+    for categoria, ranking in rankings.items():
+        ranking_sorted = sorted(ranking, key=lambda x: x[1], reverse=True)
+        ws_comparativa.write(row, 0, f"Top {categoria.title()}")
+        for i, (admin, valor) in enumerate(ranking_sorted, start=1):
+            ws_comparativa.write(row + i, 1, admin)
+            ws_comparativa.write(row + i, 2, valor, formats['money'] if 'monto' in categoria else None)
+        row += len(ranking_sorted) + 2
+
+    workbook.close()
+    output.seek(0)
+    
+    filename = f'Reporte_Administradores_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx'
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
 
 
 #---------------RUTA PARA COLABORADOR------------
@@ -7201,180 +8163,226 @@ def eliminar_colaborador(request, colaborador_id):
        'success': False,
        'message': 'Método no permitido'
    }, status=405)
+@ensure_csrf_cookie
+@login_required(login_url='login')
 def exportar_colaboradores_excel(request):
-   output = BytesIO()
-   workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
-   
-   # Formatos
-   header_format = workbook.add_format({
-       'bold': True,
-       'bg_color': '#000000',
-       'font_color': 'white',
-       'border': 1
-   })
-   
-   date_format = workbook.add_format({'num_format': 'dd/mm/yyyy'})
-   
-   # Hoja principal de datos
-   worksheet_data = workbook.add_worksheet('Colaboradores')
-   
-   # Encabezados ampliados para incluir ventas
-   headers = [
-       'ID',
-       'Username', 
-       'Email',
-       'RUT',
-       'Teléfono',
-       'Edad',
-       'Fecha Registro',
-       'Última Modificación',
-       'Clientes Registrados',
-       'Pérdidas Registradas',
-       'Ventas Registradas',
-       'Total Ventas ($)',
-       'Total Pérdidas ($)',
-       'Promedio por Venta ($)',
-       'Promedio por Pérdida ($)'
-   ]
-   
-   # Escribir encabezados
-   for col, header in enumerate(headers):
-       worksheet_data.write(0, col, header, header_format)
-       worksheet_data.set_column(col, col, 15)
-   
-   # Obtener datos
-   colaboradores = Usuario.objects.filter(TipoUsuario='Colaborador').select_related('user')
-   
-   # Escribir datos
-   for row, colab in enumerate(colaboradores, start=1):
-       clientes = Cliente.objects.filter(Usuario=colab.user)
-       perdidas = Perdidas.objects.filter(Usuario=colab.user)
-       ventas = Ventas.objects.filter(Usuario=colab.user)
-       
-       # Calcular totales y promedios
-       total_ventas = sum(v.PrecioTotalVenta for v in ventas)
-       total_perdidas = sum(p.ValorTotalPerdida for p in perdidas)
-       promedio_venta = total_ventas / ventas.count() if ventas.count() > 0 else 0
-       promedio_perdida = total_perdidas / perdidas.count() if perdidas.count() > 0 else 0
-       
-       worksheet_data.write(row, 0, colab.id)
-       worksheet_data.write(row, 1, colab.user.username)
-       worksheet_data.write(row, 2, colab.user.email)
-       worksheet_data.write(row, 3, colab.RutUsuario)
-       worksheet_data.write(row, 4, colab.TelefonoUsuario or '')
-       worksheet_data.write(row, 5, colab.EdadUsuario or '')
-       worksheet_data.write_datetime(row, 6, timezone.localtime(colab.user.date_joined).replace(tzinfo=None), date_format)
-       worksheet_data.write_datetime(row, 7, timezone.localtime(colab.user.last_login).replace(tzinfo=None), date_format) if colab.user.last_login else worksheet_data.write(row, 7, '')
-       worksheet_data.write(row, 8, clientes.count())
-       worksheet_data.write(row, 9, perdidas.count())
-       worksheet_data.write(row, 10, ventas.count())
-       worksheet_data.write(row, 11, float(total_ventas))
-       worksheet_data.write(row, 12, float(total_perdidas))
-       worksheet_data.write(row, 13, float(promedio_venta))
-       worksheet_data.write(row, 14, float(promedio_perdida))
-   
-   # Hoja de estadísticas
-   worksheet_stats = workbook.add_worksheet('Estadísticas')
-   
-   # Datos para estadísticas
-   estadisticas = {
-       'total_colaboradores': colaboradores.count(),
-       'promedio_edad': colaboradores.filter(EdadUsuario__isnull=False).aggregate(Avg('EdadUsuario'))['EdadUsuario__avg'] or 0,
-       'clientes_por_colaborador': {},
-       'perdidas_por_colaborador': {},
-       'ventas_por_colaborador': {},
-       'total_ventas_por_colaborador': {},
-       'total_perdidas_por_colaborador': {}
-   }
-   
-   for colab in colaboradores:
-       username = colab.user.username
-       ventas = Ventas.objects.filter(Usuario=colab.user)
-       perdidas = Perdidas.objects.filter(Usuario=colab.user)
-       
-       estadisticas['clientes_por_colaborador'][username] = Cliente.objects.filter(Usuario=colab.user).count()
-       estadisticas['perdidas_por_colaborador'][username] = perdidas.count()
-       estadisticas['ventas_por_colaborador'][username] = ventas.count()
-       estadisticas['total_ventas_por_colaborador'][username] = sum(v.PrecioTotalVenta for v in ventas)
-       estadisticas['total_perdidas_por_colaborador'][username] = sum(p.ValorTotalPerdida for p in perdidas)
-   
-   # Escribir estadísticas generales
-   worksheet_stats.write('A1', 'Estadísticas Generales', header_format)
-   worksheet_stats.write('A2', 'Total Colaboradores')
-   worksheet_stats.write('B2', estadisticas['total_colaboradores'])
-   worksheet_stats.write('A3', 'Promedio de Edad')
-   worksheet_stats.write('B3', round(estadisticas['promedio_edad'], 2))
-   
-   # Datos para gráficos
-   worksheet_stats.write('A5', 'Colaborador', header_format)
-   worksheet_stats.write('B5', 'Clientes Registrados', header_format)
-   worksheet_stats.write('C5', 'Pérdidas Registradas', header_format)
-   worksheet_stats.write('D5', 'Ventas Registradas', header_format)
-   worksheet_stats.write('E5', 'Total Ventas ($)', header_format)
-   worksheet_stats.write('F5', 'Total Pérdidas ($)', header_format)
-   
-   row = 6
-   for username in estadisticas['clientes_por_colaborador'].keys():
-       worksheet_stats.write(f'A{row}', username)
-       worksheet_stats.write(f'B{row}', estadisticas['clientes_por_colaborador'][username])
-       worksheet_stats.write(f'C{row}', estadisticas['perdidas_por_colaborador'][username])
-       worksheet_stats.write(f'D{row}', estadisticas['ventas_por_colaborador'][username])
-       worksheet_stats.write(f'E{row}', float(estadisticas['total_ventas_por_colaborador'][username]))
-       worksheet_stats.write(f'F{row}', float(estadisticas['total_perdidas_por_colaborador'][username]))
-       row += 1
-   
-   # Gráficos
-   # Gráfico de clientes
-   chart_clientes = workbook.add_chart({'type': 'column'})
-   chart_clientes.add_series({
-       'name': 'Clientes Registrados',
-       'categories': f'=Estadísticas!$A$6:$A${row-1}',
-       'values': f'=Estadísticas!$B$6:$B${row-1}',
-       'data_labels': {'value': True}
-   })
-   chart_clientes.set_title({'name': 'Clientes Registrados por Colaborador'})
-   chart_clientes.set_size({'width': 500, 'height': 300})
-   worksheet_stats.insert_chart('H2', chart_clientes)
-   
-   # Gráfico de pérdidas
-   chart_perdidas = workbook.add_chart({'type': 'column'})
-   chart_perdidas.add_series({
-       'name': 'Pérdidas Registradas',
-       'categories': f'=Estadísticas!$A$6:$A${row-1}',
-       'values': f'=Estadísticas!$C$6:$C${row-1}',
-       'data_labels': {'value': True}
-   })
-   chart_perdidas.set_title({'name': 'Pérdidas Registradas por Colaborador'})
-   chart_perdidas.set_size({'width': 500, 'height': 300})
-   worksheet_stats.insert_chart('H18', chart_perdidas)
-   
-   # Gráfico de ventas
-   chart_ventas = workbook.add_chart({'type': 'column'})
-   chart_ventas.add_series({
-       'name': 'Ventas Registradas',
-       'categories': f'=Estadísticas!$A$6:$A${row-1}',
-       'values': f'=Estadísticas!$D$6:$D${row-1}',
-       'data_labels': {'value': True}
-   })
-   chart_ventas.set_title({'name': 'Ventas Registradas por Colaborador'})
-   chart_ventas.set_size({'width': 500, 'height': 300})
-   worksheet_stats.insert_chart('H34', chart_ventas)
-   
-   workbook.close()
-   
-   # Preparar respuesta
-   output.seek(0)
-   filename = f'Colaboradores_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
-   
-   response = HttpResponse(
-       output.read(),
-       content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-   )
-   response['Content-Disposition'] = f'attachment; filename="{filename}"'
-   
-   return response
-
-
+    output = BytesIO()
+    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    
+    # Crear hojas
+    ws_colab = workbook.add_worksheet('Colaboradores')
+    ws_analisis = workbook.add_worksheet('Análisis Detallado')
+    ws_stats = workbook.add_worksheet('Estadísticas')
+    ws_graficos = workbook.add_worksheet('Gráficos')
+    
+    # Formatos
+    formats = {
+        'header': workbook.add_format({
+            'bold': True, 'bg_color': '#000000', 'font_color': 'white', 
+            'border': 1, 'align': 'center'
+        }),
+        'date': workbook.add_format({
+            'num_format': 'dd/mm/yyyy', 'border': 1, 'align': 'center'
+        }),
+        'money': workbook.add_format({
+            'num_format': '$#,##0.00', 'border': 1, 'align': 'right'
+        }),
+        'percent': workbook.add_format({
+            'num_format': '0.00%', 'border': 1, 'align': 'center'
+        }),
+        'high': workbook.add_format({
+            'bg_color': '#C6EFCE', 'border': 1
+        }),
+        'low': workbook.add_format({
+            'bg_color': '#FFC7CE', 'border': 1
+        })
+    }
+    
+    # Headers principales
+    headers = [
+        'ID', 'Username', 'Email', 'RUT', 'Teléfono', 'Edad',
+        'Fecha Registro', 'Última Actividad',
+        # Métricas de rendimiento
+        'Días Activo', 'Promedio Registros/Día',
+        # Clientes
+        'Clientes Registrados', 'Clientes Activos',
+        'Mejor Cliente', 'Ventas por Cliente',
+        # Ventas
+        'Ventas Realizadas', 'Monto Total Ventas',
+        'Promedio por Venta', 'Mejor Mes Ventas',
+        # Pérdidas
+        'Pérdidas Registradas', 'Monto Total Pérdidas',
+        'Promedio por Pérdida', 'Motivo Principal',
+        # Rankings
+        'Ranking Ventas', 'Ranking Clientes',
+        'Ranking Eficiencia'
+    ]
+    
+    for col, header in enumerate(headers):
+        ws_colab.write(0, col, header, formats['header'])
+        ws_colab.set_column(col, col, len(header) + 2)
+    
+    # Obtener datos
+    colaboradores = Usuario.objects.filter(TipoUsuario='Colaborador').select_related('user')
+    
+    # Estadísticas globales
+    total_ventas_global = Ventas.objects.all().aggregate(total=Sum('PrecioTotalVenta'))['total'] or 0
+    total_perdidas_global = Perdidas.objects.all().aggregate(total=Sum('ValorTotalPerdida'))['total'] or 0
+    
+    # Datos para rankings y comparativas
+    rankings = {
+        'ventas': [],
+        'clientes': [],
+        'eficiencia': []
+    }
+    
+    row = 1
+    for colab in colaboradores:
+        # Obtener datos relacionados
+        ventas = Ventas.objects.filter(Usuario=colab.user)
+        clientes = Cliente.objects.filter(Usuario=colab.user)
+        perdidas = Perdidas.objects.filter(Usuario=colab.user)
+        
+        # Cálculos básicos
+        dias_activo = (timezone.now().date() - colab.user.date_joined.date()).days
+        registros_por_dia = (ventas.count() + clientes.count() + perdidas.count()) / (dias_activo if dias_activo > 0 else 1)
+        
+        total_ventas = sum(v.PrecioTotalVenta for v in ventas)
+        total_perdidas = sum(p.ValorTotalPerdida for p in perdidas)
+        
+        # Análisis de ventas
+        ventas_por_mes = {}
+        for venta in ventas:
+            mes = venta.FechaVenta.strftime('%Y-%m')
+            ventas_por_mes[mes] = ventas_por_mes.get(mes, 0) + float(venta.PrecioTotalVenta)
+        
+        mejor_mes = max(ventas_por_mes.items(), key=lambda x: x[1])[0] if ventas_por_mes else 'N/A'
+        
+        # Análisis de clientes
+        clientes_activos = sum(1 for c in clientes if c.ventas.exists())
+        mejor_cliente = max(clientes, key=lambda x: x.TotalDineroCompras) if clientes.exists() else None
+        ventas_por_cliente = total_ventas / clientes.count() if clientes.exists() else 0
+        
+        # Análisis de pérdidas
+        motivos_perdida = {}
+        for perdida in perdidas:
+            motivo = perdida.get_MotivoPerdida_display()
+            motivos_perdida[motivo] = motivos_perdida.get(motivo, 0) + 1
+        
+        motivo_principal = max(motivos_perdida.items(), key=lambda x: x[1])[0] if motivos_perdida else 'N/A'
+        
+        # Escribir datos en la hoja principal
+        col = 0
+        ws_colab.write(row, col, colab.id); col += 1
+        ws_colab.write(row, col, colab.user.username); col += 1
+        ws_colab.write(row, col, colab.user.email); col += 1
+        ws_colab.write(row, col, colab.RutUsuario); col += 1
+        ws_colab.write(row, col, colab.TelefonoUsuario or ''); col += 1
+        ws_colab.write(row, col, colab.EdadUsuario or ''); col += 1
+        ws_colab.write(row, col, colab.user.date_joined, formats['date']); col += 1
+        ws_colab.write(row, col, colab.user.last_login or '', formats['date']); col += 1
+        
+        # Métricas de rendimiento
+        ws_colab.write(row, col, dias_activo); col += 1
+        ws_colab.write(row, col, round(registros_por_dia, 2)); col += 1
+        
+        # Datos de clientes
+        ws_colab.write(row, col, clientes.count()); col += 1
+        ws_colab.write(row, col, clientes_activos); col += 1
+        ws_colab.write(row, col, str(mejor_cliente) if mejor_cliente else 'N/A'); col += 1
+        ws_colab.write(row, col, float(ventas_por_cliente), formats['money']); col += 1
+        
+        # Datos de ventas
+        ws_colab.write(row, col, ventas.count()); col += 1
+        ws_colab.write(row, col, float(total_ventas), formats['money']); col += 1
+        ws_colab.write(row, col, float(total_ventas/ventas.count() if ventas.exists() else 0), formats['money']); col += 1
+        ws_colab.write(row, col, mejor_mes); col += 1
+        
+        # Datos de pérdidas
+        ws_colab.write(row, col, perdidas.count()); col += 1
+        ws_colab.write(row, col, float(total_perdidas), formats['money']); col += 1
+        ws_colab.write(row, col, float(total_perdidas/perdidas.count() if perdidas.exists() else 0), formats['money']); col += 1
+        ws_colab.write(row, col, motivo_principal); col += 1
+        
+        # Calcular datos para rankings
+        eficiencia = (total_ventas - total_perdidas) / total_ventas if total_ventas > 0 else 0
+        rankings['ventas'].append((colab.user.username, total_ventas))
+        rankings['clientes'].append((colab.user.username, clientes.count()))
+        rankings['eficiencia'].append((colab.user.username, eficiencia))
+        
+        row += 1
+    
+    # Calcular y escribir rankings
+    for ranking_type in ['ventas', 'clientes', 'eficiencia']:
+        sorted_ranking = sorted(rankings[ranking_type], key=lambda x: x[1], reverse=True)
+        ranking_dict = {name: pos+1 for pos, (name, _) in enumerate(sorted_ranking)}
+        
+        ranking_col = 22 + ['ventas', 'clientes', 'eficiencia'].index(ranking_type)
+        
+        for r in range(1, row):
+            username = colaboradores[r-1].user.username
+            ranking_pos = ranking_dict.get(username, len(sorted_ranking))
+            
+            format_to_use = (
+                formats['high'] if ranking_pos <= 3
+                else formats['low'] if ranking_pos == len(sorted_ranking)
+                else None
+            )
+            
+            ws_colab.write(r, ranking_col, ranking_pos, format_to_use)
+    
+    # Estadísticas generales
+    ws_stats.set_column('A:B', 30)
+    stats_data = [
+        ('Total Colaboradores', len(colaboradores)),
+        ('Promedio Edad', colaboradores.filter(EdadUsuario__isnull=False).aggregate(Avg('EdadUsuario'))['EdadUsuario__avg'] or 0),
+        ('Total Ventas Realizadas', Ventas.objects.filter(Usuario__in=[c.user for c in colaboradores]).count()),
+        ('Monto Total Ventas', f"${total_ventas_global:,.2f}"),
+        ('Total Clientes Registrados', Cliente.objects.filter(Usuario__in=[c.user for c in colaboradores]).count()),
+        ('Mejor Colaborador (Ventas)', max(rankings['ventas'], key=lambda x: x[1])[0] if rankings['ventas'] else 'N/A'),
+        ('Mejor Colaborador (Clientes)', max(rankings['clientes'], key=lambda x: x[1])[0] if rankings['clientes'] else 'N/A'),
+        ('Mejor Colaborador (Eficiencia)', max(rankings['eficiencia'], key=lambda x: x[1])[0] if rankings['eficiencia'] else 'N/A')
+    ]
+    
+    for i, (label, value) in enumerate(stats_data):
+        ws_stats.write(i, 0, label, formats['header'])
+        ws_stats.write(i, 1, value)
+    
+    # Crear gráficos
+    for i, (tipo, titulo, datos) in enumerate([
+        ('column', 'Ventas por Colaborador', rankings['ventas']),
+        ('pie', 'Clientes por Colaborador', rankings['clientes']),
+        ('column', 'Eficiencia por Colaborador', rankings['eficiencia'])
+    ]):
+        chart = workbook.add_chart({'type': tipo})
+        
+        # Escribir datos
+        for j, (name, value) in enumerate(sorted(datos, key=lambda x: x[1], reverse=True)):
+            ws_graficos.write(j+1, i*2, name)
+            ws_graficos.write(j+1, i*2+1, value)
+        
+        chart.add_series({
+            'name': titulo,
+            'categories': f'=Gráficos!${chr(65+i*2)}$2:${chr(65+i*2)}${len(datos)+1}',
+            'values': f'=Gráficos!${chr(66+i*2)}$2:${chr(66+i*2)}${len(datos)+1}',
+            'data_labels': {'percentage': True} if tipo == 'pie' else {'value': True}
+        })
+        
+        chart.set_title({'name': titulo})
+        chart.set_size({'width': 400, 'height': 300})
+        ws_graficos.insert_chart(f'{chr(68+i*7)}2', chart)
+    
+    workbook.close()
+    output.seek(0)
+    
+    filename = f'Reporte_Colaboradores_{timezone.now().strftime("%Y%m%d_%H%M")}.xlsx'
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    return response
 
 #---------------RUTA PARA DASHBOARDSSSS------------
 def get_categorias(request):

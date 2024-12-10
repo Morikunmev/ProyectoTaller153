@@ -61,6 +61,11 @@ urlpatterns = [
     path('api/material/<int:material_id>/eliminar/', views.eliminar_material, name='eliminar_material'),
     path('api/material/<int:material_id>/actualizar/', views.actualizar_material, name='actualizar_material'),
     path('api/materiales/<int:material_id>/detalles/', views.obtener_detalles_material, name='obtener_detalles_material'),
+    path('api/materiales/exportar-excel/', views.exportar_materiales_excel, name='exportar_materiales_excel'),  # Nueva ruta en el patrón API
+
+
+
+    
     
     
         #-------------------RUTA PARA HERRAMIENTA-----------------
