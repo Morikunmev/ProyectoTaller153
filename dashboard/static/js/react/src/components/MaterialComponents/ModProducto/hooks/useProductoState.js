@@ -28,6 +28,7 @@ export const useProductoState = () => {
   const [productoToDesechar, setProductoToDesechar] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortDirection, setSortDirection] = useState("desc"); // Nuevo estado
 
   const itemsPerPage = 10;
 
@@ -59,6 +60,22 @@ export const useProductoState = () => {
       setLoading(true);
       setError(null);
     };
+  }, []);
+  // Agregar la función de ordenamiento
+  const sortProductosByDate = useCallback(
+    (productos) => {
+      return [...productos].sort((a, b) => {
+        const dateA = new Date(a.FechaProducto);
+        const dateB = new Date(b.FechaProducto);
+        return sortDirection === "asc" ? dateA - dateB : dateB - dateA;
+      });
+    },
+    [sortDirection]
+  );
+
+  // Agregar la función para cambiar la dirección de ordenamiento
+  const toggleSortDirection = useCallback(() => {
+    setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
   }, []);
 
   // Manejadores de búsqueda
@@ -353,6 +370,9 @@ export const useProductoState = () => {
     handleOpenModal,
     handleCloseModal,
     handleViewChange,
+    sortDirection,
+    sortProductosByDate,
+    toggleSortDirection,
     handleProductoCreated,
     handleProductoUpdated,
     handlePreviousPage,

@@ -6089,39 +6089,52 @@ def eliminar_venta(request, venta_id):
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                # 1. Obtener la venta y el producto
+                # Obtener la venta y el producto
                 venta = get_object_or_404(Ventas, id=venta_id)
                 producto = get_object_or_404(Producto, id=venta.Producto.id)
                 cliente = venta.cliente
-
-                # 2. Verificar que podemos restablecer la cantidad vendida
+                
+                # Verificar que la cantidad a restablecer no exceda la cantidad vendida
                 if venta.CantidadVenta > producto.CantidadProductoVendido:
                     return JsonResponse({
                         'success': False,
-                        'errors': f'No se puede restablecer esta venta. Inconsistencia en la cantidad vendida.'
+                        'errors': f'Solo hay {producto.CantidadProductoVendido} unidad(es) vendida(s) para restablecer'
                     }, status=400)
 
-                # 3. Calcular nuevos valores
+                # Verificar que después de la operación las cantidades no queden negativas
                 nueva_cantidad_vendida = producto.CantidadProductoVendido - venta.CantidadVenta
-                nuevo_stock = producto.StockProductoInicial - (nueva_cantidad_vendida + producto.CantidadProductoDesechado)
+                nuevo_stock = producto.StockProductoActual + venta.CantidadVenta
 
-                # 4. Actualizar el producto
-                Producto.objects.filter(pk=producto.pk).update(
-                    CantidadProductoVendido=nueva_cantidad_vendida,
-                    StockProductoActual=nuevo_stock,
-                    PrecioTotalProducto=nuevo_stock * producto.PrecioUnitarioProducto,
-                    ProductoAgotado=(nuevo_stock == 0)
-                )
+                if nueva_cantidad_vendida < 0:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': 'La operación resultaría en una cantidad vendida negativa'
+                    }, status=400)
 
-                # 5. Eliminar la venta
+                if nuevo_stock > producto.StockProductoInicial:
+                    return JsonResponse({
+                        'success': False,
+                        'errors': 'La operación excedería el stock inicial del producto'
+                    }, status=400)
+
+                # Guardar la cantidad de la venta antes de eliminarla
+                venta_cantidad = venta.CantidadVenta
+                
+                # Eliminar la venta primero
                 venta.delete()
 
-                # 6. Actualizar el producto y la categoría
-                producto.refresh_from_db()
+                # Actualizar el producto de manera segura
+                producto.CantidadProductoVendido = nueva_cantidad_vendida
+                producto.StockProductoActual = nuevo_stock
+                producto.PrecioTotalProducto = nuevo_stock * producto.PrecioUnitarioProducto
+                producto.ProductoAgotado = (nuevo_stock == 0)
+                producto.save()
+
+                # Actualizar categoría si existe
                 if producto.Categoria:
                     producto.Categoria.actualizar_totales()
 
-                # 7. Actualizar totales del cliente si existe
+                # Actualizar totales del cliente si existe
                 if cliente:
                     cliente.actualizar_totales()
 
@@ -6153,10 +6166,6 @@ def eliminar_venta(request, venta_id):
         'success': False,
         'errors': 'Método no permitido'
     }, status=405)
-    
-    
-    
-    
 #------------RUTA PARA CLIENTE---------
 
 @login_required(login_url='login')
