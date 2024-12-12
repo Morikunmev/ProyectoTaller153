@@ -1,12 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Añade useEffect
 import { X, Send, CheckCircle } from "lucide-react";
 
-const ReportModal = ({ isOpen, onClose }) => {
+const ReportModal = ({ isOpen, onClose, currentUser }) => {
   const [formData, setFormData] = useState({
     asunto: "",
     mensaje: "",
     adjuntos: [],
+    nombreUsuario: "", // Cambiado para que inicie vacío
+    rutUsuario: currentUser?.rut || "",
+    urgencia: "medio",
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -18,6 +22,15 @@ const ReportModal = ({ isOpen, onClose }) => {
       [name]: files ? Array.from(files) : value,
     }));
   };
+  useEffect(() => {
+    if (currentUser) {
+      setFormData((prev) => ({
+        ...prev,
+        nombreUsuario: currentUser.nombre || "",
+        rutUsuario: currentUser.rut || "",
+      }));
+    }
+  }, [currentUser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,6 +41,9 @@ const ReportModal = ({ isOpen, onClose }) => {
     const data = new FormData();
     data.append("asunto", formData.asunto);
     data.append("mensaje", formData.mensaje);
+    data.append("nombreUsuario", formData.nombreUsuario);
+    data.append("rutUsuario", formData.rutUsuario);
+    data.append("urgencia", formData.urgencia);
     formData.adjuntos.forEach((file) => {
       data.append("adjuntos", file);
     });
@@ -51,8 +67,14 @@ const ReportModal = ({ isOpen, onClose }) => {
       setSuccess(true);
       setTimeout(() => {
         onClose();
-        // Resetear el formulario después de cerrar
-        setFormData({ asunto: "", mensaje: "", adjuntos: [] });
+        setFormData({
+          asunto: "",
+          mensaje: "",
+          adjuntos: [],
+          nombreUsuario: currentUser?.nombre || "",
+          rutUsuario: currentUser?.rut || "",
+          urgencia: "medio",
+        });
         setSuccess(false);
       }, 2000);
     } catch (err) {
@@ -76,8 +98,7 @@ const ReportModal = ({ isOpen, onClose }) => {
           <div className="px-6 py-6">
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 p-1.5 rounded-full 
-                       hover:bg-gray-100 transition-colors duration-300"
+              className="absolute right-4 top-4 p-1.5 rounded-full hover:bg-gray-100 transition-colors duration-300"
             >
               <X className="h-5 w-5" />
             </button>
@@ -95,6 +116,52 @@ const ReportModal = ({ isOpen, onClose }) => {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nombre Usuario
+                    </label>
+                    <input
+                      type="text"
+                      name="nombreUsuario"
+                      value={formData.nombreUsuario}
+                      onChange={handleChange} // Quitado el disabled
+                      required
+                      className="w-full px-3 py-2 border rounded-lg transition-shadow
+                   focus:ring-2 focus:ring-blue-500 hover:border-gray-400"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      RUT
+                    </label>
+                    <input
+                      type="text"
+                      name="rutUsuario"
+                      value={formData.rutUsuario}
+                      disabled
+                      className="w-full px-3 py-2 border rounded-lg bg-gray-50"
+                    />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nivel de Urgencia
+                    </label>
+                    <select
+                      name="urgencia"
+                      value={formData.urgencia}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border rounded-lg transition-shadow
+                             focus:ring-2 focus:ring-blue-500 hover:border-gray-400"
+                    >
+                      <option value="bajo">Bajo</option>
+                      <option value="medio">Medio</option>
+                      <option value="alto">Alto</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Asunto
@@ -190,7 +257,7 @@ const ReportModal = ({ isOpen, onClose }) => {
                       </>
                     ) : (
                       <>
-                        <Send className="w-4 h-4" />
+                        <Send className="h-4 w-4" />
                         Enviar Reporte
                       </>
                     )}

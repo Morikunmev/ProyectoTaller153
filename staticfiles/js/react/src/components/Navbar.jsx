@@ -239,7 +239,6 @@ const Navbar = () => {
     return cookieValue;
   }
 
-
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -257,6 +256,7 @@ const Navbar = () => {
         }
 
         const data = await response.json();
+        console.log("Datos del usuario:", data); // Agregar este console.log
         setUserData(data);
       } catch (err) {
         console.error("Error:", err);
@@ -361,10 +361,16 @@ const Navbar = () => {
           setIsProfileModalOpen(false);
         }}
       />
-
       <ReportModal
-        isOpen={isReportModalOpen}
+        isOpen={isReportModalOpen && !loading}
         onClose={() => setIsReportModalOpen(false)}
+        currentUser={
+          userData
+            ? {
+                rut: userData.RutUsuario || "",
+              }
+            : null
+        }
       />
     </>
   );
