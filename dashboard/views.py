@@ -5898,6 +5898,55 @@ def confirmar_eliminacion_categoria(request, token):
         }, status=500)
 #------------RUTA PARA USUARIOS---------
 @login_required(login_url='login')
+def obtener_usuario_actual(request):
+    try:
+        user = request.user
+        
+        if user.is_superuser:
+            return JsonResponse({
+                'success': True,
+                'usuario': {
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,  # Añadido username
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'email': user.email,
+                    },
+                    'TipoUsuario': 'Superadmin',
+                }
+            })
+        
+        try:
+            usuario = Usuario.objects.get(user=user)
+            return JsonResponse({
+                'success': True,
+                'usuario': {
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,  # Añadido username
+                        'first_name': user.first_name,
+                        'last_name': user.last_name,
+                        'email': user.email,
+                    },
+                    'RutUsuario': usuario.RutUsuario,
+                    'TipoUsuario': usuario.TipoUsuario,
+                }
+            })
+        except Usuario.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'error': 'Usuario no encontrado'
+            }, status=404)
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+
+@login_required(login_url='login')
 @ensure_csrf_cookie
 def actualizar_usuario(request):
    if request.method != 'POST':
@@ -6039,39 +6088,42 @@ def enviar_reporte(request):
         return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
     
     try:
+        usuario = Usuario.objects.get(user=request.user)
+        
         asunto = request.POST.get('asunto')
         mensaje = request.POST.get('mensaje')
+        urgencia = request.POST.get('urgencia')
+        nombre_usuario = request.POST.get('nombreUsuario')  # Obtener el nombre ingresado
         adjuntos = request.FILES.getlist('adjuntos')
 
-        # Formatear el mensaje del correo
         mensaje_correo = f"""
-        Se ha recibido un nuevo reporte:
+        Información del Usuario:
+        Nombre: {nombre_usuario}
+        RUT: {usuario.RutUsuario}
+        Tipo de Usuario: {usuario.TipoUsuario}
         
+        Detalles del Reporte:
+        Nivel de Urgencia: {urgencia.upper()}
         Asunto: {asunto}
-        Enviado por: {request.user.email}
         
         Mensaje:
         {mensaje}
         """
         
-        # Crear el email con EmailMessage para poder adjuntar archivos
         email = EmailMessage(
-            subject=f'Reporte: {asunto}',
+            subject=f'Reporte: {asunto} [Urgencia: {urgencia.upper()}]',
             body=mensaje_correo,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=['kuromechiv@gmail.com']
         )
 
-        # Adjuntar los archivos
         for adjunto in adjuntos:
-            print(f"Adjuntando archivo: {adjunto.name}")  # Debug
             email.attach(
                 adjunto.name,
                 adjunto.read(),
                 adjunto.content_type
             )
 
-        # Enviar el email
         email.send(fail_silently=False)
         
         return JsonResponse({
@@ -6080,12 +6132,11 @@ def enviar_reporte(request):
         })
         
     except Exception as e:
-        print(f"Error al enviar reporte: {str(e)}")  # Para debugging
+        print(f"Error al enviar reporte: {str(e)}")
         return JsonResponse({
             'success': False,
             'error': str(e)
         }, status=500)
-
 #------------------VIEWS PARA PERDIDA-----------------------
 @admin_required
 @login_required(login_url='login')

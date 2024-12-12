@@ -193,6 +193,10 @@ urlpatterns = [
     #-------------------RUTAS PARA MANUAL DE USUARIO-----------------
     # URL principal del manual de usuario
     path('manual/', views.manual_usuario, name='manual_usuario'),
+    
+    
+    path('api/enviar-reporte/', views.enviar_reporte, name='enviar_reporte'),
+
 
 
 
