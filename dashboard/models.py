@@ -915,3 +915,42 @@ class Cliente(models.Model):
             return f"{self.NombreCompañia} - {self.RutCliente}"
         return f"{self.NombreCliente} {self.ApellidoCliente} - {self.RutCliente}"
 #----RUTA PARA VENTA
+
+
+
+
+#-----RESPALDOS-----
+class Producto_Respaldo(models.Model):
+    # Datos de auditoría
+    FechaEliminacion = models.DateTimeField(auto_now_add=True)
+    EliminadoPor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    # Campos del producto original
+    NombreProducto = models.CharField(max_length=100)
+    StockProductoInicial = models.PositiveIntegerField()
+    StockProductoActual = models.PositiveIntegerField()
+    PrecioUnitarioProducto = models.DecimalField(max_digits=10, decimal_places=2)
+    PrecioTotalProducto = models.DecimalField(max_digits=10, decimal_places=2)
+    CategoriaOriginal = models.CharField(max_length=100, null=True, blank=True)
+    MaterialesUsados = models.TextField(null=True, blank=True)  # Guardado como JSON
+    
+    # Campos de control de stock
+    CantidadProductoVendido = models.PositiveIntegerField()
+    CantidadProductoDesechado = models.PositiveIntegerField()
+    
+    # Campos opcionales
+    DescripcionProducto = models.TextField(null=True, blank=True)
+    UbicacionProducto = models.CharField(max_length=100, null=True, blank=True)
+    EstadoProducto = models.CharField(max_length=50, null=True, blank=True)
+    FechaProducto = models.DateField()
+    DiasProducto = models.IntegerField()
+    ProductoAgotado = models.BooleanField()
+    FotoProductoURL = models.URLField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = "Producto en Respaldo"
+        verbose_name_plural = "Productos en Respaldo"
+        ordering = ['-FechaEliminacion']
+
+    def __str__(self):
+        return f"{self.NombreProducto} (Eliminado el {self.FechaEliminacion})"

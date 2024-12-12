@@ -48,7 +48,7 @@ from django.urls import reverse
 from cloudinary.uploader import upload
 from django.core.mail import EmailMessage
 # Local imports
-from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto,ProductoMaterial, Categoria, Cliente, Ventas, Perdidas, User
+from .models import Proveedor, Factura, Envio, Material, Herramienta, Producto,ProductoMaterial, Categoria, Cliente, Ventas, Perdidas, User, Producto_Respaldo
 
 
 from login.models import Usuario
@@ -4879,63 +4879,70 @@ def eliminar_producto(request, producto_id):
             # Obtener el producto con sus relaciones
             producto = get_object_or_404(Producto, id=producto_id)
             
+            # Crear respaldo antes de eliminar
+            materiales_info = [
+                {
+                    "material": material.Material.NombreMaterial,
+                    "cantidad": material.CantidadUsada
+                }
+                for material in producto.materiales_usados.select_related('Material').all()
+            ]
+            
+            Producto_Respaldo.objects.create(
+                EliminadoPor=request.user,
+                NombreProducto=producto.NombreProducto,
+                StockProductoInicial=producto.StockProductoInicial,
+                StockProductoActual=producto.StockProductoActual,
+                PrecioUnitarioProducto=producto.PrecioUnitarioProducto,
+                PrecioTotalProducto=producto.PrecioTotalProducto,
+                CategoriaOriginal=producto.Categoria.NombreCategoria if producto.Categoria else None,
+                MaterialesUsados=json.dumps(materiales_info),
+                CantidadProductoVendido=producto.CantidadProductoVendido,
+                CantidadProductoDesechado=producto.CantidadProductoDesechado,
+                DescripcionProducto=producto.DescripcionProducto,
+                UbicacionProducto=producto.UbicacionProducto,
+                EstadoProducto=producto.EstadoProducto,
+                FechaProducto=producto.FechaProducto,
+                DiasProducto=producto.DiasProducto,
+                ProductoAgotado=producto.ProductoAgotado,
+                FotoProductoURL=producto.FotoProducto.url if producto.FotoProducto else None
+            )
+            
             # Guardar información para la respuesta
             nombre_producto = producto.NombreProducto
             categoria = producto.Categoria.NombreCategoria if producto.Categoria else "Sin categoría"
             
-            # Obtener información de materiales antes de eliminar
-            materiales_info = [
-                f"{material.Material.NombreMaterial} ({material.CantidadUsada})"
-                for material in producto.materiales_usados.select_related('Material').all()
-            ]
-            
             # Si existe una foto, eliminarla de Cloudinary
             if producto.FotoProducto:
                 try:
-                    # Obtener la URL de la imagen
                     url = producto.FotoProducto.url
-                    
-                    # Extraer el public_id
                     parts = url.split('/')
                     public_id = f"{parts[-2]}/{parts[-1].split('.')[0]}"
                     
-                    print(f"Intentando eliminar foto con public_id: {public_id}")
-                    
-                    # Configurar Cloudinary
                     cloudinary.config(
                         cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
                         api_key=os.getenv('CLOUDINARY_API_KEY'),
                         api_secret=os.getenv('CLOUDINARY_API_SECRET')
                     )
                     
-                    # Eliminar la foto
                     result = cloudinary.uploader.destroy(
                         public_id,
                         resource_type="image",
                         type="upload"
                     )
-                    print(f"Resultado de eliminación foto Cloudinary: {result}")
-                    
                 except Exception as cloud_error:
                     print(f"Error al eliminar foto de Cloudinary: {str(cloud_error)}")
-                    print(f"URL de la foto: {producto.FotoProducto.url}")
             
-            # Eliminar el producto (esto también eliminará los registros de ProductoMaterial por CASCADE)
+            # Eliminar el producto
             producto.delete()
-            
-            mensaje_base = f'El producto "{nombre_producto}" de la categoría {categoria}'
-            mensaje_materiales = ""
-            if materiales_info:
-                mensaje_materiales = f" (que usaba los materiales: {', '.join(materiales_info)})"
             
             return JsonResponse({
                 'success': True,
-                'message': f'{mensaje_base}{mensaje_materiales} y sus archivos asociados fueron eliminados exitosamente',
+                'message': f'El producto "{nombre_producto}" fue eliminado y respaldado exitosamente',
                 'deleted': {
                     'id': producto_id,
                     'nombre': nombre_producto,
-                    'categoria': categoria,
-                    'materiales': materiales_info
+                    'categoria': categoria
                 }
             })
             
@@ -8511,3 +8518,5 @@ def get_productos_stock(request):
 @login_required(login_url='login')
 def manual_usuario(request):
     return render(request, 'plantilla/manual_usuario.html')
+
+
