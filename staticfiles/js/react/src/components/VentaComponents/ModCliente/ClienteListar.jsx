@@ -31,7 +31,16 @@ const StateBadge = ({ children, type = "default" }) => {
 };
 
 const StatsHeader = ({ clientes }) => {
-  const totalValue = useMemo(
+  const totalCompras = useMemo(
+    () =>
+      clientes.reduce(
+        (sum, cliente) => sum + Number(cliente.cantidad_total_compras),
+        0
+      ),
+    [clientes]
+  );
+
+  const totalDinero = useMemo(
     () =>
       clientes.reduce(
         (sum, cliente) => sum + Number(cliente.total_dinero_compras),
@@ -44,17 +53,17 @@ const StatsHeader = ({ clientes }) => {
     <div className="flex items-center gap-4 mb-6">
       <h1 className="text-2xl font-bold text-gray-900">Módulo Clientes</h1>
       <div className="flex items-center gap-2">
-        <StateBadge>
-          {clientes.length} {clientes.length === 1 ? "Cliente" : "Clientes"}
-        </StateBadge>
-        <StateBadge type="success">
-          Total en compras: ${totalValue.toLocaleString("es-CL")}
-        </StateBadge>
+        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
+          {totalCompras} Compras{" "}
+          <span className="text-gray-500">
+            ({clientes.length} {clientes.length === 1 ? "cliente" : "clientes"}{" "}
+            - ${totalDinero.toLocaleString("es-CL")})
+          </span>
+        </span>
       </div>
     </div>
   );
 };
-
 // Componente para la barra de búsqueda y exportación
 const SearchAndExport = ({
   searchTerm,
@@ -105,6 +114,54 @@ const SearchAndExport = ({
     </div>
   </div>
 );
+const ClienteStats = ({ clientes, selectedCliente, onClienteClick }) => {
+  const stats = useMemo(() => {
+    return clientes.reduce((acc, cliente) => {
+      const nombreCompleto = `${cliente.nombre} ${cliente.apellido}`;
+      if (!acc[nombreCompleto]) {
+        acc[nombreCompleto] = {
+          count: 1,
+          totalCompras: Number(cliente.cantidad_total_compras),
+          montoTotal: Number(cliente.total_dinero_compras),
+        };
+      } else {
+        acc[nombreCompleto].count++;
+        acc[nombreCompleto].totalCompras += Number(
+          cliente.cantidad_total_compras
+        );
+        acc[nombreCompleto].montoTotal += Number(cliente.total_dinero_compras);
+      }
+      return acc;
+    }, {});
+  }, [clientes]);
+
+  const statsArray = Object.entries(stats).map(([nombre, data]) => ({
+    nombre,
+    ...data,
+  }));
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-6">
+      {statsArray.map(({ nombre, totalCompras, montoTotal }) => (
+        <button
+          key={nombre}
+          onClick={() => onClienteClick(nombre)}
+          className={`px-3 py-1 rounded-full text-sm transition-all duration-200 
+            ${
+              selectedCliente === nombre
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+            }`}
+        >
+          <span className="font-medium">{nombre}</span>{" "}
+          <span className="text-xs ml-1 opacity-75">
+            ({totalCompras} compras - ${montoTotal.toLocaleString("es-CL")})
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+};
 
 // Componente para el toggle de vista
 const ViewToggle = ({ isGridView, onViewChange }) => (
@@ -272,13 +329,13 @@ const TableContent = ({ clientes, onEdit, onDelete }) => {
     </table>
   );
 };
-
 const ClienteListar = () => {
   const [isGridView, setIsGridView] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [clienteToDelete, setClienteToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [selectedCliente, setSelectedCliente] = useState(null);
 
   const {
     searchTerm,
@@ -301,18 +358,31 @@ const ClienteListar = () => {
     handleUpdateModalOpen,
     handleClienteUpdated,
     setUpdateModalOpen,
-
     handleClienteCreated,
     setClienteToUpdate,
     handleDelete,
   } = useClienteState();
 
+  const displayedClientes = useMemo(() => {
+    let filtered = currentClientes;
+
+    if (selectedCliente) {
+      filtered = filtered.filter(
+        (cliente) => `${cliente.nombre} ${cliente.apellido}` === selectedCliente
+      );
+    }
+
+    return filtered;
+  }, [currentClientes, selectedCliente]);
+
   const handleViewChange = (gridView) => {
     setIsGridView(gridView);
   };
+
   const handleOpenCreateModal = () => {
     setCreateModalOpen(true);
   };
+
   const handleDeleteClick = (cliente) => {
     setClienteToDelete(cliente);
     setDeleteModalOpen(true);
@@ -337,6 +407,14 @@ const ClienteListar = () => {
             onCreateClick={handleOpenCreateModal}
           />
 
+          <ClienteStats
+            clientes={filteredClientes}
+            selectedCliente={selectedCliente}
+            onClienteClick={(nombre) =>
+              setSelectedCliente((prev) => (prev === nombre ? null : nombre))
+            }
+          />
+
           <div className="bg-white rounded-lg shadow overflow-hidden">
             {error ? (
               <div className="text-center p-8 text-red-500 flex items-center justify-center gap-2">
@@ -348,7 +426,7 @@ const ClienteListar = () => {
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <p className="text-lg">Cargando...</p>
               </div>
-            ) : currentClientes.length === 0 ? (
+            ) : displayedClientes.length === 0 ? (
               <div className="text-center p-8 text-gray-500">
                 <p className="text-lg">No se encontraron clientes</p>
               </div>
@@ -365,21 +443,21 @@ const ClienteListar = () => {
                   >
                     {isGridView ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-                        {currentClientes.map((cliente) => (
+                        {displayedClientes.map((cliente) => (
                           <ClienteGrid
                             key={cliente.id}
                             cliente={cliente}
                             onEdit={() => handleUpdateModalOpen(cliente)}
-                            onDelete={() => handleDeleteClick(cliente)} // Cambiar esto
+                            onDelete={() => handleDeleteClick(cliente)}
                           />
                         ))}
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <TableContent
-                          clientes={currentClientes}
+                          clientes={displayedClientes}
                           onEdit={handleUpdateModalOpen}
-                          onDelete={handleDeleteClick} // Cambiado de handleDelete a handleDeleteClick
+                          onDelete={handleDeleteClick}
                         />
                       </div>
                     )}

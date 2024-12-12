@@ -64,6 +64,13 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
   };
+  const sortMaterialsByDate = (materials) => {
+    return [...materials].sort((a, b) => {
+      const dateA = new Date(a.FechaCompraMaterial);
+      const dateB = new Date(b.FechaCompraMaterial);
+      return dateB - dateA; // Orden descendente (más reciente primero)
+    });
+  };
   const renderTableView = () => (
     <table className="w-full">
       <thead>
@@ -82,7 +89,7 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
         </tr>
       </thead>
       <tbody>
-        {currentMaterials.map((material) => {
+        {sortMaterialsByDate(currentMaterials).map((material) => {
           const isSelected = selectedMaterial?.id === material.id;
           const stockStatus =
             material.StockMaterial === 0
@@ -210,7 +217,7 @@ const MaterialListar = ({ isModalOpen, setIsModalOpen }) => {
   const renderGridView = () => (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-        {currentMaterials.map((material) => {
+        {sortMaterialsByDate(currentMaterials).map((material) => {
           const stockStatus =
             material.StockMaterial === 0
               ? "border-red-200 bg-red-50"

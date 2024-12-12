@@ -50,8 +50,7 @@ urlpatterns = [
     path('api/envio/tiempo-detallado/<int:envio_id>/', 
          views.obtener_tiempo_detallado, 
          name='obtener_tiempo_detallado'),
-    path('api/envios/<int:envio_id>/toggle-status/', views.toggle_envio_status, name='toggle-envio-status'),
-    
+    path('api/envios/<int:envio_id>/toggle-status/', views.toggle_envio_status, name='toggle-envio-status'),    
     
     #-------------------RUTA PARA MATERIAL-----------------
     path('material/', views.mod_material, name='mod_material'),
@@ -190,6 +189,10 @@ urlpatterns = [
     path('api/ventas/grafico/', views.get_ventas_grafico, name='get_ventas_grafico'),
     path('api/stats/productos-categorias/', views.get_productos_categorias_stats, name='get_productos_categorias_stats'),
     path('api/stats/productos-stock/', views.get_productos_stock, name='productos-stock'),
+    
+    #-------------------RUTAS PARA MANUAL DE USUARIO-----------------
+    # URL principal del manual de usuario
+    path('manual/', views.manual_usuario, name='manual_usuario'),
 
 
 

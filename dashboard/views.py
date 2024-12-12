@@ -279,15 +279,14 @@ def exportar_proveedores_excel(request):
  
     
 @login_required(login_url='login')
-@ensure_csrf_cookie
 def exportar_facturas_excel(request):
     output = BytesIO()
-    workbook = xlsxwriter.Workbook(output, {'remove_timezone': True})
+    workbook = xlsxwriter.Workbook(output)
     
     # Hojas
-    worksheet_data = workbook.add_worksheet('Facturas Detallado')
-    worksheet_charts = workbook.add_worksheet('Gráficos')
-    
+    worksheet_data = workbook.add_worksheet('Facturas')
+    worksheet_chart = workbook.add_worksheet('Gráfico')
+
     # Formatos
     header_format = workbook.add_format({
         'bold': True,
@@ -304,129 +303,98 @@ def exportar_facturas_excel(request):
     })
     
     envio_format = workbook.add_format({
-        'bg_color': '#A5D6A7',
+        'bg_color': '#E8F5E9',
         'indent': 2,
         'border': 1
     })
-    
-    date_format = workbook.add_format({
-        'num_format': 'dd/mm/yyyy',
-        'border': 1
-    })
-    
-    money_format = workbook.add_format({
-        'num_format': '$#,##0.00',
-        'border': 1
-    })
 
-    # Configurar anchos de columna
+    # Configurar anchos
     worksheet_data.set_column('A:A', 8)   # ID
     worksheet_data.set_column('B:B', 15)  # N° Factura
     worksheet_data.set_column('C:C', 15)  # Fecha
     worksheet_data.set_column('D:D', 25)  # Proveedor
     worksheet_data.set_column('E:E', 15)  # RUT
     worksheet_data.set_column('F:F', 20)  # Marca
-    worksheet_data.set_column('G:G', 20)  # Nombre Envío
+    worksheet_data.set_column('G:G', 25)  # Envío
     worksheet_data.set_column('H:H', 12)  # Cantidad
     worksheet_data.set_column('I:I', 15)  # Precio
     worksheet_data.set_column('J:J', 15)  # Total
-    worksheet_data.set_column('K:K', 15)  # Tipo
-    worksheet_data.set_column('L:L', 15)  # Días
 
-    # Encabezados principales
+    # Encabezados
     headers = [
-        'ID', 'N° Factura', 'Fecha Emisión', 'Proveedor', 'RUT', 'Marca',
-        'Nombre Envío', 'Cantidad', 'Precio Unit.', 'Total', 'Tipo', 'Días'
+        'ID', 'N° Factura', 'Fecha Emisión', 'Proveedor', 
+        'RUT', 'Marca', 'Envío', 'Cantidad', 'Precio', 'Total'
     ]
     
     for col, header in enumerate(headers):
         worksheet_data.write(0, col, header, header_format)
 
-    # Obtener datos
-    facturas = Factura.objects.all().select_related('Proveedor').prefetch_related('envios').order_by('-FechaEmision')
-
+    # Variables para estadísticas
     current_row = 1
-    estadisticas = {
-        'proveedores_dict': {},
-        'tipos_envio': {'material': 0, 'herramienta': 0},
-        'envios_por_mes': {},
-        'montos_por_proveedor': {},
-        'estado_envios': {'Recibido': 0, 'En Tránsito': 0}
-    }
+    estadisticas = {}
 
+    # Obtener y escribir datos
+    facturas = Factura.objects.all().select_related('Proveedor').prefetch_related('envios').order_by('-FechaEmision')
+    
     for factura in facturas:
-        # Escribir datos de la factura
+        # Escribir factura
         worksheet_data.write(current_row, 0, factura.id, factura_format)
         worksheet_data.write(current_row, 1, factura.NumeroFactura, factura_format)
-        worksheet_data.write_datetime(current_row, 2, factura.FechaEmision, date_format)
+        worksheet_data.write(current_row, 2, factura.FechaEmision.strftime('%d/%m/%Y'), factura_format)
         worksheet_data.write(current_row, 3, factura.Proveedor.NombreProveedor, factura_format)
         worksheet_data.write(current_row, 4, factura.Proveedor.RutProveedor, factura_format)
         worksheet_data.write(current_row, 5, factura.Proveedor.MarcaProveedor, factura_format)
         
-        # Actualizar estadísticas del proveedor
+        # Actualizar estadísticas
         proveedor = factura.Proveedor.NombreProveedor
-        estadisticas['proveedores_dict'][proveedor] = estadisticas['proveedores_dict'].get(proveedor, 0) + 1
+        estadisticas[proveedor] = estadisticas.get(proveedor, 0) + 1
         
         current_row += 1
         total_factura = 0
 
         # Escribir envíos asociados
         for envio in factura.envios.all():
-            worksheet_data.write(current_row, 0, "", envio_format)
-            worksheet_data.write(current_row, 1, "", envio_format)
-            worksheet_data.write(current_row, 2, "", envio_format)
-            worksheet_data.write(current_row, 3, "", envio_format)
-            worksheet_data.write(current_row, 4, "", envio_format)
-            worksheet_data.write(current_row, 5, "", envio_format)
             worksheet_data.write(current_row, 6, envio.NombreEnvio, envio_format)
             worksheet_data.write(current_row, 7, envio.CantidadEnvio, envio_format)
-            worksheet_data.write(current_row, 8, float(envio.PrecioEnvio), money_format)
-            worksheet_data.write(current_row, 9, float(envio.TotalEnvio), money_format)
-            worksheet_data.write(current_row, 10, envio.TipoEnvio, envio_format)
-            worksheet_data.write(current_row, 11, envio.DiasTranscurridos, envio_format)
-
-            # Actualizar estadísticas
+            worksheet_data.write(current_row, 8, float(envio.PrecioEnvio), envio_format)
+            worksheet_data.write(current_row, 9, float(envio.TotalEnvio), envio_format)
             total_factura += float(envio.TotalEnvio)
-            estadisticas['tipos_envio'][envio.TipoEnvio] += 1
-            
-            mes = envio.FechaCompraEnvio.strftime('%Y-%m')
-            estadisticas['envios_por_mes'][mes] = estadisticas['envios_por_mes'].get(mes, 0) + 1
-            
-            if envio.EnvioRecibido:
-                estadisticas['estado_envios']['Recibido'] += 1
-            else:
-                estadisticas['estado_envios']['En Tránsito'] += 1
-
             current_row += 1
 
-        # Actualizar monto total del proveedor
-        estadisticas['montos_por_proveedor'][proveedor] = estadisticas['montos_por_proveedor'].get(proveedor, 0) + total_factura
-        
-        # Agregar línea de total por factura
+        # Escribir total de factura
         worksheet_data.write(current_row, 8, "Total Factura:", factura_format)
-        worksheet_data.write(current_row, 9, total_factura, money_format)
-        current_row += 2  # Dejar una línea en blanco entre facturas
+        worksheet_data.write(current_row, 9, total_factura, factura_format)
+        current_row += 2  # Espacio entre facturas
 
-    # Crear gráficos
-    # 1. Gráfico de Columnas: Facturas por Proveedor
-    crear_grafico_columnas(workbook, worksheet_charts, estadisticas['proveedores_dict'], 'D2')
+    # Crear gráfico de columnas
+    chart = workbook.add_chart({'type': 'column'})
     
-    # 2. Gráfico Circular: Distribución de Facturas
-    crear_grafico_circular(workbook, worksheet_charts, estadisticas['proveedores_dict'], 'D18')
+    # Escribir datos para el gráfico
+    worksheet_chart.write('A1', 'Proveedor')
+    worksheet_chart.write('B1', 'Facturas')
     
-    # 3. Gráfico de Barras: Montos por Proveedor
-    crear_grafico_barras(workbook, worksheet_charts, estadisticas['montos_por_proveedor'], 'D34')
-    
-    # 4. Gráfico Circular: Tipos de Envío
-    crear_grafico_circular_tipos(workbook, worksheet_charts, estadisticas['tipos_envio'], 'K2')
-    
-    # 5. Gráfico de Área: Estado de Envíos
-    crear_grafico_area(workbook, worksheet_charts, estadisticas['estado_envios'], 'K18')
+    for i, (proveedor, cantidad) in enumerate(estadisticas.items(), start=1):
+        worksheet_chart.write(f'A{i+1}', proveedor)
+        worksheet_chart.write(f'B{i+1}', cantidad)
 
+    # Configurar gráfico
+    chart.add_series({
+        'name': 'Facturas por Proveedor',
+        'categories': f'=Gráfico!$A$2:$A${len(estadisticas)+1}',
+        'values': f'=Gráfico!$B$2:$B${len(estadisticas)+1}',
+        'data_labels': {'value': True}
+    })
+    
+    chart.set_title({'name': 'Facturas por Proveedor'})
+    chart.set_size({'width': 720, 'height': 400})
+    worksheet_chart.insert_chart('D2', chart)
+
+    # Finalizar y enviar
     workbook.close()
     output.seek(0)
+
+    filename = f'Facturas_Detallado_{timezone.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
-    filename = f'Facturas_Detallado_{timezone.localtime().strftime("%Y%m%d_%H%M%S")}.xlsx'
     response = HttpResponse(
         output.read(),
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -434,76 +402,6 @@ def exportar_facturas_excel(request):
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
     
     return response
-
-def crear_grafico_columnas(workbook, worksheet, data, posicion):
-    chart = workbook.add_chart({'type': 'column'})
-    escribir_datos_grafico(worksheet, data, 'A2', 'Facturas por Proveedor')
-    chart.add_series({
-        'name': 'Cantidad de Facturas',
-        'categories': f'=Gráficos!$A$2:$A${len(data)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(data)+1}',
-        'data_labels': {'value': True},
-    })
-    chart.set_title({'name': 'Facturas por Proveedor'})
-    chart.set_size({'width': 500, 'height': 300})
-    worksheet.insert_chart(posicion, chart)
-
-def crear_grafico_circular(workbook, worksheet, data, posicion):
-    chart = workbook.add_chart({'type': 'pie'})
-    chart.add_series({
-        'categories': f'=Gráficos!$A$2:$A${len(data)+1}',
-        'values': f'=Gráficos!$B$2:$B${len(data)+1}',
-        'data_labels': {'percentage': True},
-    })
-    chart.set_title({'name': 'Distribución de Facturas (%)'})
-    chart.set_size({'width': 500, 'height': 300})
-    worksheet.insert_chart(posicion, chart)
-
-def crear_grafico_barras(workbook, worksheet, data, posicion):
-    chart = workbook.add_chart({'type': 'bar'})
-    escribir_datos_grafico(worksheet, data, 'D2', 'Montos por Proveedor')
-    chart.add_series({
-        'name': 'Monto Total',
-        'categories': f'=Gráficos!$D$2:$D${len(data)+1}',
-        'values': f'=Gráficos!$E$2:$E${len(data)+1}',
-        'data_labels': {'value': True},
-    })
-    chart.set_title({'name': 'Montos por Proveedor'})
-    chart.set_size({'width': 500, 'height': 300})
-    worksheet.insert_chart(posicion, chart)
-
-def crear_grafico_circular_tipos(workbook, worksheet, data, posicion):
-    chart = workbook.add_chart({'type': 'pie'})
-    escribir_datos_grafico(worksheet, data, 'G2', 'Tipos de Envío')
-    chart.add_series({
-        'categories': '=Gráficos!$G$2:$G$3',
-        'values': '=Gráficos!$H$2:$H$3',
-        'data_labels': {'percentage': True},
-    })
-    chart.set_title({'name': 'Distribución de Tipos de Envío'})
-    chart.set_size({'width': 500, 'height': 300})
-    worksheet.insert_chart(posicion, chart)
-
-def crear_grafico_area(workbook, worksheet, data, posicion):
-    chart = workbook.add_chart({'type': 'area'})
-    escribir_datos_grafico(worksheet, data, 'J2', 'Estado de Envíos')
-    chart.add_series({
-        'name': 'Cantidad',
-        'categories': '=Gráficos!$J$2:$J$3',
-        'values': '=Gráficos!$K$2:$K$3',
-        'data_labels': {'value': True},
-    })
-    chart.set_title({'name': 'Estado de Envíos'})
-    chart.set_size({'width': 500, 'height': 300})
-    worksheet.insert_chart(posicion, chart)
-
-def escribir_datos_grafico(worksheet, data, celda_inicio, titulo):
-    row, col = xl_cell_to_rowcol(celda_inicio)
-    worksheet.write(row-1, col, titulo)
-    worksheet.write(row-1, col+1, 'Valor')
-    for i, (key, value) in enumerate(data.items()):
-        worksheet.write(row+i, col, key)
-        worksheet.write(row+i, col+1, value)
 #--------------------------LOGICA PARA MOSTRAR USUARIO --------------------------------
 
 @login_required(login_url='login')
@@ -8554,3 +8452,11 @@ def get_productos_stock(request):
             'error': str(e),
             'productos': []
         }, status=500)
+        
+        
+        
+#---------LOGICA PARA MOSTRAR MANUAL DE USUARIO---------
+
+@login_required(login_url='login')
+def manual_usuario(request):
+    return render(request, 'plantilla/manual_usuario.html')

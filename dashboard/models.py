@@ -304,7 +304,7 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
                     FotoMaterial=instance.FotoEnvio,
                     Envio=instance,
                     Proveedor=instance.Proveedor,
-                    EstadoMaterial='Nuevo',  # Ya estaba correcto para Material
+                    EstadoMaterial='Nuevo',
                     UbicacionMaterial='Por asignar'
                 )
         
@@ -325,8 +325,7 @@ def crear_material_o_herramienta(sender, instance, created, **kwargs):
                     Proveedor=instance.Proveedor,
                     MarcaHerramienta='Por especificar',
                     ModeloHerramienta='Por especificar',
-                    UbicacionHerramienta='Por asignar',
-                    EstadoHerramienta='Nuevo'  # Agregado estado 'Nuevo' para Herramienta
+                    UbicacionHerramienta='Por asignar'
                 )
     else:
         # Si el envío no está marcado como recibido, eliminamos ambos registros si existen

@@ -16,6 +16,7 @@ module.exports = {
     colaborador: "./src/colaborador.js",
     administrador: "./src/administrador.js",
     colaborador: "./src/colaborador.js",
+    manual_usuario: "./src/manual_usuario.js",
   },
   output: {
     path: path.resolve(__dirname, "dist"),

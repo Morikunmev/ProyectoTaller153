@@ -1,0 +1,14 @@
+<!-- manual_usuario.html -->
+{% extends "plantilla/base.html" %}
+{% load static tailwind_tags %}
+{% tailwind_css %}
+{% block content %}
+{% csrf_token %}
+
+{% block title %}
+<title>Manual de Usuario</title>
+{% endblock %}
+<!--atributos de datos perzonalizado (data attribute) que almacenra el tipo de usuario-->
+<div id="react-manual" data-user-type="{{ user.usuario.TipoUsuario }}"></div>
+<script src="{% static 'js/react/dist/manual_usuario.bundle.js' %}?v={{ CACHE_VERSION }}"></script>
+{% endblock %}

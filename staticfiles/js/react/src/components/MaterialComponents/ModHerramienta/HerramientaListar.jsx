@@ -58,6 +58,13 @@ const HerramientaListar = ({ isModalOpen, setIsModalOpen }) => {
       selectedHerramienta?.id === herramienta.id ? null : herramienta
     );
   };
+  const sortHerramientasByDate = (herramientas) => {
+    return [...herramientas].sort((a, b) => {
+      const dateA = new Date(a.FechaCompraHerramienta);
+      const dateB = new Date(b.FechaCompraHerramienta);
+      return dateB - dateA; // Orden descendente
+    });
+  };
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -85,7 +92,7 @@ const HerramientaListar = ({ isModalOpen, setIsModalOpen }) => {
         </tr>
       </thead>
       <tbody>
-        {currentHerramientas.map((herramienta) => {
+        {sortHerramientasByDate(currentHerramientas).map((herramienta) => {
           const isSelected = selectedHerramienta?.id === herramienta.id;
           return (
             <React.Fragment key={herramienta.id}>
@@ -212,7 +219,7 @@ const HerramientaListar = ({ isModalOpen, setIsModalOpen }) => {
   const renderGridView = () => (
     <div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-        {currentHerramientas.map((herramienta) => (
+        {sortHerramientasByDate(currentHerramientas).map((herramienta) => (
           <div key={herramienta.id} className="space-y-4">
             <HerramientaGrid
               herramienta={herramienta}

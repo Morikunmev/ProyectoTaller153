@@ -36,6 +36,8 @@ const EnvioListar = () => {
     envioToDelete,
     isDeleting,
     handleToggleEstado,
+    totalMateriales,  // Agregar esto
+    totalHerramientas,  // Agregar esto
 
     updateModalOpen,
     envioToUpdate,
@@ -184,16 +186,21 @@ const EnvioListar = () => {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  handleToggleEstado(envio.id);
+                  console.log("Click en toggle para envío:", envio.id);
+                  const currentTarget = e.currentTarget;
+                  currentTarget.disabled = true; // Prevenir doble click
+                  handleToggleEstado(envio.id).finally(() => {
+                    currentTarget.disabled = false;
+                  });
                 }}
                 className={`w-full px-1.5 py-0.5 rounded-full text-xs font-medium 
-                           inline-flex items-center justify-center gap-1
-                           transition-all duration-200 hover:scale-105 cursor-pointer
-                           ${
-                             envio.EnvioRecibido
-                               ? "bg-green-100 text-green-800 hover:bg-green-200"
-                               : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-                           }`}
+           inline-flex items-center justify-center gap-1
+           transition-all duration-200 hover:scale-105 cursor-pointer
+           ${
+             envio.EnvioRecibido
+               ? "bg-green-100 text-green-800 hover:bg-green-200"
+               : "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
+           }`}
               >
                 <Package className="w-3 h-3" />
                 {envio.EnvioRecibido ? "Recibido" : "Pendiente"}
@@ -276,9 +283,17 @@ const EnvioListar = () => {
           {/* Título y contador del módulo */}
           <div className="flex items-center gap-4 mb-6">
             <h1 className="text-2xl font-bold text-gray-900">Módulo Envío</h1>
-            <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-              {filteredEnvios.length} Envíos
-            </span>
+            <div className="flex gap-2">
+              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
+                Total: {filteredEnvios.length}
+              </span>
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                Materiales: {totalMateriales}
+              </span>
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
+                Herramientas: {totalHerramientas}
+              </span>
+            </div>
           </div>
 
           {/* Barra de herramientas */}

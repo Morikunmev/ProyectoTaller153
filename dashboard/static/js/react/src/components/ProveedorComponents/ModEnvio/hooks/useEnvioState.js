@@ -16,6 +16,9 @@ export const useEnvioState = () => {
 
   // Estados para la paginación
   const [currentPage, setCurrentPage] = useState(1);
+  const totalItems = envios.length;
+  const totalMateriales = envios.filter(envio => envio.TipoEnvio === 'material').length;
+  const totalHerramientas = envios.filter(envio => envio.TipoEnvio === 'herramienta').length;
 
   // Estados para el manejo de modales
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -225,6 +228,33 @@ export const useEnvioState = () => {
   const handleToggleEstado = useCallback(
     async (envioId) => {
       try {
+        console.log("Intentando actualizar envío:", envioId);
+
+        // Guardar el estado actual antes de la actualización
+        const envioActual = envios.find((e) => e.id === envioId);
+        if (!envioActual) {
+          throw new Error("Envío no encontrado");
+        }
+
+        // Primero actualizamos optimisticamente el UI
+        setEnvios((prevEnvios) => {
+          const updatedEnvios = prevEnvios.map((envio) =>
+            envio.id === envioId
+              ? {
+                  ...envio,
+                  EnvioRecibido: !envio.EnvioRecibido,
+                  DiasTranscurridos: !envio.EnvioRecibido
+                    ? Math.floor(
+                        (new Date() - new Date(envio.FechaCompraEnvio)) /
+                          (1000 * 60 * 60 * 24)
+                      )
+                    : envio.DiasTranscurridos,
+                }
+              : envio
+          );
+          return procesarEnvios(updatedEnvios);
+        });
+
         const response = await fetch(`/api/envios/${envioId}/toggle-status/`, {
           method: "PATCH",
           headers: {
@@ -235,32 +265,44 @@ export const useEnvioState = () => {
           credentials: "include",
         });
 
-        if (!response.ok) {
-          throw new Error("Error al actualizar el estado");
-        }
-
         const data = await response.json();
 
-        if (data.status === "success") {
-          // Actualizamos el estado localmente sin recargar todos los envíos
+        if (!response.ok || data.status === "error") {
+          // Revertir al estado anterior si hay error
+          setEnvios((prevEnvios) => {
+            const revertedEnvios = prevEnvios.map((envio) =>
+              envio.id === envioId ? envioActual : envio
+            );
+            return procesarEnvios(revertedEnvios);
+          });
+          throw new Error(data.error || `Error HTTP: ${response.status}`);
+        }
+
+        // Solo si la actualización fue exitosa y tenemos datos actualizados
+        if (data.status === "success" && data.data) {
           setEnvios((prevEnvios) => {
             const updatedEnvios = prevEnvios.map((envio) =>
               envio.id === envioId
-                ? { ...envio, EnvioRecibido: !envio.EnvioRecibido }
+                ? {
+                    ...envio,
+                    EnvioRecibido: data.data.estado,
+                    DiasTranscurridos: data.data.diasTranscurridos,
+                  }
                 : envio
             );
             return procesarEnvios(updatedEnvios);
           });
         }
+
+        // Opcional: Recargar todos los datos después de una actualización exitosa
+        await fetchEnvios();
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error al actualizar el estado:", error);
         setError("Error al actualizar el estado del envío");
       }
-      // Quitamos el setLoading(false) de aquí
     },
-    [procesarEnvios]
+    [envios, procesarEnvios, fetchEnvios]
   );
-
   // Manejador para crear nuevo envío
   const handleEnvioCreated = async (nuevoEnvio) => {
     try {
@@ -338,7 +380,9 @@ export const useEnvioState = () => {
     envioToUpdate,
     isUpdating,
     procesarEnvios,
-
+    totalItems,
+    totalMateriales,
+    totalHerramientas,
     // Manejadores
     handleOpenModal,
     handleCloseModal,

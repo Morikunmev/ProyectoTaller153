@@ -6,7 +6,6 @@
     onmouseenter="handleMouseEnter()" onmouseleave="hideAllSubmenus()">
     <!-- Título fijo en la parte superior -->
     <h2 class="text-white text-2xl font-bold mb-6 hidden group-hover:block sticky top-0 bg-black z-10">Menú</h2>
-
     <!-- Contenedor con scroll -->
     <div class="sidebar-content flex-1 overflow-y-auto" style="max-height: calc(100vh - 140px);">
         <nav>
@@ -53,7 +52,7 @@
             </li>
             {% endif %}
 
-            <!-- Menú Material (fuera del if para que sea visible para todos) -->
+            <!-- Menú Material -->
             <li>
                 <a href="javascript:void(0);" onclick="toggleSubMenu('submenu-material')"
                     class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
@@ -78,7 +77,6 @@
                         </a>
                     </li>
                     {% endif %}
-                    <!-- Estos siempre se muestran -->
                     <li>
                         <a href="{% url 'mod_producto' %}"
                             class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
@@ -156,6 +154,14 @@
                 </ul>
             </li>
             {% endif %}
+            <!-- Menú Manual de Usuario -->
+            <li>
+                <a href="{% url 'manual_usuario' %}"
+                    class="text-white flex items-center space-x-2 hover:bg-gray-700 p-2 rounded-md">
+                    <i class="fas fa-book"></i>
+                    <span class="hidden group-hover:inline-block">Manual de Usuario</span>
+                </a>
+            </li>
             </ul>
         </nav>
     </div>
