@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.dispatch import receiver
 from django.db.models.signals import post_save
 from django.contrib.auth.models import User
+import re
 
 
 
@@ -29,8 +30,12 @@ logger = logging.getLogger(__name__)
 #------------------------------MODULO PROVEEDOR------------------------------
 class Proveedor(models.Model):
     # Campos obligatorios con restricciones de unicidad (1FN)
-    NombreProveedor = models.CharField(max_length=100, unique=True,null=False, blank=False)
-    RutProveedor = models.CharField(max_length=12, unique=True,null=False, blank=False,
+    NombreProveedor = models.CharField(max_length=100, unique=True, null=False, blank=False)
+    RutProveedor = models.CharField(
+        max_length=12, 
+        unique=True,
+        null=False, 
+        blank=False,
         validators=[
             RegexValidator(
                 regex=r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$',
@@ -38,16 +43,16 @@ class Proveedor(models.Model):
             )
         ]
     )
-    MarcaProveedor = models.CharField(max_length=100,unique=True ,null=False, blank=False)
+    MarcaProveedor = models.CharField(max_length=100, unique=True, null=False, blank=False)
     # --------------Campos opcionales--------------
     ComentarioProveedor = models.TextField(null=True, blank=True)
     # Campos de ubicación
-    CiudadProveedor = models.CharField(max_length=100,null=True, blank=True)
-    RegionProveedor = models.CharField(max_length=100,null=True, blank=True)
-    PaisProveedor = models.CharField(max_length=100,null=True, blank=True)
+    CiudadProveedor = models.CharField(max_length=100, null=True, blank=True)
+    RegionProveedor = models.CharField(max_length=100, null=True, blank=True)
+    PaisProveedor = models.CharField(max_length=100, null=True, blank=True)
     # Campos de contacto y multimedia
-    TelefonoProveedor = models.CharField(max_length=15,null=True, blank=True)
-    FotoProveedor = CloudinaryField('imagen',folder='proveedores/',null=True, blank=True)
+    TelefonoProveedor = models.CharField(max_length=15, null=True, blank=True)
+    FotoProveedor = CloudinaryField('imagen', folder='proveedores/', null=True, blank=True)
     
     # Campos de auditoría
     FechaCreacionProveedor = models.DateTimeField(auto_now_add=True)
@@ -56,11 +61,58 @@ class Proveedor(models.Model):
     class Meta:
         verbose_name = "Proveedor"
         verbose_name_plural = "Proveedores"
-        ordering = ['NombreProveedor']  # Cambiado a NombreProveedor
+        ordering = ['NombreProveedor']
         
     def clean(self):
         if self.RutProveedor:
             self.RutProveedor = self.RutProveedor.upper()
+            self.validar_rut_chileno()
+
+    def validar_rut_chileno(self):
+        """Valida que el RUT chileno sea válido"""
+        rut = self.RutProveedor
+        
+        # Obtener el cuerpo y dígito verificador
+        rut_limpio = rut.replace(".", "").replace("-", "").upper()
+        cuerpo = rut_limpio[:-1]
+        dv = rut_limpio[-1]
+        
+        try:
+            cuerpo = int(cuerpo)
+            if cuerpo == 0:
+                raise ValidationError({
+                    'RutProveedor': 'RUT no válido'
+                })
+        except ValueError:
+            raise ValidationError({
+                'RutProveedor': 'RUT no válido'
+            })
+        
+        # Calcular el dígito verificador
+        suma = 0
+        multiplicador = 2
+        
+        for d in reversed(str(cuerpo)):
+            suma += int(d) * multiplicador
+            multiplicador = multiplicador + 1 if multiplicador < 7 else 2
+        
+        dv_esperado = str(11 - (suma % 11))
+        if dv_esperado == '11':
+            dv_esperado = '0'
+        elif dv_esperado == '10':
+            dv_esperado = 'K'
+        
+        if dv != dv_esperado:
+            raise ValidationError({
+                'RutProveedor': 'RUT no válido (dígito verificador incorrecto)'
+            })
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+        
+    def __str__(self):
+        return f"{self.NombreProveedor} - {self.MarcaProveedor}"
             
 
             
@@ -708,18 +760,41 @@ class Cliente(models.Model):
         ('particular', 'Particular'),
         ('empresa', 'Empresa'),
     ]
+    
     # Campos obligatorios
-    NombreCliente = models.CharField(max_length=100, null=False, blank=False)
-    ApellidoCliente = models.CharField(max_length=100, null=False, blank=False)
-    RutCliente = models.CharField(max_length=12, unique=True, null=False, blank=False,
+    NombreCliente = models.CharField(
+        max_length=100, 
+        null=False, 
+        blank=False,
         validators=[
             RegexValidator(
-                regex=r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$',
-                message='RUT debe tener formato XX.XXX.XXX-X'
+                regex=r'^[A-Za-zÁáÉéÍíÓóÚúÜüÑñ\s]+$',
+                message='El nombre solo debe contener letras y espacios'
             )
         ]
     )
-    TipoCliente = models.CharField(max_length=20, choices=TIPO_CHOICES, default='particular')
+    ApellidoCliente = models.CharField(
+        max_length=100, 
+        null=False, 
+        blank=False,
+        validators=[
+            RegexValidator(
+                regex=r'^[A-Za-zÁáÉéÍíÓóÚúÜüÑñ\s]+$',
+                message='El apellido solo debe contener letras y espacios'
+            )
+        ]
+    )
+    RutCliente = models.CharField(
+        max_length=12, 
+        unique=True, 
+        null=False, 
+        blank=False
+    )
+    TipoCliente = models.CharField(
+        max_length=20, 
+        choices=TIPO_CHOICES, 
+        default='particular'
+    )
     
     # Campos de tracking
     CantidadTotalCompras = models.PositiveIntegerField(
@@ -735,10 +810,20 @@ class Cliente(models.Model):
         help_text="Total en dinero de todas las compras del cliente"
     )
     
-    # Campos opcionales existentes...
+    # Campos opcionales
     NombreCompañia = models.CharField(max_length=100, null=True, blank=True)
     ComentarioCliente = models.TextField(null=True, blank=True)
-    TelefonoCliente = models.CharField(max_length=15, null=True, blank=True)
+    TelefonoCliente = models.CharField(
+        max_length=15, 
+        null=True, 
+        blank=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\+?569\d{8}$',
+                message='El teléfono debe tener formato +569XXXXXXXX o 569XXXXXXXX'
+            )
+        ]
+    )
     FechaCliente = models.DateField(auto_now_add=True)
     
     # Campos de auditoría
@@ -757,6 +842,63 @@ class Cliente(models.Model):
         verbose_name_plural = "Clientes"
         ordering = ['NombreCliente']
 
+    def clean(self):
+        """Validaciones personalizadas del modelo"""
+        super().clean()
+        
+        # Validar RUT
+        if self.RutCliente:
+            self.validar_rut_chileno(self.RutCliente)
+        
+        # Validar campos según tipo de cliente
+        if self.TipoCliente == 'empresa':
+            if not self.NombreCompañia:
+                raise ValidationError({
+                    'NombreCompañia': 'El nombre de la compañía es obligatorio para clientes tipo empresa'
+                })
+        else:  # particular
+            if not self.NombreCliente or not self.ApellidoCliente:
+                raise ValidationError('Nombre y apellido son obligatorios para clientes particulares')
+
+    @staticmethod
+    def validar_rut_chileno(rut):
+        """Validación completa de RUT chileno"""
+        # Verificar formato inicial
+        if not re.match(r'^[0-9]{1,2}\.[0-9]{3}\.[0-9]{3}-[0-9kK]$', rut):
+            raise ValidationError('El formato del RUT debe ser XX.XXX.XXX-X')
+        
+        # Limpiar el RUT para validación
+        rut_limpio = rut.replace(".", "").replace("-", "").upper()
+        
+        # Separar cuerpo y dígito verificador
+        cuerpo = rut_limpio[:-1]
+        dv = rut_limpio[-1]
+        
+        try:
+            cuerpo = int(cuerpo)
+            # Validar que el cuerpo no sea 0
+            if cuerpo == 0:
+                raise ValidationError('RUT no válido')
+        except ValueError:
+            raise ValidationError('RUT no válido')
+        
+        # Calcular dígito verificador
+        suma = 0
+        multiplicador = 2
+        
+        for d in reversed(str(cuerpo)):
+            suma += int(d) * multiplicador
+            multiplicador = multiplicador + 1 if multiplicador < 7 else 2
+        
+        dv_esperado = str(11 - (suma % 11))
+        if dv_esperado == '11':
+            dv_esperado = '0'
+        elif dv_esperado == '10':
+            dv_esperado = 'K'
+        
+        if dv != dv_esperado:
+            raise ValidationError('RUT no válido (dígito verificador incorrecto)')
+
     def actualizar_totales(self):
         """Actualiza los totales del cliente basado en sus ventas"""
         ventas = self.ventas.all()
@@ -764,10 +906,12 @@ class Cliente(models.Model):
         self.TotalDineroCompras = sum(v.PrecioTotalVenta for v in ventas)
         self.save()
 
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         if self.TipoCliente == 'empresa':
             return f"{self.NombreCompañia} - {self.RutCliente}"
         return f"{self.NombreCliente} {self.ApellidoCliente} - {self.RutCliente}"
-    
-    
 #----RUTA PARA VENTA
